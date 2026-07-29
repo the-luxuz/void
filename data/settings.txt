@@ -1,0 +1,15 @@
+#window
+wname void
+width 1280
+height 720
+
+#camera
+fov 90
+
+#scene
+obj floor
+pos 0 -250 50
+scal 100 90 100
+rot 0 0 0
+mesh data/objects/circulo.obj
+mtl data/objects/circulo.mtl
