@@ -6,46 +6,11 @@
 #include "headers/inits.h"
 #include "headers/helpers.h"
 #include "headers/programs.h"
+#include "headers/buffers.h"
 
 std::vector<Object> objects;
 
 float totalTime = 0.0f;
-
-void buffer(Object& obj) {
-
-	glGenVertexArrays(1, &obj.vao);
-	glGenBuffers(1, &obj.vbo);
-	glGenBuffers(1, &obj.ebo);
-
-	glBindVertexArray(obj.vao);
-
-	glBindBuffer(GL_ARRAY_BUFFER, obj.vbo);
-	glBufferData(
-		GL_ARRAY_BUFFER,
-		obj.vertices.size() * sizeof(Vertex),
-		obj.vertices.data(),
-		GL_STATIC_DRAW
-	);
-
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, obj.ebo);
-	glBufferData(
-		GL_ELEMENT_ARRAY_BUFFER,
-		obj.indices.size() * sizeof(GLuint),
-		obj.indices.data(),
-		GL_STATIC_DRAW);
-
-	glVertexAttribPointer(
-		0,
-		3,
-		GL_FLOAT,
-		GL_FALSE,
-		sizeof(Vertex),
-		(void*)offsetof(Vertex, position));
-
-	glEnableVertexAttribArray(0);
-
-	glBindVertexArray(0);
-}
 
 void init() {
 
@@ -74,27 +39,8 @@ void init() {
 		obj.scale = par.objects[i].scale;
 		obj.rotation = par.objects[i].rotation;
 
-		std::cout << obj.mesh << std::endl;
-
-		std::cout << obj.position.x << "  " << obj.position.y << "  " << obj.position.z << "  " << std::endl;
-		std::cout << obj.scale.x << "  " << obj.scale.y << "  " << obj.scale.z << "  " << std::endl;
-		std::cout << obj.rotation.x << "  " << obj.rotation.y << "  " << obj.rotation.z << "  " << std::endl;
-
 		objects.push_back(obj);
 	}
-
-}
-
-
-static glm::vec3 get_cam_pos() {
-
-	glm::vec3 pos;
-
-	pos.x = radius * sin(beta) * cos(alpha);
-	pos.y = radius * cos(beta);
-	pos.z = radius * sin(beta) * sin(alpha);
-
-	return cam.cam_target + pos;
 }
 
 
@@ -121,8 +67,7 @@ void update(SDL_Window* window) {
 	);
 
 	//----------------------------------------------------
-	// GRID DEL MUNDO
-	//----------------------------------------------------
+	// grid
 
 	glUseProgram(program_grid);
 
@@ -156,8 +101,7 @@ void update(SDL_Window* window) {
 	glBindVertexArray(0);
 
 	//----------------------------------------------------
-	// OBJETOS
-	//----------------------------------------------------
+	// obj
 
 	glUseProgram(program);
 
@@ -203,37 +147,6 @@ void update(SDL_Window* window) {
 	}
 
 	SDL_GL_SwapWindow(window);
-}
-
-float moveSpeed = 10.0f;
-float mouseSensitivity = 0.005f;
-
-static void controls(const bool* keyboard, float angle_step, float radius_step, float dt) {
-
-	glm::vec3 cameraPos = get_cam_pos();
-
-	glm::vec3 forward = glm::normalize(cam.cam_target - cameraPos);
-	forward.y = 0.0f;
-	forward = glm::normalize(forward);
-
-	glm::vec3 right = glm::normalize(glm::cross(forward, glm::vec3(0, 1, 0)));
-
-	if (keyboard[SDL_SCANCODE_W])
-		cam.cam_target += forward * moveSpeed * dt;
-
-	if (keyboard[SDL_SCANCODE_S])
-		cam.cam_target -= forward * moveSpeed * dt;
-
-	if (keyboard[SDL_SCANCODE_A])
-		cam.cam_target -= right * moveSpeed * dt;
-
-	if (keyboard[SDL_SCANCODE_D])
-		cam.cam_target += right * moveSpeed * dt;
-
-	beta = glm::clamp(beta, 0.01f, glm::pi<float>() - 0.01f);
-
-	radius = std::max(radius, 0.5f);
-
 }
 
 int main(int argc, char* args[]) {
@@ -301,18 +214,32 @@ int main(int argc, char* args[]) {
 
 				if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_LCTRL]) {
 
+					SDL_HideCursor();
+					SDL_SetWindowRelativeMouseMode(window, true);
+
 					alpha -= -(event.motion.xrel * mouseSensitivity); 
 					beta -= event.motion.yrel * mouseSensitivity;
 
 					beta = glm::clamp(beta, 0.05f,
 						glm::pi<float>() - 0.05f);
 				}
+				else {
+					SDL_ShowCursor();
+					SDL_SetWindowRelativeMouseMode(window, false);
+				}
+
+				break;
+
+			case SDL_EVENT_KEY_UP:
+
+				if (event.key.scancode == SDL_SCANCODE_LCTRL)
+					SDL_WarpMouseInWindow(window, par.w / 2.0f, par.h / 2.0f);
 
 				break;
 
 			case SDL_EVENT_MOUSE_WHEEL:
 
-				radius -= event.wheel.y;
+				radius -= (event.wheel.y * 5);
 
 				radius = std::max(radius, 1.0f);
 

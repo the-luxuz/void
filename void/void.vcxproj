@@ -147,6 +147,7 @@
     <ClCompile Include="..\src\tinyobjloader.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\headers\buffers.h" />
     <ClInclude Include="..\src\headers\classes.h" />
     <ClInclude Include="..\src\headers\helpers.h" />
     <ClInclude Include="..\src\headers\inits.h" />

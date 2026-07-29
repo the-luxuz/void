@@ -8,8 +8,7 @@ fov 90
 
 #scene
 obj floor
-pos 0 -250 50
-scal 100 90 100
+pos 0 0 0
+scal 50 50 50
 rot 0 0 0
-mesh data/objects/circulo.obj
-mtl data/objects/circulo.mtl
+mesh data/objects/plane.obj

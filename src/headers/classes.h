@@ -4,7 +4,7 @@
 
 struct camera {
 
-    camera() : fov(90), nearPlane(.1f), farPlane(5000.0f), cam_position(0, 0, 5), cam_target(0, 0, 0), cam_up(0, 1, 0) {}
+    camera() : fov(90), nearPlane(.1f), farPlane(5000.0f), cam_position(100, 100, 100), cam_target(0, 0, 0), cam_up(0, 1, 0) {}
 
     float fov;
 

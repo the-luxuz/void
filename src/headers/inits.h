@@ -5,12 +5,6 @@
 #include "Parser.h"
 #include "helpers.h"
 
-camera cam;
-Parser par;
-
-float alpha, beta, radius;
-
-
 void init_camera() {
 
 	cam.fov = par.fov;
