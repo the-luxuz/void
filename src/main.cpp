@@ -1,16 +1,17 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 
 #include "imgui.h"
-#include "backends/imgui_impl_sdl3.h"
-#include "backends/imgui_impl_opengl3.h"
+#include "imgui_impl_sdl3.h"
+#include "imgui_impl_opengl3.h"
+#include "imguizmo.h"
 
-#include "headers/local.h"
-#include "headers/classes.h"
-#include "headers/Parser.h"
-#include "headers/inits.h"
-#include "headers/helpers.h"
-#include "headers/programs.h"
-#include "headers/buffers.h"
+#include "local.h"
+#include "classes.h"
+#include "Parser.h"
+#include "inits.h"
+#include "helpers.h"
+#include "programs.h"
+#include "buffers.h"
 
 std::vector<Object> objects;
 
@@ -159,6 +160,24 @@ void update(SDL_Window* window) {
 	ImGui::Text("ImGui funciona!");
 
 	ImGui::End();
+
+	ImGuizmo::BeginFrame();
+
+	ImGuizmo::SetOrthographic(false);
+
+	ImGuizmo::SetRect(
+		0, 0,
+		(float)par.w,
+		(float)par.h
+	);
+
+	ImGuizmo::Manipulate(
+		glm::value_ptr(view),
+		glm::value_ptr(projection),
+		ImGuizmo::TRANSLATE,
+		ImGuizmo::LOCAL,
+		glm::value_ptr(model)
+	);
 
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

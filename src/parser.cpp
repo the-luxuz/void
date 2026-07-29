@@ -1,4 +1,4 @@
-#include "headers/parser.h"
+#include "parser.h"
 
 void Parser::load(const char* fname) {
 

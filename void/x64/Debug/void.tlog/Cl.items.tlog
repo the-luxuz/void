@@ -5,6 +5,7 @@ C:\Users\User\Desktop\void\void\external\imgui\imgui_demo.cpp;C:\Users\User\Desk
 C:\Users\User\Desktop\void\void\external\imgui\imgui_draw.cpp;C:\Users\User\Desktop\void\void\void\x64\Debug\imgui_draw.obj
 C:\Users\User\Desktop\void\void\external\imgui\imgui_tables.cpp;C:\Users\User\Desktop\void\void\void\x64\Debug\imgui_tables.obj
 C:\Users\User\Desktop\void\void\external\imgui\imgui_widgets.cpp;C:\Users\User\Desktop\void\void\void\x64\Debug\imgui_widgets.obj
+C:\Users\User\Desktop\void\void\src\ImGuizmo.cpp;C:\Users\User\Desktop\void\void\void\x64\Debug\ImGuizmo.obj
 C:\Users\User\Desktop\void\void\src\main.cpp;C:\Users\User\Desktop\void\void\void\x64\Debug\main.obj
 C:\Users\User\Desktop\void\void\src\parser.cpp;C:\Users\User\Desktop\void\void\void\x64\Debug\parser.obj
 C:\Users\User\Desktop\void\void\src\tinyobjloader.cpp;C:\Users\User\Desktop\void\void\void\x64\Debug\tinyobjloader.obj

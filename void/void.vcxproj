@@ -111,7 +111,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)external\imgui\backends;$(SolutionDir)external\imgui;$(SolutionDir)include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)src\headers;$(SolutionDir)external\imgui\backends;$(SolutionDir)external\imgui;$(SolutionDir)include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -132,7 +132,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)external\imgui\backends;$(SolutionDir)external\imgui;$(SolutionDir)include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)src\headers;$(SolutionDir)external\imgui\backends;$(SolutionDir)external\imgui;$(SolutionDir)include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -150,6 +150,7 @@
     <ClCompile Include="..\external\imgui\imgui_draw.cpp" />
     <ClCompile Include="..\external\imgui\imgui_tables.cpp" />
     <ClCompile Include="..\external\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="..\src\ImGuizmo.cpp" />
     <ClCompile Include="..\src\main.cpp" />
     <ClCompile Include="..\src\parser.cpp" />
     <ClCompile Include="..\src\tinyobjloader.cpp" />
@@ -158,6 +159,7 @@
     <ClInclude Include="..\src\headers\buffers.h" />
     <ClInclude Include="..\src\headers\classes.h" />
     <ClInclude Include="..\src\headers\helpers.h" />
+    <ClInclude Include="..\src\headers\ImGuizmo.h" />
     <ClInclude Include="..\src\headers\inits.h" />
     <ClInclude Include="..\src\headers\local.h" />
     <ClInclude Include="..\src\headers\parser.h" />
