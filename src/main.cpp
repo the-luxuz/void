@@ -1,5 +1,9 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 
+#include "imgui.h"
+#include "backends/imgui_impl_sdl3.h"
+#include "backends/imgui_impl_opengl3.h"
+
 #include "headers/local.h"
 #include "headers/classes.h"
 #include "headers/Parser.h"
@@ -146,6 +150,19 @@ void update(SDL_Window* window) {
 		glBindVertexArray(0);
 	}
 
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplSDL3_NewFrame();
+	ImGui::NewFrame();
+
+	ImGui::Begin("Hola");
+
+	ImGui::Text("ImGui funciona!");
+
+	ImGui::End();
+
+	ImGui::Render();
+	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
 	SDL_GL_SwapWindow(window);
 }
 
@@ -172,6 +189,17 @@ int main(int argc, char* args[]) {
 		return -1;
 	}
 
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+
+	ImGuiIO& io = ImGui::GetIO();
+	(void)io;
+
+	ImGui::StyleColorsDark();
+
+	ImGui_ImplSDL3_InitForOpenGL(window, context);
+	ImGui_ImplOpenGL3_Init("#version 330");
+
 	create_programs();
 
 	init();
@@ -196,6 +224,8 @@ int main(int argc, char* args[]) {
 		previousCounter = currentCounter;
 
 		while (SDL_PollEvent(&event)) {
+
+			ImGui_ImplSDL3_ProcessEvent(&event);
 
 			switch (event.type) {
 
@@ -258,6 +288,11 @@ int main(int argc, char* args[]) {
 	}
 
 	glDeleteProgram(program);
+	glDeleteProgram(program_grid);
+
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplSDL3_Shutdown();
+	ImGui::DestroyContext();
 
 	SDL_GL_DestroyContext(context);
 	SDL_DestroyWindow(window);
