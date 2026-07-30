@@ -17,12 +17,25 @@ struct Parser {
 		
 	void load(const char* fname);
 
+	enum  class window_mode {
+		WINDOWED,
+		WINDOWED_BORDERLESS,
+		FULLSCREEN
+	};
+
+	window_mode win_mode;
+
+	window_mode last_win_mode;
+
 	std::string win_name;
 	int w, h;
 
 	float fov;
+	std::string skybox;
 
 	struct Transform {
+
+		std::string obj_name;
 
 		std::string mesh;
 		

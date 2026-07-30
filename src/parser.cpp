@@ -33,11 +33,30 @@ void Parser::load(const char* fname) {
         else if (id == "height")
             h = std::stoi(value);
 
+        else if (id == "window_mode ") {
+
+            if (value == "windowed")
+                win_mode = window_mode::WINDOWED;
+
+            else if (value == "fullscreen")
+                win_mode = window_mode::FULLSCREEN;
+
+            else if (value == "borderless")
+                win_mode = window_mode::WINDOWED_BORDERLESS;
+
+			last_win_mode = win_mode;
+        }
+
+        else if (id == "skybox")
+            skybox = value;
+
         else if (id == "fov")
             fov = std::stoi(value);
 
-        else if (id == "obj")
-            objects.emplace_back(value);
+        else if (id == "obj") {
+            objects.emplace_back();
+            objects.back().obj_name = value;
+        }
 
         else if (id == "mesh")
             objects.back().mesh = value;

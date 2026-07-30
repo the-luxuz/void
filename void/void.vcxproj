@@ -111,7 +111,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)src\headers;$(SolutionDir)external\imgui\backends;$(SolutionDir)external\imgui;$(SolutionDir)include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)external\tinyexr\deps\libdeflate\lib;$(SolutionDir)include\stb;$(SolutionDir)src\headers;$(SolutionDir)external\tinyexr\deps\zstd;$(SolutionDir)external\tinyexr\deps\miniz;$(SolutionDir)external\tinyexr;$(SolutionDir)external\imgui\backends;$(SolutionDir)external\imgui;$(SolutionDir)include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -132,7 +132,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)src\headers;$(SolutionDir)external\imgui\backends;$(SolutionDir)external\imgui;$(SolutionDir)include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)external\tinyexr\deps\libdeflate\lib;$(SolutionDir)include\stb;$(SolutionDir)src\headers;$(SolutionDir)external\tinyexr\deps\zstd;$(SolutionDir)external\tinyexr\deps\miniz;$(SolutionDir)external\tinyexr;$(SolutionDir)external\imgui\backends;$(SolutionDir)external\imgui;$(SolutionDir)include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -150,12 +150,16 @@
     <ClCompile Include="..\external\imgui\imgui_draw.cpp" />
     <ClCompile Include="..\external\imgui\imgui_tables.cpp" />
     <ClCompile Include="..\external\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="..\external\tinyexr\deps\miniz\miniz.c" />
+    <ClCompile Include="..\external\tinyexr\tinyexr.cc" />
     <ClCompile Include="..\src\ImGuizmo.cpp" />
     <ClCompile Include="..\src\main.cpp" />
     <ClCompile Include="..\src\parser.cpp" />
     <ClCompile Include="..\src\tinyobjloader.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\external\tinyexr\deps\miniz\miniz.h" />
+    <ClInclude Include="..\external\tinyexr\tinyexr.h" />
     <ClInclude Include="..\src\headers\buffers.h" />
     <ClInclude Include="..\src\headers\classes.h" />
     <ClInclude Include="..\src\headers\helpers.h" />
@@ -164,13 +168,18 @@
     <ClInclude Include="..\src\headers\local.h" />
     <ClInclude Include="..\src\headers\parser.h" />
     <ClInclude Include="..\src\headers\programs.h" />
+    <ClInclude Include="..\src\headers\textures.h" />
     <ClInclude Include="..\src\headers\tiny_obj_loader.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\data\shaders\fragment.frag" />
     <None Include="..\data\shaders\fragment_grid.frag" />
+    <None Include="..\data\shaders\fragment_hdrToCubemap.frag" />
+    <None Include="..\data\shaders\fragment_skybox.frag" />
     <None Include="..\data\shaders\vertex.vert" />
     <None Include="..\data\shaders\vertex_grid.vert" />
+    <None Include="..\data\shaders\vertex_hdrToCubemap.vert" />
+    <None Include="..\data\shaders\vertex_skybox.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

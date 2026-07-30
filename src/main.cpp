@@ -12,8 +12,26 @@
 #include "helpers.h"
 #include "programs.h"
 #include "buffers.h"
+#include "textures.h"
 
 float totalTime = 0.0f;
+
+static int currentMesh = 0;
+
+bool useSnap;
+
+float* snap;
+
+glm::mat4 m;
+
+static ImGuizmo::OPERATION currentOperation = ImGuizmo::TRANSLATE;
+
+const char* meshes[] = {
+	"Plane",
+	"Sphere",
+	"Cube",
+	"Cylinder"
+};
 
 void init() {
 
@@ -25,7 +43,7 @@ void init() {
 
 	init_camera();
 
-	Create_Grid();
+	init_skybox();
 
 	for (int i = 0; i < par.objects.size(); i++) {
 		
@@ -37,6 +55,8 @@ void init() {
 		buffer(obj);
 
 		obj.mesh = par.objects[i].mesh;
+
+		obj.name = par.objects[i].obj_name;
 
 		obj.position = par.objects[i].position;
 		obj.scale = par.objects[i].scale;
@@ -52,6 +72,7 @@ void update(SDL_Window* window) {
 	glViewport(0, 0, par.w, par.h);
 
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	glm::vec3 cameraPos = get_cam_pos();
@@ -69,6 +90,36 @@ void update(SDL_Window* window) {
 		cam.farPlane
 	);
 
+	if (par.last_win_mode != par.win_mode) {
+
+		switch (par.win_mode) {
+
+		case Parser::window_mode::WINDOWED:
+			SDL_SetWindowFullscreen(window, false);
+			SDL_RestoreWindow(window);
+			SDL_SetWindowBordered(window, true);
+			break;
+
+		case Parser::window_mode::WINDOWED_BORDERLESS:
+			SDL_SetWindowFullscreen(window, false);
+			SDL_SetWindowBordered(window, false);
+			SDL_MaximizeWindow(window);
+			break;
+
+		case Parser::window_mode::FULLSCREEN:
+			SDL_SetWindowFullscreen(window, true);
+			break;
+		}
+
+		int w, h;
+		SDL_GetWindowSizeInPixels(window, &w, &h);
+
+		par.w = w;
+		par.h = h;
+
+		par.last_win_mode = par.win_mode;
+	}
+
 	//----------------------------------------------------
 	// grid
 
@@ -76,11 +127,7 @@ void update(SDL_Window* window) {
 
 	glm::mat4 model(1.0f);
 
-	glm::vec3 gridPos(
-		floor(cameraPos.x / STEP) * STEP,
-		0.0f,
-		floor(cameraPos.z / STEP) * STEP
-	);
+	glm::vec3 gridPos(floor(cameraPos.x / STEP) * STEP, 0.0f, floor(cameraPos.z / STEP) * STEP);
 
 	model = glm::translate(glm::mat4(1.0f), gridPos);
 
@@ -110,23 +157,7 @@ void update(SDL_Window* window) {
 
 	for (Object& obj : objects) {
 
-		glm::mat4 model(1.0f);
-
-		model = glm::translate(model, obj.position);
-
-		model = glm::rotate(model,
-			glm::radians(obj.rotation.x),
-			glm::vec3(1, 0, 0));
-
-		model = glm::rotate(model,
-			glm::radians(obj.rotation.y),
-			glm::vec3(0, 1, 0));
-
-		model = glm::rotate(model,
-			glm::radians(obj.rotation.z),
-			glm::vec3(0, 0, 1));
-
-		model = glm::scale(model, obj.scale);
+		glm::mat4 model = GetModelMatrix(obj);
 
 		glm::mat4 mvp = projection * view * model;
 
@@ -145,9 +176,32 @@ void update(SDL_Window* window) {
 			GL_UNSIGNED_INT,
 			nullptr
 		);
-
-		glBindVertexArray(0);
 	}
+
+	//----------------------------------------------------
+	// skybox
+
+	glDepthFunc(GL_LEQUAL);
+	glDisable(GL_CULL_FACE);
+
+	glUseProgram(program_skybox);
+
+	glm::mat4 skyView = glm::mat4(glm::mat3(view));
+
+	glUniformMatrix4fv(glGetUniformLocation(program_skybox, "view"), 1, GL_FALSE, glm::value_ptr(skyView));
+
+	glUniformMatrix4fv(glGetUniformLocation(program_skybox, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, cubeFBO);
+
+	glUniform1i(glGetUniformLocation(program_skybox, "skybox"), 0);
+
+	glBindVertexArray(skyboxVAO);
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+
+	glEnable(GL_CULL_FACE);
+	glDepthFunc(GL_LESS);
 
 	//----------------------------------------------------
 	// imgui / imguizmo
@@ -156,27 +210,11 @@ void update(SDL_Window* window) {
 	ImGui_ImplSDL3_NewFrame();
 	ImGui::NewFrame();
 
-	ImGui::Begin("Hey");
+	Object* obj = GetSelectedObject();
 
-	ImGui::Text("ImGui works!");
+	if (obj) {
 
-	ImGui::End();
-
-	glm::mat4 m;
-
-	if (selectedObject != nullptr) {
-
-		m = glm::mat4(1.0f);
-
-		m = glm::translate(m, selectedObject->position);
-
-		m = glm::rotate(m, glm::radians(selectedObject->rotation.x), glm::vec3(1, 0, 0));
-
-		m = glm::rotate(m, glm::radians(selectedObject->rotation.y), glm::vec3(0, 1, 0));
-
-		m = glm::rotate(m, glm::radians(selectedObject->rotation.z), glm::vec3(0, 0, 1));
-
-		m = glm::scale(m, selectedObject->scale);
+		m = GetModelMatrix(*obj);
 
 		ImGuizmo::BeginFrame();
 
@@ -186,7 +224,33 @@ void update(SDL_Window* window) {
 
 		ImGuizmo::SetRect(0, 0, (float)par.w, (float)par.h );
 
-		ImGuizmo::Manipulate(glm::value_ptr(view), glm::value_ptr(projection), ImGuizmo::TRANSLATE, ImGuizmo::LOCAL, glm::value_ptr(m));
+		float moveSnap[3] = { 12.5, 12.5, 12.5 };
+		float scaleSnap[3] = { 12.5f, 12.5f, 12.5f };
+		float rotateSnap[3] = { 11.25, 11.25, 11.25 };
+
+		snap = nullptr;
+
+		useSnap = SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_LSHIFT];
+
+		if (useSnap) {
+
+			switch (currentOperation) {
+
+			case ImGuizmo::TRANSLATE:
+				snap = moveSnap;
+				break;
+
+			case ImGuizmo::ROTATE:
+				snap = rotateSnap;
+				break;
+
+			case ImGuizmo::SCALE:
+				snap = scaleSnap;
+				break;
+			}
+		}
+
+		ImGuizmo::Manipulate(glm::value_ptr(view), glm::value_ptr(projection), currentOperation, ImGuizmo::LOCAL, glm::value_ptr(m), nullptr, snap);
 
 		if (ImGuizmo::IsUsing()) {
 
@@ -196,15 +260,135 @@ void update(SDL_Window* window) {
 
 			ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(m), glm::value_ptr(translation), glm::value_ptr(rotation), glm::value_ptr(scale));
 
-			selectedObject->position = translation;
-			selectedObject->rotation = rotation;
-			selectedObject->scale = scale;
+			if (useSnap && currentOperation == ImGuizmo::ROTATE) {
+
+				auto Snap = [](float value, float step) {
+						return roundf(value / step) * step;
+				};
+
+				rotation.x = Snap(rotation.x, rotateSnap[0]);
+				rotation.y = Snap(rotation.y, rotateSnap[1]);
+				rotation.z = Snap(rotation.z, rotateSnap[2]);
+			}
+
+			obj->position = translation;
+			obj->rotation = rotation;
+			obj->scale = scale;
 		}
 
 	}
 
+	ImGui::Begin("Create Object");
+
+	ImGui::Combo("Mesh", &currentMesh, meshes, IM_ARRAYSIZE(meshes));
+
+	if (ImGui::Button("Create")) {
+
+		Object obj;
+
+		switch (currentMesh) {
+
+		case 0:
+			init_obj("../data/objects/plane.obj", obj);
+			obj.name = "Plane";
+			break;
+
+		case 1:
+			init_obj("../data/objects/sphere.obj", obj);
+			obj.name = "Sphere";
+			break;
+
+		case 2:
+			init_obj("../data/objects/cube.obj", obj);
+			obj.name = "Cube";
+			break;
+
+		case 3:
+			init_obj("../data/objects/cylinder.obj", obj);
+			obj.name = "Cylinder";
+			break;
+		}
+
+		buffer(obj);
+
+		obj.position = glm::vec3(0.0f);
+		obj.rotation = glm::vec3(0.0f);
+		obj.scale = glm::vec3(50.0f);
+
+		objects.push_back(obj);
+		selectedObject = (int)(objects.size() - 1);
+	}
+
+	ImGui::End();
+
+	//----------------------------------------------------
+	// tools
+
+	ImGui::Begin("Tools");
+
+	if (ImGui::RadioButton("Move", currentOperation == ImGuizmo::TRANSLATE))
+		currentOperation = ImGuizmo::TRANSLATE;
+
+	ImGui::SameLine();
+
+	if (ImGui::RadioButton("Rotate", currentOperation == ImGuizmo::ROTATE))
+		currentOperation = ImGuizmo::ROTATE;
+
+	ImGui::SameLine();
+
+	if (ImGui::RadioButton("Scale", currentOperation == ImGuizmo::SCALE))
+		currentOperation = ImGuizmo::SCALE;
+
+	ImGui::End();
+
+	//----------------------------------------------------
+	// hierarchy
+
+	ImGui::SetNextWindowPos(ImVec2(par.w - 300, 0), ImGuiCond_Always);
+	ImGui::SetNextWindowSize(ImVec2(300, par.h), ImGuiCond_Always);
+
+	ImGuiWindowFlags h_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+
+	ImGui::Begin("Hierarchy", nullptr, h_flags);
+
+	for (size_t i = 0; i < objects.size(); i++) {
+
+		ImGui::PushID((int)i);
+
+		bool selected = (selectedObject == (int)i);
+
+		if (ImGui::Selectable(objects[i].name.c_str(), selected))
+			selectedObject = i;
+
+		ImGui::PopID();
+	}
+
+	ImGui::End();
+
+	static float fps = 0.0f;
+
+	fps = ImGui::GetIO().Framerate;
+
+	ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Always);
+	ImGui::SetNextWindowBgAlpha(0.35f);
+
+	ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+
+	ImGui::Begin("HUD", nullptr, flags);
+
+	ImGui::Text("FPS: %.1f", fps);
+	ImGui::Text("Frame: %.3f ms", 1000.0f / fps);
+
+	ImGui::End();
+
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+	//----------------------------------------------------
+
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glBindVertexArray(0);
+	glUseProgram(0);
 
 	SDL_GL_SwapWindow(window);
 }
@@ -219,7 +403,14 @@ int main(int argc, char* args[]) {
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
-	SDL_Window* window = SDL_CreateWindow(par.win_name.c_str(), par.w, par.h, SDL_WINDOW_OPENGL);
+	SDL_Window* window;
+
+	if (par.win_mode == Parser::window_mode::FULLSCREEN)
+		window = SDL_CreateWindow(par.win_name.c_str(), par.w, par.h, SDL_WINDOW_FULLSCREEN);
+	else if(par.win_mode == Parser::window_mode::WINDOWED_BORDERLESS)
+		window = SDL_CreateWindow(par.win_name.c_str(), par.w, par.h, SDL_WINDOW_BORDERLESS);
+	else
+		window = SDL_CreateWindow(par.win_name.c_str(), par.w, par.h, SDL_WINDOW_OPENGL);
 
 	SDL_GLContext context = SDL_GL_CreateContext(window);
 
@@ -281,6 +472,31 @@ int main(int argc, char* args[]) {
 				if (event.key.scancode == SDL_SCANCODE_ESCAPE)
 					quit = true;
 
+				if (event.key.scancode == SDL_SCANCODE_BACKSPACE) {
+
+					if (selectedObject != -1) {
+
+						for (size_t i = 0; i < objects.size(); i++) {
+
+							if (selectedObject == (int)i) {
+
+								objects.erase(objects.begin() + i);
+								selectedObject = -1;
+								break;
+							}
+						}
+					}
+				}
+
+				if(event.key.scancode == SDL_SCANCODE_F11) {
+					if(par.win_mode == Parser::window_mode::FULLSCREEN)
+						par.win_mode = Parser::window_mode::WINDOWED;
+					else if (par.win_mode == Parser::window_mode::WINDOWED)
+						par.win_mode = Parser::window_mode::WINDOWED_BORDERLESS;
+					else
+						par.win_mode = Parser::window_mode::FULLSCREEN;
+				}
+
 				break;
 
 			case SDL_EVENT_MOUSE_MOTION:
@@ -335,6 +551,10 @@ int main(int argc, char* args[]) {
 					/*if (selectedObject != nullptr) {
 						std::cout << "selected" << std::endl;
 					}*/
+				}
+
+				if (event.button.button == SDL_BUTTON_RIGHT) {
+					selectedObject = -1;
 				}
 
 				break;

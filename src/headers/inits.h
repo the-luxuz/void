@@ -5,6 +5,19 @@
 #include "Parser.h"
 #include "helpers.h"
 
+void init_skybox() {
+	
+	Create_Grid();
+
+	GenSkybox();
+
+	Load_Skybox(par.skybox.c_str());
+
+	gen_cubemap();
+
+	ConvertHDRToCubemap();
+}
+
 void init_camera() {
 
 	cam.fov = par.fov;

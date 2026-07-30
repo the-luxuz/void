@@ -2,11 +2,14 @@
 wname void
 width 1280
 height 720
+window_mode windowed // fullscreen, borderless, windowed
 
 #camera
 fov 90
 
 #scene
+skybox data/skybox/galaxie_skybox.hdr
+
 obj floor
 pos 0 0 0
 scal 50 50 50

@@ -2,6 +2,14 @@
 
 #include "local.h"
 #include "classes.h"
+#include "programs.h"
+#include "textures.h"
+
+GLuint cubeFBO;
+GLuint dynamic_cubemap;
+
+GLuint captureFBO;
+GLuint captureRBO;
 
 camera cam;
 Parser par;
@@ -18,7 +26,10 @@ int gridVertexCount;
 float moveSpeed = 10.0f;
 float mouseSensitivity = 0.005f;
 
-Object* selectedObject = nullptr;
+int selectedObject = -1;
+
+GLuint skyVAO;
+GLuint skyVBO;
 
 enum class view_Mode {
 	EDITOR,
@@ -34,6 +45,200 @@ glm::vec3 rayOrigin;
 glm::vec3 rayDir;
 
 std::vector<Object> objects;
+
+GLuint skyboxVAO;
+GLuint skyboxVBO;
+
+glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
+
+glm::mat4 captureViews[] = {
+
+    glm::lookAt(glm::vec3(0), glm::vec3( 1, 0, 0), glm::vec3(0,-1,0)),
+    glm::lookAt(glm::vec3(0), glm::vec3(-1, 0, 0), glm::vec3(0,-1,0)),
+    glm::lookAt(glm::vec3(0), glm::vec3(0, 1, 0), glm::vec3(0, 0, 1)),
+    glm::lookAt(glm::vec3(0), glm::vec3(0,-1, 0), glm::vec3(0, 0,-1)),
+    glm::lookAt(glm::vec3(0), glm::vec3(0, 0, 1), glm::vec3(0,-1,0)),
+    glm::lookAt(glm::vec3(0), glm::vec3(0, 0,-1), glm::vec3(0,-1,0))
+};
+
+Object* GetSelectedObject() {
+
+	if (selectedObject < 0)
+		return nullptr;
+
+	if (selectedObject >= objects.size())
+		return nullptr;
+
+	return &objects[selectedObject];
+}
+
+glm::mat4 GetModelMatrix(Object obj) {
+
+	glm::mat4 m(1);
+
+	m = glm::translate(m, obj.position);
+
+	m = glm::rotate(m, glm::radians(obj.rotation.x), { 1,0,0 });
+	m = glm::rotate(m, glm::radians(obj.rotation.y), { 0,1,0 });
+	m = glm::rotate(m, glm::radians(obj.rotation.z), { 0,0,1 });
+
+	m = glm::scale(m, obj.scale);
+
+	return m;
+}
+
+void gen_cubemap() {
+
+	glGenTextures(1, &cubeFBO);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, cubeFBO);
+
+	for (int i = 0; i < 6; i++) {
+
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F, 1024, 1024, 0, GL_RGB, GL_FLOAT, nullptr);
+	}
+
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+	glGenFramebuffers(1, &captureFBO);
+	glGenRenderbuffers(1, &captureRBO);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+
+	glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
+
+	glRenderbufferStorage(
+		GL_RENDERBUFFER,
+		GL_DEPTH_COMPONENT24,
+		1024,
+		1024
+	);
+
+	glFramebufferRenderbuffer(
+		GL_FRAMEBUFFER,
+		GL_DEPTH_ATTACHMENT,
+		GL_RENDERBUFFER,
+		captureRBO
+	);
+}
+
+void ConvertHDRToCubemap() {
+
+	glViewport(0, 0, 1024, 1024);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+
+	glUseProgram(program_hdrToCubemap);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, skybox_texture);
+
+	glUniform1i(
+		glGetUniformLocation(program_hdrToCubemap,
+			"equirectangularMap"),
+		0);
+
+	glUniformMatrix4fv(
+		glGetUniformLocation(program_hdrToCubemap, "projection"),
+		1,
+		GL_FALSE,
+		glm::value_ptr(captureProjection));
+
+	glBindVertexArray(skyboxVAO);
+
+	glFramebufferRenderbuffer(
+		GL_FRAMEBUFFER,
+		GL_DEPTH_ATTACHMENT,
+		GL_RENDERBUFFER,
+		captureRBO);
+
+	for (int i = 0; i < 6; i++) {
+
+		glUniformMatrix4fv(
+			glGetUniformLocation(program_hdrToCubemap, "view"),
+			1,
+			GL_FALSE,
+			glm::value_ptr(captureViews[i]));
+
+		glFramebufferTexture2D(
+			GL_FRAMEBUFFER,
+			GL_COLOR_ATTACHMENT0,
+			GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
+			cubeFBO,
+			0);
+
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+	}
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	glViewport(0, 0, par.w, par.h);
+}
+
+void GenSkybox() {
+
+	// my friend LearnOpenGL carries
+	float skyboxVertices[] = {
+    -1.0f,  1.0f, -1.0f,
+    -1.0f, -1.0f, -1.0f,
+     1.0f, -1.0f, -1.0f,
+     1.0f, -1.0f, -1.0f,
+     1.0f,  1.0f, -1.0f,
+    -1.0f,  1.0f, -1.0f,
+
+    -1.0f, -1.0f,  1.0f,
+    -1.0f, -1.0f, -1.0f,
+    -1.0f,  1.0f, -1.0f,
+    -1.0f,  1.0f, -1.0f,
+    -1.0f,  1.0f,  1.0f,
+    -1.0f, -1.0f,  1.0f,
+
+     1.0f, -1.0f, -1.0f,
+     1.0f, -1.0f,  1.0f,
+     1.0f,  1.0f,  1.0f,
+     1.0f,  1.0f,  1.0f,
+     1.0f,  1.0f, -1.0f,
+     1.0f, -1.0f, -1.0f,
+
+    -1.0f, -1.0f,  1.0f,
+    -1.0f,  1.0f,  1.0f,
+     1.0f,  1.0f,  1.0f,
+     1.0f,  1.0f,  1.0f,
+     1.0f, -1.0f,  1.0f,
+    -1.0f, -1.0f,  1.0f,
+
+    -1.0f,  1.0f, -1.0f,
+     1.0f,  1.0f, -1.0f,
+     1.0f,  1.0f,  1.0f,
+     1.0f,  1.0f,  1.0f,
+    -1.0f,  1.0f,  1.0f,
+    -1.0f,  1.0f, -1.0f,
+
+    -1.0f, -1.0f, -1.0f,
+    -1.0f, -1.0f,  1.0f,
+     1.0f, -1.0f, -1.0f,
+     1.0f, -1.0f, -1.0f,
+    -1.0f, -1.0f,  1.0f,
+     1.0f, -1.0f,  1.0f
+};
+
+	glGenVertexArrays(1, &skyboxVAO);
+	glGenBuffers(1, &skyboxVBO);
+
+	glBindVertexArray(skyboxVAO);
+
+	glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), skyboxVertices, GL_STATIC_DRAW);
+
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
+}
 
 static glm::vec3 get_cam_pos() {
 
@@ -100,10 +305,13 @@ void BuildRay(float mouseX, float mouseY, glm::vec3& rayOrigin, glm::vec3& rayDi
 
 void select_object(glm::vec3& rayOrigin, glm::vec3& rayDir) {
 
-	Object* selected = nullptr;
 	float nearest = FLT_MAX;
 
-	for (Object& obj : objects) {
+	selectedObject = -1;
+
+	for (size_t i = 0; i < objects.size(); i++) {
+
+		Object& obj = objects[i];
 
 		glm::vec3 worldMin = obj.min * obj.scale + obj.position;
 		glm::vec3 worldMax = obj.max * obj.scale + obj.position;
@@ -115,14 +323,8 @@ void select_object(glm::vec3& rayOrigin, glm::vec3& rayDir) {
 			if (t < nearest) {
 
 				nearest = t;
-				selected = &obj;
-
-				selectedObject = selected;
+				selectedObject = static_cast<int>(i);
 			}
-		}
-		else {
-			selectedObject = nullptr;
-			selected = nullptr;
 		}
 	}
 }

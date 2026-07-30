@@ -30,6 +30,8 @@ struct Object {
     GLuint vbo = 0;
     GLuint ebo = 0;
 
+    std::string name;
+
     std::vector<Vertex> vertices;
     std::vector<GLuint> indices;
 
