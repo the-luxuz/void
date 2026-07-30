@@ -105,6 +105,8 @@ GLuint LoadHDRTexture(const std::string& path) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     stbi_image_free(data);
+
+    return texture;
 }
 
 void Load_Skybox(const std::string& path) {

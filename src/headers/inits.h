@@ -5,13 +5,16 @@
 #include "Parser.h"
 #include "helpers.h"
 
-void init_skybox() {
+void init_grid() {
 	
 	Create_Grid();
+}
 
+void init_skybox(const char* skyboxFile) {
+	
 	GenSkybox();
 
-	Load_Skybox(par.skybox.c_str());
+	Load_Skybox(skyboxFile);
 
 	gen_cubemap();
 

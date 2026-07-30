@@ -22,7 +22,9 @@ void init() {
 
 	init_camera();
 
-	init_skybox();
+	init_grid();
+
+	init_skybox(par.skybox.c_str());
 
 	read_textures_path();
 

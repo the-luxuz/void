@@ -117,7 +117,7 @@ void update_skybox() {
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, cubeFBO);
 
-	glUniform1i(glGetUniformLocation(program_skybox, "skybox"), 0);
+	glUniform1i(glGetUniformLocation(program_skybox, "skybox"), 1);
 
 	glBindVertexArray(skyboxVAO);
 	glDrawArrays(GL_TRIANGLES, 0, 36);
@@ -296,6 +296,22 @@ void update_imgui_guizmo() {
 
 						objects.push_back(obj);
 						selectedObject = (int)(objects.size() - 1);
+					}
+
+					ImGui::TextWrapped("%s", entry.path().stem().string().c_str());
+				}
+
+				if (ext == ".exr" || ext == ".hdr") {
+				
+					std::string path = entry.path().string();
+
+					if (path.rfind("../", 0) == 0)
+						path.erase(0, 3);
+
+					if (ImGui::Button("", ImVec2(64, 64))) {
+
+						init_skybox(path.c_str());
+
 					}
 
 					ImGui::TextWrapped("%s", entry.path().stem().string().c_str());
