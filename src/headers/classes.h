@@ -39,4 +39,6 @@ struct Object {
 
     std::string mesh;
 
+    glm::vec3 min, max;
+
 };

@@ -53,6 +53,18 @@ void init_obj(const char* objFile, Object& obj) {
 
 			glm::vec2 uv0(0.0f), uv1(0.0f), uv2(0.0f);
 
+			glm::vec3 min(FLT_MAX);
+			glm::vec3 max(-FLT_MAX);
+
+			for (const Vertex& v : obj.vertices) {
+
+				min = glm::min(min, v.position);
+				max = glm::max(max, v.position);
+			}
+
+			obj.min = min;
+			obj.max = max;
+
 			// make sure the texcoord index is valid before accessing the array
 			if (i0.texcoord_index >= 0)
 				uv0 = { attrib.texcoords[2 * i0.texcoord_index + 0], attrib.texcoords[2 * i0.texcoord_index + 1] };

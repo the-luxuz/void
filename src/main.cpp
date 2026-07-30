@@ -13,8 +13,6 @@
 #include "programs.h"
 #include "buffers.h"
 
-std::vector<Object> objects;
-
 float totalTime = 0.0f;
 
 void init() {
@@ -58,13 +56,13 @@ void update(SDL_Window* window) {
 
 	glm::vec3 cameraPos = get_cam_pos();
 
-	glm::mat4 view = glm::lookAt(
+	view = glm::lookAt(
 		cameraPos,
 		cam.cam_target,
 		cam.cam_up
 	);
 
-	glm::mat4 projection = glm::perspective(
+	projection = glm::perspective(
 		glm::radians(par.fov),
 		(float)par.w / par.h,
 		cam.nearPlane,
@@ -151,33 +149,59 @@ void update(SDL_Window* window) {
 		glBindVertexArray(0);
 	}
 
+	//----------------------------------------------------
+	// imgui / imguizmo
+
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplSDL3_NewFrame();
 	ImGui::NewFrame();
 
-	ImGui::Begin("Hola");
+	ImGui::Begin("Hey");
 
-	ImGui::Text("ImGui funciona!");
+	ImGui::Text("ImGui works!");
 
 	ImGui::End();
 
-	ImGuizmo::BeginFrame();
+	glm::mat4 m;
 
-	ImGuizmo::SetOrthographic(false);
+	if (selectedObject != nullptr) {
 
-	ImGuizmo::SetRect(
-		0, 0,
-		(float)par.w,
-		(float)par.h
-	);
+		m = glm::mat4(1.0f);
 
-	ImGuizmo::Manipulate(
-		glm::value_ptr(view),
-		glm::value_ptr(projection),
-		ImGuizmo::TRANSLATE,
-		ImGuizmo::LOCAL,
-		glm::value_ptr(model)
-	);
+		m = glm::translate(m, selectedObject->position);
+
+		m = glm::rotate(m, glm::radians(selectedObject->rotation.x), glm::vec3(1, 0, 0));
+
+		m = glm::rotate(m, glm::radians(selectedObject->rotation.y), glm::vec3(0, 1, 0));
+
+		m = glm::rotate(m, glm::radians(selectedObject->rotation.z), glm::vec3(0, 0, 1));
+
+		m = glm::scale(m, selectedObject->scale);
+
+		ImGuizmo::BeginFrame();
+
+		//ImGuizmo::SetDrawlist();
+
+		ImGuizmo::SetOrthographic(false);
+
+		ImGuizmo::SetRect(0, 0, (float)par.w, (float)par.h );
+
+		ImGuizmo::Manipulate(glm::value_ptr(view), glm::value_ptr(projection), ImGuizmo::TRANSLATE, ImGuizmo::LOCAL, glm::value_ptr(m));
+
+		if (ImGuizmo::IsUsing()) {
+
+			glm::vec3 translation;
+			glm::vec3 rotation;
+			glm::vec3 scale;
+
+			ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(m), glm::value_ptr(translation), glm::value_ptr(rotation), glm::value_ptr(scale));
+
+			selectedObject->position = translation;
+			selectedObject->rotation = rotation;
+			selectedObject->scale = scale;
+		}
+
+	}
 
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -288,9 +312,30 @@ int main(int argc, char* args[]) {
 
 			case SDL_EVENT_MOUSE_WHEEL:
 
-				radius -= (event.wheel.y * 5);
+				radius -= (event.wheel.y * 10);
 
 				radius = std::max(radius, 1.0f);
+
+				break;
+
+			case SDL_EVENT_MOUSE_BUTTON_UP:
+
+				if (event.button.button == SDL_BUTTON_LEFT) {
+
+					if (ImGuizmo::IsOver() || ImGuizmo::IsUsing())
+						break;
+
+					if (ImGui::GetIO().WantCaptureMouse)
+						break;
+
+					BuildRay(event.button.x, event.button.y, rayOrigin, rayDir);
+
+					select_object(rayOrigin, rayDir);
+
+					/*if (selectedObject != nullptr) {
+						std::cout << "selected" << std::endl;
+					}*/
+				}
 
 				break;
 			}
