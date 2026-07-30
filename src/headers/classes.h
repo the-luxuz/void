@@ -1,6 +1,7 @@
 #pragma once
 
 #include "local.h"
+#include <unordered_map>
 
 struct camera {
 
@@ -32,7 +33,7 @@ struct Object {
 
     std::string name;
 
-    GLuint obj_texture;
+    GLuint obj_texture = 0;
 
     std::vector<Vertex> vertices;
     std::vector<GLuint> indices;
@@ -45,4 +46,21 @@ struct Object {
 
     glm::vec3 min, max;
 
+};
+
+class TextureManager {
+
+    static std::unordered_map<std::string, GLuint> textures;
+
+public:
+    static GLuint Get(const std::string& path);
+
+};
+
+struct Program {
+
+    GLuint id;
+
+    GLint mvpLoc;
+    GLint textureLoc;
 };

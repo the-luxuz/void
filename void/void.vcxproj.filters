@@ -92,6 +92,9 @@
     <ClInclude Include="..\external\tinyexr\deps\miniz\miniz.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\headers\updates.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\data\shaders\vertex.vert" />

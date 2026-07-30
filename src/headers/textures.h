@@ -138,6 +138,8 @@ GLuint LoadObjTexture(const std::string& path) {
     if (!data) {
 
         std::cout << "No se pudo cargar la textura\n";
+
+		std::cout << "Path: " << fullPath << std::endl;
         return 0;
     }
 

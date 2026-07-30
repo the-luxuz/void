@@ -170,6 +170,7 @@
     <ClInclude Include="..\src\headers\programs.h" />
     <ClInclude Include="..\src\headers\textures.h" />
     <ClInclude Include="..\src\headers\tiny_obj_loader.h" />
+    <ClInclude Include="..\src\headers\updates.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\data\shaders\fragment.frag" />

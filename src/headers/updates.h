@@ -1,0 +1,375 @@
+#pragma once
+
+#include "local.h"
+#include "programs.h"
+#include "helpers.h"
+#include "inits.h"
+#include "buffers.h"
+
+static int currentMesh = 0;
+
+GLuint currentTexture = 0;
+
+bool useSnap;
+
+float* snap;
+
+glm::mat4 m;
+
+const float cellSize = 90.0f;
+
+static ImGuizmo::OPERATION currentOperation = ImGuizmo::TRANSLATE;
+
+std::unordered_map<std::string, GLuint> TextureManager::textures;
+
+const char* meshes[] = {
+	"Plane",
+	"Sphere",
+	"Cube",
+	"Cylinder"
+};
+
+void update_grid(glm::vec3 cameraPos) {
+
+	glUseProgram(program_grid);
+
+	glm::mat4 model(1.0f);
+
+	glm::vec3 gridPos(floor(cameraPos.x / STEP) * STEP, 0.0f, floor(cameraPos.z / STEP) * STEP);
+
+	model = glm::translate(glm::mat4(1.0f), gridPos);
+
+	glm::mat4 mvp = projection * view * model;
+
+	glUniformMatrix4fv(
+		glGetUniformLocation(program_grid, "uMVP"),
+		1,
+		GL_FALSE,
+		glm::value_ptr(mvp)
+	);
+
+	glBindVertexArray(gridVAO);
+
+	glDrawArrays(
+		GL_LINES,
+		0,
+		gridVertexCount
+	);
+
+	glBindVertexArray(0);
+}
+
+void update_objects() {
+
+	currentTexture = 0;
+	
+	glUseProgram(program);
+
+	glActiveTexture(GL_TEXTURE0);
+
+	glUniform1i(glGetUniformLocation(program, "uTexture"), 0);
+
+
+	for (Object& obj : objects) {
+
+		glm::mat4 model = GetModelMatrix(obj);
+
+		glm::mat4 mvp = projection * view * model;
+
+		glUniformMatrix4fv(
+			glGetUniformLocation(program, "uMVP"),
+			1,
+			GL_FALSE,
+			glm::value_ptr(mvp)
+		);
+
+
+		if (currentTexture != obj.obj_texture) {
+			
+			glBindTexture(GL_TEXTURE_2D, obj.obj_texture);
+			currentTexture = obj.obj_texture;
+		}
+
+		glBindVertexArray(obj.vao);
+
+		glDrawElements(
+			GL_TRIANGLES,
+			obj.indices.size(),
+			GL_UNSIGNED_INT,
+			nullptr
+		);
+	}
+}
+
+void update_skybox() {
+	
+	glDepthFunc(GL_LEQUAL);
+	glDisable(GL_CULL_FACE);
+
+	glUseProgram(program_skybox);
+
+	glm::mat4 skyView = glm::mat4(glm::mat3(view));
+
+	glUniformMatrix4fv(glGetUniformLocation(program_skybox, "view"), 1, GL_FALSE, glm::value_ptr(skyView));
+
+	glUniformMatrix4fv(glGetUniformLocation(program_skybox, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, cubeFBO);
+
+	glUniform1i(glGetUniformLocation(program_skybox, "skybox"), 0);
+
+	glBindVertexArray(skyboxVAO);
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+
+	glEnable(GL_CULL_FACE);
+	glDepthFunc(GL_LESS);
+}
+
+void update_imgui_guizmo() {
+
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplSDL3_NewFrame();
+	ImGui::NewFrame();
+
+	ImGui::SetNextWindowPos(ImVec2(0, 0));
+	ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
+
+	Object* obj = GetSelectedObject();
+
+	if (obj) {
+
+		m = GetModelMatrix(*obj);
+
+		ImGuizmo::BeginFrame();
+
+		//ImGuizmo::SetDrawlist();
+
+		ImGuizmo::SetOrthographic(false);
+
+		ImGuizmo::SetRect(0, 0, (float)par.w, (float)par.h);
+
+		float moveSnap[3] = { 12.5, 12.5, 12.5 };
+		float scaleSnap[3] = { 12.5f, 12.5f, 12.5f };
+		float rotateSnap[3] = { 11.25, 11.25, 11.25 };
+
+		snap = nullptr;
+
+		useSnap = SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_LSHIFT];
+
+		if (useSnap) {
+
+			switch (currentOperation) {
+
+			case ImGuizmo::TRANSLATE:
+				snap = moveSnap;
+				break;
+
+			case ImGuizmo::ROTATE:
+				snap = rotateSnap;
+				break;
+
+			case ImGuizmo::SCALE:
+				snap = scaleSnap;
+				break;
+			}
+		}
+
+		ImGuizmo::Manipulate(glm::value_ptr(view), glm::value_ptr(projection), currentOperation, ImGuizmo::LOCAL, glm::value_ptr(m), nullptr, snap);
+
+		if (ImGuizmo::IsUsing()) {
+
+			glm::vec3 translation;
+			glm::vec3 rotation;
+			glm::vec3 scale;
+
+			ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(m), glm::value_ptr(translation), glm::value_ptr(rotation), glm::value_ptr(scale));
+
+			if (useSnap && currentOperation == ImGuizmo::ROTATE) {
+
+				auto Snap = [](float value, float step) {
+					return roundf(value / step) * step;
+				};
+
+				rotation.x = Snap(rotation.x, rotateSnap[0]);
+				rotation.y = Snap(rotation.y, rotateSnap[1]);
+				rotation.z = Snap(rotation.z, rotateSnap[2]);
+			}
+
+			obj->position = translation;
+			obj->rotation = rotation;
+			obj->scale = scale;
+		}
+
+	}
+
+	//----------------------------------------------------
+	// browser
+
+	ImGui::SetNextWindowPos(ImVec2(0, par.h - 200), ImGuiCond_Always);
+	ImGui::SetNextWindowSize(ImVec2(par.w, 200), ImGuiCond_Always);
+
+	ImGuiWindowFlags a_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+	
+	ImGui::Begin("Assets", nullptr, a_flags);
+
+	if (currentFolder != rootFolder) {
+
+		if (ImGui::Button("<-"))
+			currentFolder = currentFolder.parent_path();
+	}else {
+
+		ImGui::BeginDisabled();
+		ImGui::Button("<-");
+		ImGui::EndDisabled();
+	}
+
+	ImGui::SameLine();
+
+	if (ImGui::Button("Home"))
+		currentFolder = rootFolder;
+
+	ImGui::SameLine();
+
+	ImGui::TextUnformatted(currentFolder.string().c_str());
+
+	ImGui::Separator();
+
+	int columns = std::max(1, (int)(ImGui::GetContentRegionAvail().x / cellSize));
+
+	if (ImGui::BeginTable("AssetsTable", columns)) {
+
+		for (const auto& entry : std::filesystem::directory_iterator(currentFolder)) {
+
+			ImGui::TableNextColumn();
+
+			ImGui::PushID(entry.path().string().c_str());
+
+			if (entry.is_directory()) {
+
+				if (ImGui::Button("", ImVec2(64, 64))) {
+
+					currentFolder = entry.path();
+				}
+
+				ImGui::TextWrapped("%s", entry.path().filename().string().c_str());
+
+			}else {
+
+				auto ext = entry.path().extension().string();
+
+				if (ext == ".png" || ext == ".jpg" || ext == ".jpeg") {
+
+					std::string path = entry.path().string();
+
+					if (path.rfind("../", 0) == 0)
+						path.erase(0, 3);
+
+					GLuint tex = TextureManager::Get(path);
+
+					if (ImGui::ImageButton("", (ImTextureID)(intptr_t)tex, ImVec2(64, 64))) {
+
+						if(selectedObject != -1)
+							objects[selectedObject].obj_texture = tex;
+					}
+
+					ImGui::TextWrapped("%s", entry.path().stem().string().c_str());
+				}
+
+				if (ext == ".obj") {
+
+					std::string path = entry.path().string();
+
+					if (ImGui::Button("", ImVec2(64, 64))) {
+						
+						Object obj;
+						
+						init_obj(path.c_str(), obj);
+
+						obj.name = GenerateObjectName(entry.path().stem().string());
+
+						buffer(obj);
+
+						obj.position = glm::vec3(0.0f);
+						obj.rotation = glm::vec3(0.0f);
+						obj.scale = glm::vec3(50.0f);
+
+						objects.push_back(obj);
+						selectedObject = (int)(objects.size() - 1);
+					}
+
+					ImGui::TextWrapped("%s", entry.path().stem().string().c_str());
+				}
+			}
+
+			ImGui::PopID();
+		}
+
+		ImGui::EndTable();
+	}
+
+	ImGui::End();
+
+	//----------------------------------------------------
+	// tools
+
+	ImGui::Begin("Tools");
+
+	if (ImGui::RadioButton("Move", currentOperation == ImGuizmo::TRANSLATE))
+		currentOperation = ImGuizmo::TRANSLATE;
+
+	ImGui::SameLine();
+
+	if (ImGui::RadioButton("Rotate", currentOperation == ImGuizmo::ROTATE))
+		currentOperation = ImGuizmo::ROTATE;
+
+	ImGui::SameLine();
+
+	if (ImGui::RadioButton("Scale", currentOperation == ImGuizmo::SCALE))
+		currentOperation = ImGuizmo::SCALE;
+
+	ImGui::End();
+
+	//----------------------------------------------------
+	// hierarchy
+
+	ImGui::SetNextWindowPos(ImVec2(par.w - 300, 0), ImGuiCond_Always);
+	ImGui::SetNextWindowSize(ImVec2(300, par.h), ImGuiCond_Always);
+
+	ImGuiWindowFlags h_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+
+	ImGui::Begin("Hierarchy", nullptr, h_flags);
+
+	for (size_t i = 0; i < objects.size(); i++) {
+
+		ImGui::PushID((int)i);
+
+		bool selected = (selectedObject == (int)i);
+
+		if (ImGui::Selectable(objects[i].name.c_str(), selected))
+			selectedObject = i;
+
+		ImGui::PopID();
+	}
+
+	ImGui::End();
+
+	static float fps = 0.0f;
+
+	fps = ImGui::GetIO().Framerate;
+
+	ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Always);
+	ImGui::SetNextWindowBgAlpha(0.35f);
+
+	ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+
+	ImGui::Begin("HUD", nullptr, flags);
+
+	ImGui::Text("FPS: %.1f", fps);
+	ImGui::Text("Frame: %.3f ms", 1000.0f / fps);
+
+	ImGui::End();
+
+	ImGui::Render();
+	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}

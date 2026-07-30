@@ -61,6 +61,56 @@ glm::mat4 captureViews[] = {
     glm::lookAt(glm::vec3(0), glm::vec3(0, 0,-1), glm::vec3(0,-1,0))
 };
 
+std::vector<std::filesystem::path> pathTextures;
+
+std::string dirPath = "data/textures";
+
+std::filesystem::path rootFolder = "../data";
+std::filesystem::path currentFolder = rootFolder;
+
+std::unordered_map<std::string, int> objectNameCounters;
+
+std::string GenerateObjectName(const std::string& baseName) {
+
+	int& counter = objectNameCounters[baseName];
+
+	if (counter == 0) {
+
+		counter = 1;
+		return baseName;
+	}
+
+	return baseName + "_" + std::to_string(counter++);
+}
+
+void read_textures_path() {
+
+	pathTextures.clear();
+
+	for (const auto& entry : std::filesystem::directory_iterator("../" + dirPath)) {
+
+		if (!entry.is_regular_file())
+			continue;
+
+		pathTextures.push_back(entry.path());
+	}
+}
+
+GLuint TextureManager::Get(const std::string& path) {
+
+	auto it = textures.find(path);
+
+	if (it != textures.end())
+		return it->second;
+
+	GLuint texture = LoadObjTexture(path);
+
+	if (texture != 0)
+		textures[path] = texture;
+
+	return texture;
+}
+
 Object* GetSelectedObject() {
 
 	if (selectedObject < 0)
