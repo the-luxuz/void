@@ -12,6 +12,16 @@
 
 float totalTime = 0.0f;
 
+static float fps = 0.0f;
+
+enum class view_Mode {
+	EDITOR,
+	PLAY
+};
+
+view_Mode currentViewMode = view_Mode::EDITOR;
+
+
 void init() {
 
 	glEnable(GL_DEPTH_TEST);
@@ -27,6 +37,8 @@ void init() {
 	init_skybox(par.skybox.c_str());
 
 	read_textures_path();
+
+	ReloadFolder();
 
 	for (int i = 0; i < par.objects.size(); i++) {
 		
@@ -105,10 +117,14 @@ void update(SDL_Window* window) {
 		par.last_win_mode = par.win_mode;
 	}
 
-	//----------------------------------------------------
-	// grid
+	if (currentViewMode == view_Mode::EDITOR) {
+		
+		//----------------------------------------------------
+		// grid
 
-	update_grid(cameraPos);
+		update_grid(cameraPos);
+
+	}
 
 	//----------------------------------------------------
 	// obj
@@ -123,7 +139,29 @@ void update(SDL_Window* window) {
 	//----------------------------------------------------
 	// imgui / imguizmo
 
-	update_imgui_guizmo();
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplSDL3_NewFrame();
+	ImGui::NewFrame();
+
+	fps = ImGui::GetIO().Framerate;
+
+	ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Always);
+	ImGui::SetNextWindowBgAlpha(0.35f);
+
+	ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+
+	ImGui::Begin("HUD", nullptr, flags);
+
+	ImGui::Text("FPS: %.1f", fps);
+	ImGui::Text("Frame: %.3f ms", 1000.0f / fps);
+
+	ImGui::End();
+
+	if (currentViewMode == view_Mode::EDITOR)
+		update_imgui_guizmo();
+
+	ImGui::Render();
+	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 	//----------------------------------------------------
 
@@ -186,17 +224,7 @@ int main(int argc, char* args[]) {
 	constexpr float angle_speed = glm::radians(90.0f);
 	float radius_speed = 20.0f;
 
-	Uint64 previousCounter = SDL_GetPerformanceCounter();
-	Uint64 frequency = SDL_GetPerformanceFrequency();
-
 	while (!quit) {
-
-		Uint64 currentCounter = SDL_GetPerformanceCounter();
-
-		float dt = static_cast<float>(currentCounter - previousCounter) /
-			static_cast<float>(frequency);
-
-		previousCounter = currentCounter;
 
 		while (SDL_PollEvent(&event)) {
 
@@ -241,6 +269,16 @@ int main(int argc, char* args[]) {
 
 				if (event.key.scancode == SDL_SCANCODE_F5) {
 					read_textures_path();
+				}
+
+				if (event.key.scancode == SDL_SCANCODE_T) {
+
+					if(currentViewMode == view_Mode::EDITOR) {
+						currentViewMode = view_Mode::PLAY;
+					}
+					else {
+						currentViewMode = view_Mode::EDITOR;
+					}
 				}
 
 				break;
@@ -310,9 +348,9 @@ int main(int argc, char* args[]) {
 
 		const bool* keyboard = SDL_GetKeyboardState(nullptr);
 
-		controls(keyboard, angle_speed, radius_speed, dt);
+		controls(keyboard, angle_speed, radius_speed, 1 / fps);
 
-		totalTime += dt;
+		totalTime += 1.0f / fps;
 
 		update(window);
 	}

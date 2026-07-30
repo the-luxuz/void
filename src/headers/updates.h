@@ -22,13 +22,6 @@ static ImGuizmo::OPERATION currentOperation = ImGuizmo::TRANSLATE;
 
 std::unordered_map<std::string, GLuint> TextureManager::textures;
 
-const char* meshes[] = {
-	"Plane",
-	"Sphere",
-	"Cube",
-	"Cylinder"
-};
-
 void update_grid(glm::vec3 cameraPos) {
 
 	glUseProgram(program_grid);
@@ -128,10 +121,6 @@ void update_skybox() {
 
 void update_imgui_guizmo() {
 
-	ImGui_ImplOpenGL3_NewFrame();
-	ImGui_ImplSDL3_NewFrame();
-	ImGui::NewFrame();
-
 	ImGui::SetNextWindowPos(ImVec2(0, 0));
 	ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
 
@@ -215,8 +204,11 @@ void update_imgui_guizmo() {
 
 	if (currentFolder != rootFolder) {
 
-		if (ImGui::Button("<-"))
+		if (ImGui::Button("<-")) {
+		
 			currentFolder = currentFolder.parent_path();
+			ReloadFolder();
+		}
 	}else {
 
 		ImGui::BeginDisabled();
@@ -226,8 +218,11 @@ void update_imgui_guizmo() {
 
 	ImGui::SameLine();
 
-	if (ImGui::Button("Home"))
+	if (ImGui::Button("Home")) {
+
 		currentFolder = rootFolder;
+		ReloadFolder();
+	}
 
 	ImGui::SameLine();
 
@@ -239,7 +234,7 @@ void update_imgui_guizmo() {
 
 	if (ImGui::BeginTable("AssetsTable", columns)) {
 
-		for (const auto& entry : std::filesystem::directory_iterator(currentFolder)) {
+		for (auto& entry : folderEntries) {
 
 			ImGui::TableNextColumn();
 
@@ -249,7 +244,8 @@ void update_imgui_guizmo() {
 
 				if (ImGui::Button("", ImVec2(64, 64))) {
 
-					currentFolder = entry.path();
+					newFolder = entry.path();
+					reloadFolder = true;
 				}
 
 				ImGui::TextWrapped("%s", entry.path().filename().string().c_str());
@@ -267,7 +263,7 @@ void update_imgui_guizmo() {
 
 					GLuint tex = TextureManager::Get(path);
 
-					if (ImGui::ImageButton("", (ImTextureID)(intptr_t)tex, ImVec2(64, 64))) {
+					if (ImGui::ImageButton("", (ImTextureID)(intptr_t)tex, ImVec2(64, 64), ImVec2(0, 1), ImVec2(1, 0))) {
 
 						if(selectedObject != -1)
 							objects[selectedObject].obj_texture = tex;
@@ -308,17 +304,23 @@ void update_imgui_guizmo() {
 					if (path.rfind("../", 0) == 0)
 						path.erase(0, 3);
 
-					if (ImGui::Button("", ImVec2(64, 64))) {
-
+					if (ImGui::Button("", ImVec2(64, 64)))
 						init_skybox(path.c_str());
-
-					}
 
 					ImGui::TextWrapped("%s", entry.path().stem().string().c_str());
 				}
 			}
 
 			ImGui::PopID();
+		}
+
+		if (reloadFolder) {
+
+			currentFolder = newFolder;
+
+			ReloadFolder();
+
+			reloadFolder = false;
 		}
 
 		ImGui::EndTable();
@@ -369,23 +371,4 @@ void update_imgui_guizmo() {
 	}
 
 	ImGui::End();
-
-	static float fps = 0.0f;
-
-	fps = ImGui::GetIO().Framerate;
-
-	ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Always);
-	ImGui::SetNextWindowBgAlpha(0.35f);
-
-	ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
-
-	ImGui::Begin("HUD", nullptr, flags);
-
-	ImGui::Text("FPS: %.1f", fps);
-	ImGui::Text("Frame: %.3f ms", 1000.0f / fps);
-
-	ImGui::End();
-
-	ImGui::Render();
-	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }

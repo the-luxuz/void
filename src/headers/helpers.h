@@ -31,13 +31,6 @@ int selectedObject = -1;
 GLuint skyVAO;
 GLuint skyVBO;
 
-enum class view_Mode {
-	EDITOR,
-	PLAY
-};
-
-view_Mode currentViewMode = view_Mode::EDITOR;
-
 glm::mat4 view;
 glm::mat4 projection;
 
@@ -69,6 +62,19 @@ std::filesystem::path rootFolder = "../data";
 std::filesystem::path currentFolder = rootFolder;
 
 std::unordered_map<std::string, int> objectNameCounters;
+
+bool reloadFolder = false;
+std::filesystem::path newFolder;
+
+std::vector<std::filesystem::directory_entry> folderEntries;
+
+void ReloadFolder() {
+
+	folderEntries.clear();
+
+	for (auto& e : std::filesystem::directory_iterator(currentFolder))
+		folderEntries.push_back(e);
+}
 
 std::string GenerateObjectName(const std::string& baseName) {
 
