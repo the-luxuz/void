@@ -1,3 +1,5 @@
+#version 330 core
+
 uniform sampler2D equirectangularMap;
 
 in vec3 LocalPos;

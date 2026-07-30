@@ -38,6 +38,8 @@ struct Parser {
 		std::string obj_name;
 
 		std::string mesh;
+
+		std::string tex;
 		
 		glm::vec3 position;
 		glm::vec3 rotation;

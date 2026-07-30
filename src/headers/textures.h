@@ -124,3 +124,50 @@ void Load_Skybox(const std::string& path) {
         std::cout << "Formato no soportado: " << ext << std::endl;
    
 }
+
+GLuint LoadObjTexture(const std::string& path) {
+
+    stbi_set_flip_vertically_on_load(true);
+
+    int width, height, channels;
+
+    std::string fullPath = "../" + path;
+
+    unsigned char* data = stbi_load(fullPath.c_str(), &width, &height, &channels, 0);
+
+    if (!data) {
+
+        std::cout << "No se pudo cargar la textura\n";
+        return 0;
+    }
+
+    GLuint texture;
+
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+
+    GLenum format = channels == 4 ? GL_RGBA : channels == 3 ? GL_RGB : GL_RED;
+
+    glTexImage2D(
+        GL_TEXTURE_2D,
+        0,
+        format,
+        width,
+        height,
+        0,
+        format,
+        GL_UNSIGNED_BYTE,
+        data
+    );
+
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    stbi_image_free(data);
+
+    return texture;
+}

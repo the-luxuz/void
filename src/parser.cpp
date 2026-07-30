@@ -61,6 +61,9 @@ void Parser::load(const char* fname) {
         else if (id == "mesh")
             objects.back().mesh = value;
 
+        else if (id == "tex")
+            objects.back().tex = value;
+
         else if (id == "pos") {
 
             float x = std::stof(value);

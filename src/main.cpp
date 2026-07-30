@@ -56,6 +56,8 @@ void init() {
 
 		obj.mesh = par.objects[i].mesh;
 
+		obj.obj_texture = LoadObjTexture(par.objects[i].tex);
+
 		obj.name = par.objects[i].obj_name;
 
 		obj.position = par.objects[i].position;
@@ -168,6 +170,11 @@ void update(SDL_Window* window) {
 			glm::value_ptr(mvp)
 		);
 
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, obj.obj_texture);
+
+		glUniform1i(glGetUniformLocation(program, "uTexture"), 0);
+
 		glBindVertexArray(obj.vao);
 
 		glDrawElements(
@@ -192,7 +199,7 @@ void update(SDL_Window* window) {
 
 	glUniformMatrix4fv(glGetUniformLocation(program_skybox, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
 
-	glActiveTexture(GL_TEXTURE0);
+	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, cubeFBO);
 
 	glUniform1i(glGetUniformLocation(program_skybox, "skybox"), 0);

@@ -32,6 +32,8 @@ struct Object {
 
     std::string name;
 
+    GLuint obj_texture;
+
     std::vector<Vertex> vertices;
     std::vector<GLuint> indices;
 
