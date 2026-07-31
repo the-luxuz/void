@@ -109,6 +109,8 @@ void update_skybox() {
 
 	glUniformMatrix4fv(glGetUniformLocation(program_skybox, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
 
+	glUniform1f(glGetUniformLocation(program_skybox, "is_hdr"), is_hdr);
+
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, cubeFBO);
 

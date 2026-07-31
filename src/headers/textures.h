@@ -10,10 +10,13 @@
 #include <filesystem>
 #include <iostream>
 
+bool is_hdr = false;
+
 GLuint skybox_texture;
 
 GLuint LoadEXRTexture(const std::string& path) {
 
+    is_hdr = false;
     //std::cout << std::filesystem::current_path() << std::endl;
 
     std::string fullPath = "../" + path;
@@ -68,6 +71,7 @@ GLuint LoadEXRTexture(const std::string& path) {
 
 GLuint LoadHDRTexture(const std::string& path) {
 
+    is_hdr = true;
     stbi_set_flip_vertically_on_load(true);
 
     int width, height, channels;

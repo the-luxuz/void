@@ -6,7 +6,12 @@ out vec4 FragColor;
 
 uniform samplerCube skybox;
 
-void main() {
+uniform bool is_hdr;
 
-    FragColor = texture(skybox, TexCoords);
+void main() {
+    
+    if(is_hdr)
+        FragColor = texture(skybox, -TexCoords);
+    else
+        FragColor = texture(skybox, TexCoords);
 }
