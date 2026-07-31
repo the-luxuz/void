@@ -14,13 +14,15 @@ float totalTime = 0.0f;
 
 static float fps = 0.0f;
 
+Object objCopy;
+bool hasCopy = false;
+
 enum class view_Mode {
 	EDITOR,
 	PLAY
 };
 
 view_Mode currentViewMode = view_Mode::EDITOR;
-
 
 void init() {
 
@@ -57,6 +59,7 @@ void init() {
 
 		obj.position = par.objects[i].position;
 		obj.scale = par.objects[i].scale;
+
 		obj.rotation = par.objects[i].rotation;
 
 		objects.push_back(obj);
@@ -241,17 +244,20 @@ int main(int argc, char* args[]) {
 				if (event.key.scancode == SDL_SCANCODE_ESCAPE)
 					quit = true;
 
-				if (event.key.scancode == SDL_SCANCODE_BACKSPACE) {
+				if (currentViewMode == view_Mode::EDITOR) {
+				
+					if (event.key.scancode == SDL_SCANCODE_BACKSPACE) {
 
-					if (selectedObject != -1) {
+						if (selectedObject != -1) {
 
-						for (size_t i = 0; i < objects.size(); i++) {
+							for (size_t i = 0; i < objects.size(); i++) {
 
-							if (selectedObject == (int)i) {
+								if (selectedObject == (int)i) {
 
-								objects.erase(objects.begin() + i);
-								selectedObject = -1;
-								break;
+									objects.erase(objects.begin() + i);
+									selectedObject = -1;
+									break;
+								}
 							}
 						}
 					}
@@ -278,6 +284,47 @@ int main(int argc, char* args[]) {
 					}
 					else {
 						currentViewMode = view_Mode::EDITOR;
+					}
+				}
+
+				if (currentViewMode == view_Mode::EDITOR) {
+					
+					if (event.key.mod & SDL_KMOD_CTRL && event.key.scancode == SDL_SCANCODE_Z) {
+
+						if (selectedObject != -1 && !objects[selectedObject].undoStack.empty()) {
+
+							objects[selectedObject].redoStack.push_back(CaptureState(objects[selectedObject]));
+							ApplyState(objects[selectedObject], objects[selectedObject].undoStack.back());
+							objects[selectedObject].undoStack.pop_back();
+						}
+					}
+
+					if (event.key.mod & SDL_KMOD_CTRL && event.key.scancode == SDL_SCANCODE_Y) {
+
+						if (selectedObject != -1 && !objects[selectedObject].redoStack.empty()) {
+
+							objects[selectedObject].undoStack.push_back(CaptureState(objects[selectedObject]));
+							ApplyState(objects[selectedObject], objects[selectedObject].redoStack.back());
+							objects[selectedObject].redoStack.pop_back();
+						}
+					}
+
+					if (event.key.mod & SDL_KMOD_CTRL && event.key.scancode == SDL_SCANCODE_C) {
+
+						if (selectedObject != -1) {
+
+							objCopy = objects[selectedObject];
+							hasCopy = true;
+						}
+					}
+
+					if (event.key.mod & SDL_KMOD_CTRL && event.key.scancode == SDL_SCANCODE_V) {
+
+						if (hasCopy) {
+
+							objects.push_back(objCopy);
+							selectedObject = objects.size() - 1;
+						}
 					}
 				}
 

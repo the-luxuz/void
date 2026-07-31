@@ -68,6 +68,197 @@ std::filesystem::path newFolder;
 
 std::vector<std::filesystem::directory_entry> folderEntries;
 
+void FixCylinderSeam(Object& obj) {
+
+	for (size_t i = 0; i < obj.indices.size(); i += 3) {
+
+		Vertex& v0 = obj.vertices[obj.indices[i + 0]];
+		Vertex& v1 = obj.vertices[obj.indices[i + 1]];
+		Vertex& v2 = obj.vertices[obj.indices[i + 2]];
+
+		float u0 = v0.uv.x;
+		float u1 = v1.uv.x;
+		float u2 = v2.uv.x;
+
+		float minU = std::min({ u0, u1, u2 });
+		float maxU = std::max({ u0, u1, u2 });
+
+		if (maxU - minU > 0.5f) {
+
+			if (u0 < 0.5f) v0.uv.x += 1.0f;
+			if (u1 < 0.5f) v1.uv.x += 1.0f;
+			if (u2 < 0.5f) v2.uv.x += 1.0f;
+		}
+	}
+}
+
+void RestoreOriginalUV(Object& obj) {
+
+	for(auto& vertex : obj.vertices) {
+		vertex.uv = vertex.originalUV;
+	}
+}
+
+void GeneratePlanarUV(Object& obj, coord_types coordType) {
+
+	switch (coordType) {
+
+		case coord_types::XZ: {
+
+			float sizeX = obj.max.x - obj.min.x;
+			float sizeZ = obj.max.z - obj.min.z;
+
+			if (sizeX == 0.0f) sizeX = 1.0f;
+			if (sizeZ == 0.0f) sizeZ = 1.0f;
+
+			for (auto& vertex : obj.vertices) {
+
+				vertex.uv.x = (vertex.position.x - obj.min.x) / sizeX;
+				vertex.uv.y = (vertex.position.z - obj.min.z) / sizeZ;
+			}
+			break;
+		}
+
+		case coord_types::XY: {
+
+			float sizeX = obj.max.x - obj.min.x;
+			float sizeY = obj.max.y - obj.min.y;
+
+			if (sizeX == 0.0f) sizeX = 1.0f;
+			if (sizeY == 0.0f) sizeY = 1.0f;
+
+			for (auto& vertex : obj.vertices) {
+
+				vertex.uv.x = (vertex.position.x - obj.min.x) / sizeX;
+				vertex.uv.y = (vertex.position.y - obj.min.y) / sizeY;
+			}
+			break;
+		}
+
+		case coord_types::YZ: {
+
+			float sizeY = obj.max.y - obj.min.y;
+			float sizeZ = obj.max.z - obj.min.z;
+
+			if (sizeY == 0.0f) sizeY = 1.0f;
+			if (sizeZ == 0.0f) sizeZ = 1.0f;
+
+			for (auto& vertex : obj.vertices) {
+
+				vertex.uv.x = (vertex.position.y - obj.min.y) / sizeY;
+				vertex.uv.y = (vertex.position.z - obj.min.z) / sizeZ;
+			}
+			break;
+		}
+	}
+}
+
+void GenerateCubeUV(Object& obj) {
+
+
+}
+
+void GenerateCylindricalUV(Object& obj, cylinder_axis axis) {
+
+	static float doble_pi = 2.0f * glm::pi<float>();
+
+	switch (axis) {
+	
+		case cylinder_axis::X: {
+	
+			float size = obj.max.x - obj.min.x;
+			if (size == 0.0f) 
+				size = 1.0f;
+
+			for (auto& vertex : obj.vertices) {
+
+				float angle = atan2f(vertex.position.y, vertex.position.z);
+
+				float u = (angle + glm::pi<float>()) / (doble_pi);
+				vertex.uv.x = 1.0f - u;
+				vertex.uv.y = (vertex.position.x - obj.min.x) / size;
+			}
+
+			break;
+		}
+
+		case cylinder_axis::Y: {
+
+			float size = obj.max.y - obj.min.y;
+			if (size == 0.0f) 
+				size = 1.0f;
+
+			for (auto& vertex : obj.vertices) {
+
+				float angle = atan2f(vertex.position.z, vertex.position.x);
+
+				float u = (angle + glm::pi<float>()) / (doble_pi);
+				vertex.uv.x = 1.0f - u;
+				vertex.uv.y = (vertex.position.y - obj.min.y) / size;
+			}
+
+			break;
+		}
+
+		case cylinder_axis::Z: {
+
+			float size = obj.max.z - obj.min.z;
+			if (size == 0.0f)
+				size = 1.0f;
+
+			for (auto& vertex : obj.vertices) {
+
+				float angle = atan2f(vertex.position.y, vertex.position.x);
+
+				float u = (angle + glm::pi<float>()) / (doble_pi);
+				vertex.uv.x = 1.0f - u;
+				vertex.uv.y = (vertex.position.z - obj.min.z) / size;
+			}
+
+			break;
+		}
+	}
+
+	FixCylinderSeam(obj);
+}
+
+void GenerateSphericalUV(Object& obj) {
+
+
+}
+
+void UpdateMapping(Object& obj) {
+
+	switch (obj.mapping) {
+
+	case TextureMapping::UV:
+		RestoreOriginalUV(obj);
+		break;
+
+	case TextureMapping::Planar:
+		GeneratePlanarUV(obj, obj.coordType);
+		break;
+
+	case TextureMapping::Cubic:
+		GenerateCubeUV(obj);
+		break;
+
+	case TextureMapping::Cylindrical:
+		GenerateCylindricalUV(obj, obj.cyaxisType);
+		break;
+
+	case TextureMapping::Spherical:
+		GenerateSphericalUV(obj);
+		break;
+	}
+
+	glBindBuffer(GL_ARRAY_BUFFER, obj.vbo);
+	glBufferSubData(GL_ARRAY_BUFFER,
+		0,
+		obj.vertices.size() * sizeof(Vertex),
+		obj.vertices.data());
+}
+
 void ReloadFolder() {
 
 	folderEntries.clear();
@@ -128,7 +319,7 @@ Object* GetSelectedObject() {
 	return &objects[selectedObject];
 }
 
-glm::mat4 GetModelMatrix(Object obj) {
+glm::mat4 GetModelMatrix(Object& obj) {
 
 	glm::mat4 m(1);
 

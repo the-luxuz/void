@@ -18,6 +18,8 @@ glm::mat4 m;
 
 const float cellSize = 90.0f;
 
+ObjectState prevState;
+
 static ImGuizmo::OPERATION currentOperation = ImGuizmo::TRANSLATE;
 
 std::unordered_map<std::string, GLuint> TextureManager::textures;
@@ -62,7 +64,6 @@ void update_objects() {
 
 	glUniform1i(glGetUniformLocation(program, "uTexture"), 0);
 
-
 	for (Object& obj : objects) {
 
 		glm::mat4 model = GetModelMatrix(obj);
@@ -92,6 +93,7 @@ void update_objects() {
 			nullptr
 		);
 	}
+
 }
 
 void update_skybox() {
@@ -139,7 +141,7 @@ void update_imgui_guizmo() {
 		ImGuizmo::SetRect(0, 0, (float)par.w, (float)par.h);
 
 		float moveSnap[3] = { 12.5, 12.5, 12.5 };
-		float scaleSnap[3] = { 12.5f, 12.5f, 12.5f };
+		float scaleSnap[3] = { 0.125, 0.125, 0.125 };
 		float rotateSnap[3] = { 11.25, 11.25, 11.25 };
 
 		snap = nullptr;
@@ -166,17 +168,31 @@ void update_imgui_guizmo() {
 
 		ImGuizmo::Manipulate(glm::value_ptr(view), glm::value_ptr(projection), currentOperation, ImGuizmo::LOCAL, glm::value_ptr(m), nullptr, snap);
 
+		static bool wasUsing = false;
+
+		bool usingGizmo = ImGuizmo::IsUsing();
+
+		if (usingGizmo && !wasUsing) {
+
+			prevState = CaptureState(*obj);
+		}
+
 		if (ImGuizmo::IsUsing()) {
 
-			glm::vec3 translation;
-			glm::vec3 rotation;
-			glm::vec3 scale;
+			glm::vec3 translation = glm::vec3(0.0f);
+			glm::vec3 scale = glm::vec3(50.0f);
+			glm::vec3 rotation = glm::vec3(0.0f);
 
 			ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(m), glm::value_ptr(translation), glm::value_ptr(rotation), glm::value_ptr(scale));
+
+			if (currentOperation == ImGuizmo::SCALE && scale.x < 1.0f && scale.y < 1.0f && scale.z < 1.0f && obj->scale.x > 1.0f) {
+				scale *= 1000.0f;
+			}
 
 			if (useSnap && currentOperation == ImGuizmo::ROTATE) {
 
 				auto Snap = [](float value, float step) {
+
 					return roundf(value / step) * step;
 				};
 
@@ -186,11 +202,19 @@ void update_imgui_guizmo() {
 			}
 
 			obj->position = translation;
-			obj->rotation = rotation;
 			obj->scale = scale;
+			obj->rotation = rotation;
 		}
 
-	}
+		if (!usingGizmo && wasUsing) {
+
+			obj->undoStack.push_back(prevState);
+			obj->redoStack.clear();
+		}
+
+		wasUsing = usingGizmo;
+	
+}
 
 	//----------------------------------------------------
 	// browser
@@ -345,6 +369,61 @@ void update_imgui_guizmo() {
 
 	if (ImGui::RadioButton("Scale", currentOperation == ImGuizmo::SCALE))
 		currentOperation = ImGuizmo::SCALE;
+
+	static const char* mappings[] = {
+		"UV",
+		"Planar",
+		"Cube",
+		"Cylinder",
+		"Sphere"
+	};
+
+	static const char* planarCoords[] = {
+		"XZ",
+		"XY",
+		"YZ"
+	};
+	
+	static const char* cylinderAxes[] = {
+		"X",
+		"Y",
+		"Z"
+	};
+
+	if (selectedObject != -1) {
+	
+		obj = GetSelectedObject();
+
+		int current = (int)obj->mapping;
+
+		if (ImGui::Combo("Mapping", &current, mappings, IM_ARRAYSIZE(mappings))) {
+
+			obj->mapping = (TextureMapping)current;
+			UpdateMapping(*obj);
+		}
+
+		if (obj->mapping == TextureMapping::Planar) {
+
+			int coord = (int)obj->coordType;
+
+			if (ImGui::Combo("Plane", &coord, planarCoords, IM_ARRAYSIZE(planarCoords))) {
+
+				obj->coordType = (coord_types)coord;
+				UpdateMapping(*obj);
+			}
+		}
+
+		if (obj->mapping == TextureMapping::Cylindrical) {
+
+			int coord = (int)obj->cyaxisType;
+
+			if (ImGui::Combo("Cylinder", &coord, cylinderAxes, IM_ARRAYSIZE(cylinderAxes))) {
+
+				obj->cyaxisType = (cylinder_axis)coord;
+				UpdateMapping(*obj);
+			}
+		}
+	}
 
 	ImGui::End();
 
