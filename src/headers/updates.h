@@ -187,10 +187,6 @@ void update_imgui_guizmo() {
 
 			ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(m), glm::value_ptr(translation), glm::value_ptr(rotation), glm::value_ptr(scale));
 
-			if (currentOperation == ImGuizmo::SCALE && scale.x < 1.0f && scale.y < 1.0f && scale.z < 1.0f && obj->scale.x > 1.0f) {
-				scale *= 1000.0f;
-			}
-
 			if (useSnap && currentOperation == ImGuizmo::ROTATE) {
 
 				auto Snap = [](float value, float step) {

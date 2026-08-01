@@ -68,7 +68,7 @@ std::filesystem::path newFolder;
 
 std::vector<std::filesystem::directory_entry> folderEntries;
 
-void FixCylinderSeam(Object& obj) {
+void FixCylinder(Object& obj) {
 
 	for (size_t i = 0; i < obj.indices.size(); i += 3) {
 
@@ -90,6 +90,48 @@ void FixCylinderSeam(Object& obj) {
 			if (u2 < 0.5f) v2.uv.x += 1.0f;
 		}
 	}
+}
+
+void FixSphere(Object& obj) {
+
+	std::vector<Vertex> newVertices = obj.vertices;
+	std::vector<unsigned int> newIndices = obj.indices;
+
+	for (size_t i = 0; i < newIndices.size(); i += 3) {
+
+		unsigned int ids[3] = {
+			newIndices[i + 0],
+			newIndices[i + 1],
+			newIndices[i + 2]
+		};
+
+		float u[3] = {
+			newVertices[ids[0]].uv.x,
+			newVertices[ids[1]].uv.x,
+			newVertices[ids[2]].uv.x
+		};
+
+		float minU = std::min({ u[0], u[1], u[2] });
+		float maxU = std::max({ u[0], u[1], u[2] });
+
+		if (maxU - minU > 0.5f) {
+
+			for (int k = 0; k < 3; ++k) {
+
+				if (u[k] < 0.5f) {
+
+					Vertex v = newVertices[ids[k]];
+					v.uv.x += 1.0f;
+
+					newVertices.push_back(v);
+					newIndices[i + k] = (unsigned int)newVertices.size() - 1;
+				}
+			}
+		}
+	}
+
+	obj.vertices = std::move(newVertices);
+	obj.indices = std::move(newIndices);
 }
 
 void RestoreOriginalUV(Object& obj) {
@@ -155,7 +197,56 @@ void GeneratePlanarUV(Object& obj, coord_types coordType) {
 
 void GenerateCubeUV(Object& obj) {
 
+	for (auto& v : obj.vertices) {
+	
+		glm::vec3 n = glm::normalize(v.normal);
 
+		float ax = fabs(n.x);
+		float ay = fabs(n.y);
+		float az = fabs(n.z);
+
+		if (ax >= ay && ax >= az) {
+
+			if (n.x > 0) {
+
+				v.uv.x = (-v.position.z - obj.min.z) / (obj.max.z - obj.min.z);
+
+				v.uv.y = (v.position.y - obj.min.y) / (obj.max.y - obj.min.y);
+			}else {
+
+				v.uv.x = (v.position.z - obj.min.z) / (obj.max.z - obj.min.z);
+
+				v.uv.y = (v.position.y - obj.min.y) / (obj.max.y - obj.min.y);
+			}
+		}else if (ay >= ax && ay >= az) {
+
+			if (n.y > 0) {
+
+				v.uv.x = (v.position.x - obj.min.x) / (obj.max.x - obj.min.x);
+
+				v.uv.y = (-v.position.z - obj.min.z) / (obj.max.z - obj.min.z);
+			}else {
+
+				v.uv.x = (v.position.x - obj.min.x) / (obj.max.x - obj.min.x);
+
+				v.uv.y = (v.position.z - obj.min.z) / (obj.max.z - obj.min.z);
+			}
+		}else {
+
+			if (n.z > 0) {
+
+				v.uv.x = (v.position.x - obj.min.x) / (obj.max.x - obj.min.x);
+
+				v.uv.y = (v.position.y - obj.min.y) / (obj.max.y - obj.min.y);
+			}
+			else {
+
+				v.uv.x = (-v.position.x - obj.min.x) / (obj.max.x - obj.min.x);
+
+				v.uv.y = (v.position.y - obj.min.y) / (obj.max.y - obj.min.y);
+			}
+		}
+	}
 }
 
 void GenerateCylindricalUV(Object& obj, cylinder_axis axis) {
@@ -219,12 +310,25 @@ void GenerateCylindricalUV(Object& obj, cylinder_axis axis) {
 		}
 	}
 
-	FixCylinderSeam(obj);
+	FixCylinder(obj);
 }
 
 void GenerateSphericalUV(Object& obj) {
 
+	float TWO_PI = glm::two_pi<float>();
 
+	for (auto& v : obj.vertices) {
+
+		glm::vec3 p = glm::normalize(v.position);
+
+		float u = atan2(p.z, p.x);
+		float vv = asin(p.y);
+
+		v.uv.x = (u + glm::pi<float>()) / TWO_PI;
+		v.uv.y = (vv + glm::half_pi<float>()) / glm::pi<float>();
+	}
+
+	FixSphere(obj);
 }
 
 void UpdateMapping(Object& obj) {
