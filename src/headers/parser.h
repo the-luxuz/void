@@ -33,6 +33,8 @@ struct Parser {
 	float fov;
 	std::string skybox;
 
+	bool VSync;
+
 	struct Transform {
 
 		std::string obj_name;

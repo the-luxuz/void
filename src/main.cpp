@@ -196,6 +196,11 @@ int main(int argc, char* args[]) {
 
 	SDL_GLContext context = SDL_GL_CreateContext(window);
 
+	if (!par.VSync)
+		SDL_GL_SetSwapInterval(0);
+	else
+		SDL_GL_SetSwapInterval(1);
+	
 	glewExperimental = GL_TRUE;
 	GLenum err = glewInit();
 
@@ -207,7 +212,7 @@ int main(int argc, char* args[]) {
 
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
-
+	
 	ImGuiIO& io = ImGui::GetIO();
 	(void)io;
 

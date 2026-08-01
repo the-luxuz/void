@@ -53,6 +53,9 @@ void Parser::load(const char* fname) {
         else if (id == "fov")
             fov = std::stoi(value);
 
+        else if (id == "VSync")
+            VSync = std::stoi(value);
+
         else if (id == "obj") {
             objects.emplace_back();
             objects.back().obj_name = value;
