@@ -68,6 +68,73 @@ std::filesystem::path newFolder;
 
 std::vector<std::filesystem::directory_entry> folderEntries;
 
+glm::ivec2 windowedSize;
+
+void ApplyWindowMode(SDL_Window* window)
+{
+	SDL_DisplayID display = SDL_GetDisplayForWindow(window);
+
+	SDL_Rect bounds;
+	SDL_GetDisplayBounds(display, &bounds);
+
+	switch (par.win_mode)
+	{
+	case Parser::window_mode::WINDOWED:
+	{
+		SDL_SetWindowFullscreen(window, false);
+
+		SDL_SetWindowBordered(window, true);
+
+		SDL_SetWindowSize(window,
+			windowedSize.x,
+			windowedSize.y);
+
+		SDL_SetWindowPosition(
+			window,
+			SDL_WINDOWPOS_CENTERED,
+			SDL_WINDOWPOS_CENTERED);
+
+		par.w = windowedSize.x;
+		par.h = windowedSize.y;
+
+		break;
+	}
+
+	case Parser::window_mode::WINDOWED_BORDERLESS:
+	{
+		SDL_SetWindowFullscreen(window, false);
+
+		SDL_SetWindowBordered(window, false);
+
+		SDL_SetWindowPosition(window,
+			bounds.x,
+			bounds.y);
+
+		SDL_SetWindowSize(window,
+			bounds.w,
+			bounds.h);
+
+		par.w = bounds.w;
+		par.h = bounds.h;
+
+		break;
+	}
+
+	case Parser::window_mode::FULLSCREEN:
+	{
+		SDL_SetWindowFullscreen(window, true);
+
+		SDL_GetWindowSizeInPixels(window,
+			&par.w,
+			&par.h);
+
+		break;
+	}
+	}
+
+	par.last_win_mode = par.win_mode;
+}
+
 void FixCylinder(Object& obj) {
 
 	for (size_t i = 0; i < obj.indices.size(); i += 3) {
@@ -136,12 +203,14 @@ void FixSphere(Object& obj) {
 
 void RestoreOriginalUV(Object& obj) {
 
-	for(auto& vertex : obj.vertices) {
-		vertex.uv = vertex.originalUV;
-	}
+	obj.vertices = obj.original_vertices;
+	obj.indices = obj.original_indices;
 }
 
 void GeneratePlanarUV(Object& obj, coord_types coordType) {
+
+	obj.vertices = obj.original_vertices;
+	obj.indices = obj.original_indices;
 
 	switch (coordType) {
 
@@ -197,6 +266,9 @@ void GeneratePlanarUV(Object& obj, coord_types coordType) {
 
 void GenerateCubeUV(Object& obj) {
 
+	obj.vertices = obj.original_vertices;
+	obj.indices = obj.original_indices;
+
 	for (auto& v : obj.vertices) {
 	
 		glm::vec3 n = glm::normalize(v.normal);
@@ -250,6 +322,9 @@ void GenerateCubeUV(Object& obj) {
 }
 
 void GenerateCylindricalUV(Object& obj, cylinder_axis axis) {
+
+	obj.vertices = obj.original_vertices;
+	obj.indices = obj.original_indices;
 
 	static float doble_pi = 2.0f * glm::pi<float>();
 
@@ -315,7 +390,10 @@ void GenerateCylindricalUV(Object& obj, cylinder_axis axis) {
 
 void GenerateSphericalUV(Object& obj) {
 
-	float TWO_PI = glm::two_pi<float>();
+	obj.vertices = obj.original_vertices;
+	obj.indices = obj.original_indices;
+
+	constexpr float TWO_PI = glm::two_pi<float>();
 
 	for (auto& v : obj.vertices) {
 
@@ -357,10 +435,14 @@ void UpdateMapping(Object& obj) {
 	}
 
 	glBindBuffer(GL_ARRAY_BUFFER, obj.vbo);
-	glBufferSubData(GL_ARRAY_BUFFER,
-		0,
-		obj.vertices.size() * sizeof(Vertex),
-		obj.vertices.data());
+
+	glBindBuffer(GL_ARRAY_BUFFER, obj.vbo);
+
+	glBufferData(GL_ARRAY_BUFFER, obj.vertices.size() * sizeof(Vertex), obj.vertices.data(), GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, obj.ebo);
+
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, obj.indices.size() * sizeof(unsigned int), obj.indices.data(), GL_STATIC_DRAW);
 }
 
 void ReloadFolder() {

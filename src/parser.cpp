@@ -33,7 +33,7 @@ void Parser::load(const char* fname) {
         else if (id == "height")
             h = std::stoi(value);
 
-        else if (id == "window_mode ") {
+        else if (id == "window_mode") {
 
             if (value == "windowed")
                 win_mode = window_mode::WINDOWED;

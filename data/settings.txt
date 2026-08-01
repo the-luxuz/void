@@ -2,7 +2,7 @@
 wname void
 width 1280
 height 720
-window_mode windowed // fullscreen, borderless, windowed
+window_mode borderless // fullscreen, borderless, windowed
 VSync 0
 
 #camera

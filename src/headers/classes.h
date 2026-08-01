@@ -74,6 +74,9 @@ struct Object {
     std::vector<Vertex> vertices;
     std::vector<GLuint> indices;
 
+    std::vector<Vertex> original_vertices;
+    std::vector<GLuint> original_indices;
+
     glm::vec3 position;
     glm::vec3 rotation;
     glm::vec3 scale;

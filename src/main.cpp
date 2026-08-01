@@ -17,6 +17,9 @@ static float fps = 0.0f;
 Object objCopy;
 bool hasCopy = false;
 
+SDL_DisplayID display;
+SDL_Rect rect;
+
 enum class view_Mode {
 	EDITOR,
 	PLAY
@@ -50,6 +53,9 @@ void init() {
 		init_obj(fullPath.c_str(), obj);
 
 		buffer(obj);
+
+		obj.original_vertices = obj.vertices;
+		obj.original_indices = obj.indices;
 
 		obj.mesh = par.objects[i].mesh;
 
@@ -167,6 +173,12 @@ void update(SDL_Window* window) {
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 	//----------------------------------------------------
+	// windows
+
+	if (par.last_win_mode != par.win_mode)
+		ApplyWindowMode(window);
+
+	//----------------------------------------------------
 
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glBindVertexArray(0);
@@ -179,20 +191,17 @@ int main(int argc, char* args[]) {
 
 	par.load("../data/settings.txt");
 
+	windowedSize = { par.w, par.h };
+
 	SDL_Init(SDL_INIT_VIDEO);
 
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
-	SDL_Window* window;
+	SDL_Window* window = SDL_CreateWindow(par.win_name.c_str(), par.w, par.h, SDL_WINDOW_OPENGL);
 
-	if (par.win_mode == Parser::window_mode::FULLSCREEN)
-		window = SDL_CreateWindow(par.win_name.c_str(), par.w, par.h, SDL_WINDOW_FULLSCREEN);
-	else if(par.win_mode == Parser::window_mode::WINDOWED_BORDERLESS)
-		window = SDL_CreateWindow(par.win_name.c_str(), par.w, par.h, SDL_WINDOW_BORDERLESS);
-	else
-		window = SDL_CreateWindow(par.win_name.c_str(), par.w, par.h, SDL_WINDOW_OPENGL);
+	ApplyWindowMode(window);
 
 	SDL_GLContext context = SDL_GL_CreateContext(window);
 
@@ -268,14 +277,22 @@ int main(int argc, char* args[]) {
 					}
 				}
 
-				if(event.key.scancode == SDL_SCANCODE_F11) {
+				if (event.key.scancode == SDL_SCANCODE_F11) {
 
-					if(par.win_mode == Parser::window_mode::FULLSCREEN)
-						par.win_mode = Parser::window_mode::WINDOWED;
-					else if (par.win_mode == Parser::window_mode::WINDOWED)
-						par.win_mode = Parser::window_mode::WINDOWED_BORDERLESS;
-					else
-						par.win_mode = Parser::window_mode::FULLSCREEN;
+					switch (par.win_mode) {
+
+						case Parser::window_mode::WINDOWED:
+							par.win_mode = Parser::window_mode::WINDOWED_BORDERLESS;
+							break;
+
+						case Parser::window_mode::WINDOWED_BORDERLESS:
+							par.win_mode = Parser::window_mode::FULLSCREEN;
+							break;
+
+						case Parser::window_mode::FULLSCREEN:
+							par.win_mode = Parser::window_mode::WINDOWED;
+							break;
+					}
 				}
 
 				if (event.key.scancode == SDL_SCANCODE_F5) {

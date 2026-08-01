@@ -312,6 +312,11 @@ void update_imgui_guizmo() {
 						obj.rotation = glm::vec3(0.0f);
 						obj.scale = glm::vec3(50.0f);
 
+						obj.original_vertices = obj.vertices;
+						obj.original_indices = obj.indices;
+
+						obj.obj_texture = LoadObjTexture(par.objects[0].tex);
+
 						objects.push_back(obj);
 						selectedObject = (int)(objects.size() - 1);
 					}
