@@ -45,11 +45,17 @@ void update_grid(glm::vec3 cameraPos) {
 
 	glBindVertexArray(gridVAO);
 
-	glDrawArrays(
-		GL_LINES,
+	glBindBuffer(GL_ARRAY_BUFFER, gridVBO);
+
+	glVertexAttribPointer(
 		0,
-		gridVertexCount
-	);
+		3,
+		GL_FLOAT,
+		GL_FALSE,
+		sizeof(glm::vec3),
+		(void*)0);
+
+	glEnableVertexAttribArray(0);
 
 	glBindVertexArray(0);
 }

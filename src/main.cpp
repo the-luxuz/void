@@ -96,36 +96,6 @@ void update(SDL_Window* window) {
 		cam.farPlane
 	);
 
-	if (par.last_win_mode != par.win_mode) {
-
-		switch (par.win_mode) {
-
-		case Parser::window_mode::WINDOWED:
-			SDL_SetWindowFullscreen(window, false);
-			SDL_RestoreWindow(window);
-			SDL_SetWindowBordered(window, true);
-			break;
-
-		case Parser::window_mode::WINDOWED_BORDERLESS:
-			SDL_SetWindowFullscreen(window, false);
-			SDL_SetWindowBordered(window, false);
-			SDL_MaximizeWindow(window);
-			break;
-
-		case Parser::window_mode::FULLSCREEN:
-			SDL_SetWindowFullscreen(window, true);
-			break;
-		}
-
-		int w, h;
-		SDL_GetWindowSizeInPixels(window, &w, &h);
-
-		par.w = w;
-		par.h = h;
-
-		par.last_win_mode = par.win_mode;
-	}
-
 	if (currentViewMode == view_Mode::EDITOR) {
 		
 		//----------------------------------------------------
@@ -177,6 +147,7 @@ void update(SDL_Window* window) {
 
 	if (par.last_win_mode != par.win_mode)
 		ApplyWindowMode(window);
+
 
 	//----------------------------------------------------
 

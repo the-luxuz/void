@@ -75,61 +75,62 @@ void ApplyWindowMode(SDL_Window* window)
 	SDL_DisplayID display = SDL_GetDisplayForWindow(window);
 
 	SDL_Rect bounds;
+
 	SDL_GetDisplayBounds(display, &bounds);
 
-	switch (par.win_mode)
-	{
-	case Parser::window_mode::WINDOWED:
-	{
-		SDL_SetWindowFullscreen(window, false);
+	switch (par.win_mode) {
 
-		SDL_SetWindowBordered(window, true);
+		case Parser::window_mode::WINDOWED: {
 
-		SDL_SetWindowSize(window,
-			windowedSize.x,
-			windowedSize.y);
+			SDL_SetWindowFullscreen(window, false);
 
-		SDL_SetWindowPosition(
-			window,
-			SDL_WINDOWPOS_CENTERED,
-			SDL_WINDOWPOS_CENTERED);
+			SDL_SetWindowBordered(window, true);
 
-		par.w = windowedSize.x;
-		par.h = windowedSize.y;
+			SDL_SetWindowSize(window,
+				windowedSize.x,
+				windowedSize.y);
 
-		break;
-	}
+			SDL_SetWindowPosition(
+				window,
+				SDL_WINDOWPOS_CENTERED,
+				SDL_WINDOWPOS_CENTERED);
 
-	case Parser::window_mode::WINDOWED_BORDERLESS:
-	{
-		SDL_SetWindowFullscreen(window, false);
+			par.w = windowedSize.x;
+			par.h = windowedSize.y;
 
-		SDL_SetWindowBordered(window, false);
+			break;
+		}
 
-		SDL_SetWindowPosition(window,
-			bounds.x,
-			bounds.y);
+		case Parser::window_mode::WINDOWED_BORDERLESS: {
 
-		SDL_SetWindowSize(window,
-			bounds.w,
-			bounds.h);
+			SDL_SetWindowFullscreen(window, false);
 
-		par.w = bounds.w;
-		par.h = bounds.h;
+			SDL_SetWindowBordered(window, false);
 
-		break;
-	}
+			SDL_SetWindowPosition(window,
+				bounds.x,
+				bounds.y);
 
-	case Parser::window_mode::FULLSCREEN:
-	{
-		SDL_SetWindowFullscreen(window, true);
+			SDL_SetWindowSize(window,
+				bounds.w,
+				bounds.h);
 
-		SDL_GetWindowSizeInPixels(window,
-			&par.w,
-			&par.h);
+			par.w = bounds.w;
+			par.h = bounds.h;
 
-		break;
-	}
+			break;
+		}
+
+		case Parser::window_mode::FULLSCREEN: {
+
+			SDL_SetWindowFullscreen(window, true);
+
+			SDL_GetWindowSizeInPixels(window,
+				&par.w,
+				&par.h);
+
+			break;
+		}
 	}
 
 	par.last_win_mode = par.win_mode;
@@ -813,7 +814,6 @@ static void Create_Grid() {
 	glGenBuffers(1, &gridVBO);
 
 	glBindVertexArray(gridVAO);
-
 	glBindBuffer(GL_ARRAY_BUFFER, gridVBO);
 
 	glBufferData(
