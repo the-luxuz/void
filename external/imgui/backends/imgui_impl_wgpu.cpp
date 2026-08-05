@@ -7,6 +7,8 @@
 //  [X] Renderer: Large meshes support (64k+ vertices) even with 16-bit indices (ImGuiBackendFlags_RendererHasVtxOffset).
 //  [X] Renderer: Expose selected render state for draw callbacks to use. Access in '(ImGui_ImplXXXX_RenderState*)GetPlatformIO().Renderer_RenderState'.
 //  [X] Renderer: Texture updates support for dynamic font system (ImGuiBackendFlags_RendererHasTextures).
+// Missing features or Issues:
+//  [ ] Renderer: Multi-viewport support (multiple windows), useful for desktop.
 
 // Read imgui_impl_wgpu.h about how to use the IMGUI_IMPL_WEBGPU_BACKEND_WGPU or IMGUI_IMPL_WEBGPU_BACKEND_DAWN flags.
 
@@ -449,7 +451,7 @@ static void ImGui_ImplWGPU_SetupRenderState(ImDrawData* draw_data, WGPURenderPas
     wgpuRenderPassEncoderSetBindGroup(ctx, 0, bd->renderResources.CommonBindGroupLinear, 0, nullptr);
 
     // Setup blend factor
-    WGPUColor blend_color = { 0.f, 0.f, 0.f, 0.f };
+    WGPUColor blend_color = { 0.0f, 0.0f, 0.0f, 0.0f };
     wgpuRenderPassEncoderSetBlendConstant(ctx, &blend_color);
 }
 
@@ -844,8 +846,7 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
 
     ImGui_ImplWGPU_CreateUniformBuffer();
 
-    // Create samplers (Linear/Nearest)
-    // (Bilinear sampling is required by default. Set 'io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false' to allow point/nearest sampling)
+    // Create samplers (Linear/Nearest) (bilinear sampling is required)
     WGPUSamplerDescriptor sampler_desc = {};
     sampler_desc.addressModeU = WGPUAddressMode_ClampToEdge;
     sampler_desc.addressModeV = WGPUAddressMode_ClampToEdge;

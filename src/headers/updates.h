@@ -106,10 +106,10 @@ void update_objects() {
 
 void update_skybox() {
 	
+	glUseProgram(program_skybox);
+
 	glDepthFunc(GL_LEQUAL);
 	glDisable(GL_CULL_FACE);
-
-	glUseProgram(program_skybox);
 
 	glm::mat4 skyView = glm::mat4(glm::mat3(view));
 
@@ -120,7 +120,7 @@ void update_skybox() {
 	glUniform1f(glGetUniformLocation(program_skybox, "is_hdr"), is_hdr);
 
 	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, viewportFBO);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap);
 
 	glUniform1i(glGetUniformLocation(program_skybox, "skybox"), 1);
 
@@ -133,7 +133,7 @@ void update_skybox() {
 
 void update_imgui_guizmo() {
 
-	ImGui::Begin("ViewPort", nullptr, ImGuizmo::IsUsing() ? ImGuiWindowFlags_NoMove : 0);
+	ImGui::Begin("ViewPort", nullptr);
 
 	ImVec2 pos = ImGui::GetCursorScreenPos();
 
@@ -234,10 +234,7 @@ void update_imgui_guizmo() {
 	//----------------------------------------------------
 	// browser
 
-	ImGui::SetNextWindowPos(ImVec2(0, par.h - 200), ImGuiCond_Always);
-	ImGui::SetNextWindowSize(ImVec2(par.w, 200), ImGuiCond_Always);
-
-	ImGuiWindowFlags a_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+	ImGuiWindowFlags a_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
 	
 	ImGui::Begin("Assets", nullptr, a_flags);
 
@@ -450,10 +447,7 @@ void update_imgui_guizmo() {
 	//----------------------------------------------------
 	// hierarchy
 
-	ImGui::SetNextWindowPos(ImVec2(par.w - 300, 0), ImGuiCond_Always);
-	ImGui::SetNextWindowSize(ImVec2(300, par.h), ImGuiCond_Always);
-
-	ImGuiWindowFlags h_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+	ImGuiWindowFlags h_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
 
 	ImGui::Begin("Hierarchy", nullptr, h_flags);
 

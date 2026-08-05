@@ -8,6 +8,8 @@
 GLuint viewportFBO;
 GLuint dynamic_cubemap;
 
+GLuint envCubemap;
+
 GLuint captureFBO;
 GLuint captureRBO;
 
@@ -72,6 +74,83 @@ std::filesystem::path newFolder;
 std::vector<std::filesystem::directory_entry> folderEntries;
 
 glm::ivec2 windowedSize;
+
+void Docking() {
+	
+	ImGuiViewport* viewport = ImGui::GetMainViewport();
+
+	ImGui::SetNextWindowPos(viewport->WorkPos);
+	ImGui::SetNextWindowSize(viewport->WorkSize);
+	ImGui::SetNextWindowViewport(viewport->ID);
+
+	ImGuiWindowFlags flags =
+		ImGuiWindowFlags_NoDocking |
+		ImGuiWindowFlags_NoTitleBar |
+		ImGuiWindowFlags_NoCollapse |
+		ImGuiWindowFlags_NoResize |
+		ImGuiWindowFlags_NoMove |
+		ImGuiWindowFlags_NoBringToFrontOnFocus |
+		ImGuiWindowFlags_NoNavFocus |
+		ImGuiWindowFlags_MenuBar;
+
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+
+	ImGui::Begin("DockSpace", nullptr, flags);
+
+	ImGui::PopStyleVar(2);
+
+	ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
+	ImGui::DockSpace(dockspace_id);
+
+	static bool first_time = true;
+
+	if (first_time) {
+
+		first_time = false;
+
+		ImGui::DockBuilderRemoveNode(dockspace_id);
+		ImGui::DockBuilderAddNode(dockspace_id, ImGuiDockNodeFlags_DockSpace);
+		ImGui::DockBuilderSetNodeSize(dockspace_id, ImGui::GetMainViewport()->WorkSize);
+
+		static ImGuiID dock_main = dockspace_id;
+
+		static ImGuiID dock_left;
+		static ImGuiID dock_right;
+		static ImGuiID dock_bottom;
+
+		dock_left = ImGui::DockBuilderSplitNode(
+			dock_main,
+			ImGuiDir_Left,
+			0.20f,
+			nullptr,
+			&dock_main);
+
+		dock_right = ImGui::DockBuilderSplitNode(
+			dock_main,
+			ImGuiDir_Right,
+			0.25f,
+			nullptr,
+			&dock_main);
+
+		dock_bottom = ImGui::DockBuilderSplitNode(
+			dock_main,
+			ImGuiDir_Down,
+			0.25f,
+			nullptr,
+			&dock_main);
+
+		ImGui::DockBuilderDockWindow("Hierarchy", dock_left);
+		ImGui::DockBuilderDockWindow("Tools", dock_right);
+		ImGui::DockBuilderDockWindow("Assets", dock_bottom);
+
+		ImGui::DockBuilderDockWindow("ViewPort", dock_main);
+
+		ImGui::DockBuilderFinish(dockspace_id);
+	}
+
+	ImGui::End();
+}
 
 void ResizeViewport(int width, int height) {
 
@@ -598,8 +677,8 @@ glm::mat4 GetModelMatrix(Object& obj) {
 
 void gen_cubemap() {
 
-	glGenTextures(1, &viewportFBO);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, viewportFBO);
+	glGenTextures(1, &envCubemap);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap);
 
 	for (int i = 0; i < 6; i++) {
 
@@ -677,7 +756,7 @@ void ConvertHDRToCubemap() {
 			GL_FRAMEBUFFER,
 			GL_COLOR_ATTACHMENT0,
 			GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
-			viewportFBO,
+			envCubemap,
 			0);
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

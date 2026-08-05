@@ -79,7 +79,6 @@ void update(SDL_Window* window) {
 
 	if (currentViewMode == view_Mode::EDITOR) {
 	
-	
 		if ((int)viewportSize.x != viewport_width || (int)viewportSize.y != viewport_height)
 			ResizeViewport((int)viewportSize.x, (int)viewportSize.y);
 
@@ -141,7 +140,12 @@ void update(SDL_Window* window) {
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	static ImGuiIO& io = ImGui::GetIO();
+	(void)io;
+
 	if (currentViewMode == view_Mode::PLAY) {
+
+		io.ConfigFlags &= ~ImGuiConfigFlags_ViewportsEnable;
 
 		glm::vec3 cameraPos = get_cam_pos();
 
@@ -179,12 +183,15 @@ void update(SDL_Window* window) {
 	ImGui_ImplSDL3_NewFrame();
 	ImGui::NewFrame();
 
+	if (currentViewMode == view_Mode::EDITOR) {
+
+		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+		Docking();
+	}
+
 	fps = ImGui::GetIO().Framerate;
 
-	ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Always);
-	ImGui::SetNextWindowBgAlpha(0.35f);
-
-	ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+	ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
 
 	ImGui::Begin("HUD", nullptr, flags);
 
@@ -197,6 +204,21 @@ void update(SDL_Window* window) {
 		update_imgui_guizmo();
 
 	ImGui::Render();
+
+	if (currentViewMode == view_Mode::EDITOR) {
+
+		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+
+			SDL_Window* backupWindow = SDL_GL_GetCurrentWindow();
+			SDL_GLContext backupContext = SDL_GL_GetCurrentContext();
+
+			ImGui::UpdatePlatformWindows();
+			ImGui::RenderPlatformWindowsDefault();
+
+			SDL_GL_MakeCurrent(backupWindow, backupContext);
+		}
+	}
+
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 	//----------------------------------------------------
@@ -251,8 +273,17 @@ int main(int argc, char* args[]) {
 	(void)io;
 
 	io.ConfigWindowsMoveFromTitleBarOnly = true;
+
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 	io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+
+	ImGuiStyle& style = ImGui::GetStyle();
+
+	if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+
+		style.WindowRounding = 0.0f;
+		style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+	}
 
 	ImGui::StyleColorsDark();
 
