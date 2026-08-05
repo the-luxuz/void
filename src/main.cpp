@@ -41,6 +41,8 @@ void init() {
 
 	init_skybox(par.skybox.c_str());
 
+	init_viewport();
+
 	read_textures_path();
 
 	ReloadFolder();
@@ -75,45 +77,100 @@ void init() {
 
 void update(SDL_Window* window) {
 
-	glViewport(0, 0, par.w, par.h);
+	if (currentViewMode == view_Mode::EDITOR) {
+	
+	
+		if ((int)viewportSize.x != viewport_width || (int)viewportSize.y != viewport_height)
+			ResizeViewport((int)viewportSize.x, (int)viewportSize.y);
 
-	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+		glBindFramebuffer(GL_FRAMEBUFFER, viewportFBO);
+
+		glViewport(0, 0, viewport_width, viewport_height);
+
+		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		glm::vec3 cameraPos = get_cam_pos();
+
+		view = glm::lookAt(
+			cameraPos,
+			cam.cam_target,
+			cam.cam_up
+		);
+
+		projection = glm::perspective(
+			glm::radians(par.fov),
+			(float)viewport_width / viewport_height,
+			cam.nearPlane,
+			cam.farPlane
+		);
+
+		if (currentViewMode == view_Mode::EDITOR) {
+		
+			//----------------------------------------------------
+			// grid
+
+			update_grid(cameraPos);
+
+		}
+
+		//----------------------------------------------------
+		// obj
+
+		update_objects();
+
+		//----------------------------------------------------
+		// skybox
+
+		update_skybox();
+
+		//----------------------------------------------------
+
+		glBindTexture(GL_TEXTURE_2D, 0);
+		glBindVertexArray(0);
+		glUseProgram(0);
+
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}
+
+
+	//----------------------------------------------------
+
+	glViewport(0, 0, par.w, par.h);
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	glm::vec3 cameraPos = get_cam_pos();
+	if (currentViewMode == view_Mode::PLAY) {
 
-	view = glm::lookAt(
-		cameraPos,
-		cam.cam_target,
-		cam.cam_up
-	);
+		glm::vec3 cameraPos = get_cam_pos();
 
-	projection = glm::perspective(
-		glm::radians(par.fov),
-		(float)par.w / par.h,
-		cam.nearPlane,
-		cam.farPlane
-	);
+		view = glm::lookAt(
+			cameraPos,
+			cam.cam_target,
+			cam.cam_up
+		);
 
-	if (currentViewMode == view_Mode::EDITOR) {
-		
+		projection = glm::perspective(
+			glm::radians(par.fov),
+			(float)par.w / par.h,
+			cam.nearPlane,
+			cam.farPlane
+		);
+
 		//----------------------------------------------------
-		// grid
+		// obj
 
-		update_grid(cameraPos);
+		update_objects();
+
+		//----------------------------------------------------
+		// skybox
+
+		update_skybox();
+
+		//----------------------------------------------------
 
 	}
-
-	//----------------------------------------------------
-	// obj
-
-	update_objects();
-
-	//----------------------------------------------------
-	// skybox
-
-	update_skybox();
 
 	//----------------------------------------------------
 	// imgui / imguizmo
@@ -147,9 +204,6 @@ void update(SDL_Window* window) {
 
 	if (par.last_win_mode != par.win_mode)
 		ApplyWindowMode(window);
-
-
-	//----------------------------------------------------
 
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glBindVertexArray(0);
@@ -195,6 +249,10 @@ int main(int argc, char* args[]) {
 	
 	ImGuiIO& io = ImGui::GetIO();
 	(void)io;
+
+	io.ConfigWindowsMoveFromTitleBarOnly = true;
+	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+	io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
 	ImGui::StyleColorsDark();
 
@@ -365,10 +423,16 @@ int main(int argc, char* args[]) {
 					if (ImGuizmo::IsOver() || ImGuizmo::IsUsing())
 						break;
 
-					if (ImGui::GetIO().WantCaptureMouse)
+					//if (ImGui::GetIO().WantCaptureMouse)
+					//	break;
+
+					float mx = event.button.x - viewportPos.x;
+					float my = event.button.y - viewportPos.y;
+
+					if (mx < 0 || my < 0 || mx > viewport_width || my > viewport_height)
 						break;
 
-					BuildRay(event.button.x, event.button.y, rayOrigin, rayDir);
+					BuildRay(mx, my, rayOrigin, rayDir);
 
 					select_object(rayOrigin, rayDir);
 

@@ -12,6 +12,12 @@
 
 bool is_hdr = false;
 
+int viewport_width = 512;
+int viewport_height = 512;
+
+GLuint viewport_texture;
+GLuint depth_texture;
+
 GLuint skybox_texture;
 
 GLuint LoadEXRTexture(const std::string& path) {
@@ -110,6 +116,8 @@ GLuint LoadHDRTexture(const std::string& path) {
 
     stbi_image_free(data);
 
+    glBindTexture(GL_TEXTURE_2D, 0);
+
     return texture;
 }
 
@@ -177,5 +185,75 @@ GLuint LoadObjTexture(const std::string& path) {
 
     stbi_image_free(data);
 
+    glBindTexture(GL_TEXTURE_2D, 0);
+
     return texture;
+}
+
+void Create_viewport_tex(int width, int height) {
+
+    glGenTextures(1, &viewport_texture);
+
+    glBindTexture(GL_TEXTURE_2D, viewport_texture);
+
+    glTexImage2D(
+        GL_TEXTURE_2D,
+        0,
+        GL_RGB16F,
+        width,
+        height,
+        0,
+        GL_RGB,
+        GL_FLOAT,
+        nullptr
+    );
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    glFramebufferTexture2D(
+        GL_FRAMEBUFFER,
+        GL_COLOR_ATTACHMENT0,
+        GL_TEXTURE_2D,
+        viewport_texture,
+        0);
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void Create_depth_tex(int width, int height) {
+
+    glGenTextures(1, &depth_texture);
+    glBindTexture(GL_TEXTURE_2D, depth_texture);
+
+    glTexImage2D(
+        GL_TEXTURE_2D,
+        0,
+        GL_DEPTH_COMPONENT24,
+        width,
+        height,
+        0,
+        GL_DEPTH_COMPONENT,
+        GL_FLOAT,
+        nullptr
+    );
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    glFramebufferTexture2D(
+        GL_FRAMEBUFFER,
+        GL_DEPTH_ATTACHMENT,
+        GL_TEXTURE_2D,
+        depth_texture,
+        0
+    );
+
+    glBindTexture(GL_TEXTURE_2D, 0);
 }

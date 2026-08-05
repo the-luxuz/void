@@ -5,7 +5,7 @@
 #include "programs.h"
 #include "textures.h"
 
-GLuint cubeFBO;
+GLuint viewportFBO;
 GLuint dynamic_cubemap;
 
 GLuint captureFBO;
@@ -17,6 +17,9 @@ Parser par;
 float alpha, beta, radius;
 
 const float STEP = 25.0f;
+
+ImVec2 viewportPos;
+ImVec2 viewportSize;
 
 GLuint gridVAO;
 GLuint gridVBO;
@@ -69,6 +72,78 @@ std::filesystem::path newFolder;
 std::vector<std::filesystem::directory_entry> folderEntries;
 
 glm::ivec2 windowedSize;
+
+void ResizeViewport(int width, int height) {
+
+	if (width <= 0 || height <= 0)
+		return;
+
+	viewport_width = width;
+	viewport_height = height;
+
+	glBindFramebuffer(GL_FRAMEBUFFER, viewportFBO);
+
+	glBindTexture(GL_TEXTURE_2D, viewport_texture);
+
+	glTexImage2D(
+		GL_TEXTURE_2D,
+		0,
+		GL_RGB16F,
+		width,
+		height,
+		0,
+		GL_RGB,
+		GL_FLOAT,
+		nullptr
+	);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	glFramebufferTexture2D(
+		GL_FRAMEBUFFER,
+		GL_COLOR_ATTACHMENT0,
+		GL_TEXTURE_2D,
+		viewport_texture,
+		0);
+
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	glBindTexture(GL_TEXTURE_2D, depth_texture);
+
+	glTexImage2D(
+		GL_TEXTURE_2D,
+		0,
+		GL_DEPTH_COMPONENT24,
+		width,
+		height,
+		0,
+		GL_DEPTH_COMPONENT,
+		GL_FLOAT,
+		nullptr
+	);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	glFramebufferTexture2D(
+		GL_FRAMEBUFFER,
+		GL_DEPTH_ATTACHMENT,
+		GL_TEXTURE_2D,
+		depth_texture,
+		0
+	);
+
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
 
 void ApplyWindowMode(SDL_Window* window)
 {
@@ -523,8 +598,8 @@ glm::mat4 GetModelMatrix(Object& obj) {
 
 void gen_cubemap() {
 
-	glGenTextures(1, &cubeFBO);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, cubeFBO);
+	glGenTextures(1, &viewportFBO);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, viewportFBO);
 
 	for (int i = 0; i < 6; i++) {
 
@@ -602,7 +677,7 @@ void ConvertHDRToCubemap() {
 			GL_FRAMEBUFFER,
 			GL_COLOR_ATTACHMENT0,
 			GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
-			cubeFBO,
+			viewportFBO,
 			0);
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -722,8 +797,8 @@ bool RayVsAABB(const glm::vec3& rayOrigin, const glm::vec3& rayDir, const glm::v
 
 void BuildRay(float mouseX, float mouseY, glm::vec3& rayOrigin, glm::vec3& rayDir) {
 
-	float x = (2.0f * mouseX) / par.w - 1.0f;
-	float y = 1.0f - (2.0f * mouseY) / par.h;
+	float x = (2.0f * mouseX) / viewportSize.x - 1.0f;
+	float y = 1.0f - (2.0f * mouseY) / viewportSize.y;
 
 	glm::vec4 rayClip(x, y, -1.0f, 1.0f);
 

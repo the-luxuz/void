@@ -120,7 +120,7 @@ void update_skybox() {
 	glUniform1f(glGetUniformLocation(program_skybox, "is_hdr"), is_hdr);
 
 	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, cubeFBO);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, viewportFBO);
 
 	glUniform1i(glGetUniformLocation(program_skybox, "skybox"), 1);
 
@@ -133,8 +133,15 @@ void update_skybox() {
 
 void update_imgui_guizmo() {
 
-	ImGui::SetNextWindowPos(ImVec2(0, 0));
-	ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
+	ImGui::Begin("ViewPort", nullptr, ImGuizmo::IsUsing() ? ImGuiWindowFlags_NoMove : 0);
+
+	ImVec2 pos = ImGui::GetCursorScreenPos();
+
+	viewportPos = ImGui::GetCursorScreenPos();
+	viewportSize = ImGui::GetContentRegionAvail();
+
+	ImGui::Image((ImTextureID)(intptr_t)viewport_texture, viewportSize, ImVec2(0, 1), ImVec2(1, 0));
+
 
 	Object* obj = GetSelectedObject();
 
@@ -144,11 +151,11 @@ void update_imgui_guizmo() {
 
 		ImGuizmo::BeginFrame();
 
-		//ImGuizmo::SetDrawlist();
+		ImGuizmo::SetDrawlist(ImGui::GetWindowDrawList());
 
 		ImGuizmo::SetOrthographic(false);
 
-		ImGuizmo::SetRect(0, 0, (float)par.w, (float)par.h);
+		ImGuizmo::SetRect(viewportPos.x, viewportPos.y, viewportSize.x, viewportSize.y);
 
 		float moveSnap[3] = { 12.5, 12.5, 12.5 };
 		float scaleSnap[3] = { 0.125, 0.125, 0.125 };
@@ -200,7 +207,7 @@ void update_imgui_guizmo() {
 				auto Snap = [](float value, float step) {
 
 					return roundf(value / step) * step;
-				};
+					};
 
 				rotation.x = Snap(rotation.x, rotateSnap[0]);
 				rotation.y = Snap(rotation.y, rotateSnap[1]);
@@ -219,8 +226,10 @@ void update_imgui_guizmo() {
 		}
 
 		wasUsing = usingGizmo;
-	
-}
+
+	}
+
+	ImGui::End();
 
 	//----------------------------------------------------
 	// browser

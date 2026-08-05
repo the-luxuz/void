@@ -5,6 +5,23 @@
 #include "Parser.h"
 #include "helpers.h"
 
+void init_viewport() {
+
+	glGenFramebuffers(1, &viewportFBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, viewportFBO);
+
+	Create_viewport_tex(viewport_width, viewport_height);
+
+	Create_depth_tex(viewport_width, viewport_height);
+
+	glDrawBuffer(GL_COLOR_ATTACHMENT0);
+
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		std::cout << "Framebuffer incompleto\n";
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
 void init_grid() {
 	
 	Create_Grid();
