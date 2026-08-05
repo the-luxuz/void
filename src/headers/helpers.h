@@ -5,7 +5,7 @@
 #include "classes.h"
 #include "programs.h"
 #include "textures.h"
-//#include "inits.h"
+#include "inits.h"
 
 extern GLuint viewportFBO;
 extern GLuint dynamic_cubemap;
@@ -70,6 +70,8 @@ extern std::filesystem::path newFolder;
 extern std::vector<std::filesystem::directory_entry> folderEntries;
 
 extern glm::ivec2 windowedSize;
+
+void DeleteObjectGPU(Object& o);
 
 void clean();
 

@@ -219,3 +219,24 @@ void init_(const char* settings) {
 
 	init();
 }
+
+void open_init(const char* settings) {
+
+	selectedObject = -1;
+
+	for (auto& o : objects) {
+
+		o.undoStack.clear();
+		o.redoStack.clear();
+
+		DeleteObjectGPU(o);
+	}
+
+	objects.clear();
+
+	objectNameCounters.clear();
+
+	par.load(settings);
+
+	init();
+}

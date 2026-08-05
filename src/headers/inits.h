@@ -22,3 +22,5 @@ void init_obj(const char* objFile, Object& obj);
 void init();
 
 void init_(const char* settings);
+
+void open_init(const char* settings);

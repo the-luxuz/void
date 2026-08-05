@@ -11,9 +11,9 @@ fov 40
 #scene
 skybox data/skybox/skybox.exr
 
-obj floor
-pos 0 0 0
-scal 50 50 50
-rot 0 0 0
-mesh data/objects/plane.obj
-tex data/textures/CubeMap_Bottom.png
+//obj floor
+//pos 0 0 0
+//scal 50 50 50
+//rot 0 0 0
+//mesh data/objects/plane.obj
+//tex data/textures/CubeMap_Bottom.png

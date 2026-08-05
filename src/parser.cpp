@@ -2,6 +2,8 @@
 
 void Parser::load(const char* fname) {
 
+    objects.clear();
+
     std::ifstream f(fname);
 
     if (!f.is_open()) {

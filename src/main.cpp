@@ -387,6 +387,10 @@ int main(int argc, char* args[]) {
 
 	clean();
 
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplSDL3_Shutdown();
+	ImGui::DestroyContext();
+
 	SDL_GL_DestroyContext(context);
 	SDL_DestroyWindow(window);
 

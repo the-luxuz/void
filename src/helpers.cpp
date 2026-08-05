@@ -72,6 +72,21 @@ std::vector<std::filesystem::directory_entry> folderEntries;
 
 glm::ivec2 windowedSize;
 
+void DeleteObjectGPU(Object& o) {
+
+	if (o.ebo)
+		glDeleteBuffers(1, &o.ebo);
+
+	if (o.vbo)
+		glDeleteBuffers(1, &o.vbo);
+
+	if (o.vao)
+		glDeleteVertexArrays(1, &o.vao);
+
+	if (o.obj_texture)
+		glDeleteTextures(1, &o.obj_texture);
+}
+
 void clean() {
 
 	glDeleteProgram(program);
@@ -85,10 +100,6 @@ void clean() {
 		glDeleteBuffers(1, &obj.vbo);
 		glDeleteBuffers(1, &obj.ebo);
 	}
-
-	ImGui_ImplOpenGL3_Shutdown();
-	ImGui_ImplSDL3_Shutdown();
-	ImGui::DestroyContext();
 }
 
 void Docking() {
@@ -193,7 +204,7 @@ void Docking() {
 					std::string path = outPath;
 
 					std::cout << path << std::endl;
-					//init_(path.c_str());
+					open_init(path.c_str());
 
 					NFD_FreePath(outPath);
 				}
