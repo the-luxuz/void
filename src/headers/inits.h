@@ -13,7 +13,7 @@ void init_viewport();
 
 void init_grid();
 
-void init_skybox(const char* skyboxFile);
+void init_skybox(const char* skyboxFile, bool create_vaos);
 
 void init_camera();
 
@@ -23,4 +23,4 @@ void init();
 
 void init_(const char* settings);
 
-void open_init(const char* settings);
+void open_init(const char* settings, Settings& st);

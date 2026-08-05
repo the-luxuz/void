@@ -69,6 +69,8 @@ struct Object {
 
     std::string name;
 
+    std::string tex; // has the texture path
+
     GLuint obj_texture = 0;
 
     std::vector<Vertex> vertices;
@@ -81,7 +83,7 @@ struct Object {
     glm::vec3 rotation;
     glm::vec3 scale;
 
-    std::string mesh;
+    std::string mesh; // has the .obj path
 
     glm::vec3 min, max;
 
@@ -125,4 +127,28 @@ struct Program {
 
     GLint mvpLoc;
     GLint textureLoc;
+};
+
+enum  class window_mode {
+    WINDOWED,
+    WINDOWED_BORDERLESS,
+    FULLSCREEN
+};
+
+struct Settings {
+
+    window_mode win_mode;
+
+    window_mode last_win_mode;
+
+    std::string win_name;
+
+    std::string skybox;
+
+    int w = 1280;
+    int h = 720;
+
+    float fov;
+
+    bool VSync;
 };

@@ -120,6 +120,7 @@ void Load_Skybox(const std::string& path) {
     std::filesystem::path p(fullPath);
 
     std::string ext = p.extension().string();
+    //std::cout << fullPath << std::endl;
 
     if (ext == ".exr")
         skybox_texture = LoadEXRTexture(path);

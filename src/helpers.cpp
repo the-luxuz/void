@@ -10,6 +10,7 @@ GLuint captureRBO;
 
 camera cam;
 Parser par;
+Settings st;
 
 float alpha, beta, radius;
 
@@ -83,8 +84,8 @@ void DeleteObjectGPU(Object& o) {
 	if (o.vao)
 		glDeleteVertexArrays(1, &o.vao);
 
-	if (o.obj_texture)
-		glDeleteTextures(1, &o.obj_texture);
+	//if (o.obj_texture)
+		//glDeleteTextures(1, &o.obj_texture);
 }
 
 void clean() {
@@ -189,7 +190,7 @@ void Docking() {
 				nfdu8char_t* outPath = nullptr;
 
 				nfdfilteritem_t filterItem[1] = {
-					{ "Text file", "txt" }
+					{ "Text file", "bin" }
 				};
 
 				nfdresult_t result = NFD_OpenDialog(
@@ -199,19 +200,43 @@ void Docking() {
 					nullptr
 				);
 
-				if (result == NFD_OKAY)
-				{
+				if (result == NFD_OKAY) {
+
 					std::string path = outPath;
 
 					std::cout << path << std::endl;
-					open_init(path.c_str());
+					open_init(path.c_str(), st);
 
 					NFD_FreePath(outPath);
 				}
 			}
 
 			if (ImGui::MenuItem("Save", "Ctrl+S")) {
-				// Guardar
+				
+				par.skybox = st.skybox;
+
+				std::cout << par.skybox << std::endl;
+
+				nfdu8char_t* outPath = nullptr;
+
+				nfdfilteritem_t filterItem[1] = {
+					{ "Text file", "bin" }
+				};
+
+				nfdresult_t result = NFD_SaveDialog(
+					&outPath,
+					filterItem,
+					1,
+					nullptr,
+					"scene.bin"
+				);
+
+				if (result == NFD_OKAY) {
+
+					par.save(outPath, st, objects);
+
+					NFD_FreePath(outPath);
+				}
 			}
 
 			ImGui::Separator();
@@ -344,17 +369,17 @@ void ResizeViewport(int width, int height) {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void ApplyWindowMode(SDL_Window* window)
-{
+void ApplyWindowMode(SDL_Window* window) {
+
 	SDL_DisplayID display = SDL_GetDisplayForWindow(window);
 
 	SDL_Rect bounds;
 
 	SDL_GetDisplayBounds(display, &bounds);
 
-	switch (par.win_mode) {
+	switch (st.win_mode) {
 
-		case Parser::window_mode::WINDOWED: {
+		case window_mode::WINDOWED: {
 
 			SDL_SetWindowFullscreen(window, false);
 
@@ -369,13 +394,13 @@ void ApplyWindowMode(SDL_Window* window)
 				SDL_WINDOWPOS_CENTERED,
 				SDL_WINDOWPOS_CENTERED);
 
-			par.w = windowedSize.x;
-			par.h = windowedSize.y;
+			st.w = windowedSize.x;
+			st.h = windowedSize.y;
 
 			break;
 		}
 
-		case Parser::window_mode::WINDOWED_BORDERLESS: {
+		case window_mode::WINDOWED_BORDERLESS: {
 
 			SDL_SetWindowFullscreen(window, false);
 
@@ -389,25 +414,25 @@ void ApplyWindowMode(SDL_Window* window)
 				bounds.w,
 				bounds.h);
 
-			par.w = bounds.w;
-			par.h = bounds.h;
+			st.w = bounds.w;
+			st.h = bounds.h;
 
 			break;
 		}
 
-		case Parser::window_mode::FULLSCREEN: {
+		case window_mode::FULLSCREEN: {
 
 			SDL_SetWindowFullscreen(window, true);
 
 			SDL_GetWindowSizeInPixels(window,
-				&par.w,
-				&par.h);
+				&st.w,
+				&st.h);
 
 			break;
 		}
 	}
 
-	par.last_win_mode = par.win_mode;
+	st.last_win_mode = st.win_mode;
 }
 
 void FixCylinder(Object& obj) {
@@ -886,7 +911,7 @@ void ConvertHDRToCubemap() {
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	glViewport(0, 0, par.w, par.h);
+	glViewport(0, 0, st.w, st.h);
 }
 
 void GenSkybox() {

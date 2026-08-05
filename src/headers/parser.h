@@ -13,27 +13,31 @@
 #include <array>
 #include <vector>
 
+#include "classes.h"
+
 struct Parser {
 		
-	void load(const char* fname);
+	bool load(const char* fname, Settings& st);
+	void save(const char* fname, Settings& st, const std::vector<Object>& scene);
 
-	enum  class window_mode {
-		WINDOWED,
-		WINDOWED_BORDERLESS,
-		FULLSCREEN
-	};
+	void WriteString(std::ofstream& out, const std::string& str);
+	void ReadString(std::ifstream& in, std::string& str);
 
-	window_mode win_mode;
+	template<typename T>
 
-	window_mode last_win_mode;
+	void Write(std::ofstream& out, const T& t) {
 
-	std::string win_name;
-	int w, h;
+		out.write(reinterpret_cast<const char*>(&t), sizeof(t));
+	}
 
-	float fov;
+	template<typename M>
+
+	void Read(std::ifstream& in, M& m) {
+
+		in.read(reinterpret_cast<char*>(&m), sizeof(m));
+	}
+
 	std::string skybox;
-
-	bool VSync;
 
 	struct Transform {
 
@@ -46,6 +50,12 @@ struct Parser {
 		glm::vec3 position;
 		glm::vec3 rotation;
 		glm::vec3 scale;
+
+		glm::vec3 min, max;
+
+		TextureMapping mapping = TextureMapping::UV;
+		coord_types coordType = coord_types::XZ;
+		cylinder_axis cyaxisType = cylinder_axis::Y;
 
 	};
 

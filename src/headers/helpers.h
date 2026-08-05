@@ -17,6 +17,7 @@ extern GLuint captureRBO;
 
 extern camera cam;
 extern Parser par;
+extern Settings st;
 
 extern float alpha, beta, radius;
 

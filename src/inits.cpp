@@ -25,20 +25,22 @@ void init_grid() {
 	Create_Grid();
 }
 
-void init_skybox(const char* skyboxFile) {
+void init_skybox(const char* skyboxFile, bool create_vaos) {
 	
-	GenSkybox();
+	if (create_vaos)
+		GenSkybox();
 
 	Load_Skybox(skyboxFile);
 
-	gen_cubemap();
+	if (create_vaos)
+		gen_cubemap();
 
 	ConvertHDRToCubemap();
 }
 
 void init_camera() {
 
-	cam.fov = par.fov;
+	cam.fov = st.fov;
 
 	glm::vec3 offset = cam.cam_position - cam.cam_target;
 
@@ -123,7 +125,7 @@ void init() {
 
 	init_grid();
 
-	init_skybox(par.skybox.c_str());
+	init_skybox(st.skybox.c_str(), true);
 
 	init_viewport();
 
@@ -131,96 +133,115 @@ void init() {
 
 	ReloadFolder();
 
-	for (int i = 0; i < par.objects.size(); i++) {
+	objects.clear();
+
+	for (auto& p : par.objects) {
 
 		Object obj;
 
-		std::string fullPath = "../" + par.objects[i].mesh;
-		init_obj(fullPath.c_str(), obj);
+		init_obj(p.mesh.c_str(), obj);
+
+		obj.name = p.obj_name;
+		obj.mesh = p.mesh;
+		obj.tex = p.tex;
+
+		obj.position = p.position;
+		obj.rotation = p.rotation;
+		obj.scale = p.scale;
+
+		obj.coordType = p.coordType;
+		obj.cyaxisType = p.cyaxisType;
+		obj.mapping = p.mapping;
+
+		obj.max = p.max;
+		obj.min = p.min;
+
+		obj.obj_texture = TextureManager::Get(obj.tex);
 
 		buffer(obj);
 
 		obj.original_vertices = obj.vertices;
 		obj.original_indices = obj.indices;
 
-		obj.mesh = par.objects[i].mesh;
+		UpdateMapping(obj);
 
-		obj.obj_texture = LoadObjTexture(par.objects[i].tex);
-
-		obj.name = par.objects[i].obj_name;
-
-		obj.position = par.objects[i].position;
-		obj.scale = par.objects[i].scale;
-
-		obj.rotation = par.objects[i].rotation;
-
-		objects.push_back(obj);
+		objects.push_back(std::move(obj));
 	}
 }
 
 
 void init_(const char* settings) {
 
-	par.load(settings);
+	//st.win_name = "void";
+	//st.win_mode = window_mode::WINDOWED;
+	//st.w = 1280;
+	//st.h = 720;
+	//st.VSync = 0;
+	//st.fov = 90;
+	//
+	//par.save(settings, st, objects);
 
-	windowedSize = { par.w, par.h };
+	if (par.load(settings, st)) {
 
-	SDL_Init(SDL_INIT_VIDEO);
+		windowedSize = { st.w, st.h };
 
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+		SDL_Init(SDL_INIT_VIDEO);
 
-	window = SDL_CreateWindow(par.win_name.c_str(), par.w, par.h, SDL_WINDOW_OPENGL);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
-	ApplyWindowMode(window);
+		window = SDL_CreateWindow(st.win_name.c_str(), st.w, st.h, SDL_WINDOW_OPENGL);
 
-	context = SDL_GL_CreateContext(window);
+		ApplyWindowMode(window);
 
-	if (!par.VSync)
-		SDL_GL_SetSwapInterval(0);
-	else
-		SDL_GL_SetSwapInterval(1);
+		context = SDL_GL_CreateContext(window);
 
-	glewExperimental = GL_TRUE;
-	GLenum err = glewInit();
+		if (!st.VSync)
+			SDL_GL_SetSwapInterval(0);
+		else
+			SDL_GL_SetSwapInterval(1);
 
-	if (err != GLEW_OK) {
+		glewExperimental = GL_TRUE;
+		GLenum err = glewInit();
 
-		std::cout << glewGetErrorString(err) << '\n';
-		return;
+		if (err != GLEW_OK) {
+
+			std::cout << glewGetErrorString(err) << '\n';
+			return;
+		}
+
+		IMGUI_CHECKVERSION();
+		ImGui::CreateContext();
+
+		ImGuiIO& io = ImGui::GetIO();
+		(void)io;
+
+		io.ConfigWindowsMoveFromTitleBarOnly = true;
+
+		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+
+		ImGuiStyle& style = ImGui::GetStyle();
+
+		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+
+			style.WindowRounding = 0.0f;
+			style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+		}
+
+		ImGui::StyleColorsDark();
+
+		ImGui_ImplSDL3_InitForOpenGL(window, context);
+		ImGui_ImplOpenGL3_Init("#version 330");
+
+		create_programs();
+
+		init();
 	}
-
-	IMGUI_CHECKVERSION();
-	ImGui::CreateContext();
-
-	ImGuiIO& io = ImGui::GetIO();
-	(void)io;
-
-	io.ConfigWindowsMoveFromTitleBarOnly = true;
-
-	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-	io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-
-	ImGuiStyle& style = ImGui::GetStyle();
-
-	if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
-
-		style.WindowRounding = 0.0f;
-		style.Colors[ImGuiCol_WindowBg].w = 1.0f;
-	}
-
-	ImGui::StyleColorsDark();
-
-	ImGui_ImplSDL3_InitForOpenGL(window, context);
-	ImGui_ImplOpenGL3_Init("#version 330");
-
-	create_programs();
-
-	init();
 }
 
-void open_init(const char* settings) {
+void open_init(const char* settings, Settings& st) {
 
 	selectedObject = -1;
 
@@ -236,7 +257,6 @@ void open_init(const char* settings) {
 
 	objectNameCounters.clear();
 
-	par.load(settings);
-
-	init();
+	if(par.load(settings, st))
+		init();
 }

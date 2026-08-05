@@ -295,8 +295,11 @@ void update_imgui_guizmo() {
 
 					if (ImGui::ImageButton("", (ImTextureID)(intptr_t)tex, ImVec2(64, 64), ImVec2(0, 1), ImVec2(1, 0))) {
 
-						if(selectedObject != -1)
+						if (selectedObject != -1) {
+						
 							objects[selectedObject].obj_texture = tex;
+							objects[selectedObject].tex = path;
+						}
 					}
 
 					ImGui::TextWrapped("%s", entry.path().stem().string().c_str());
@@ -314,6 +317,8 @@ void update_imgui_guizmo() {
 
 						obj.name = GenerateObjectName(entry.path().stem().string());
 
+						obj.mesh = path;
+
 						buffer(obj);
 
 						obj.position = glm::vec3(0.0f);
@@ -323,10 +328,13 @@ void update_imgui_guizmo() {
 						obj.original_vertices = obj.vertices;
 						obj.original_indices = obj.indices;
 
-						obj.obj_texture = LoadObjTexture(par.objects[0].tex);
+						if (!objects.empty())
+							obj.obj_texture = TextureManager::Get(objects[0].tex);
+						else
+							obj.obj_texture = 0;
 
 						objects.push_back(obj);
-						selectedObject = (int)(objects.size() - 1);
+						//selectedObject = (int)(objects.size() - 1);
 					}
 
 					ImGui::TextWrapped("%s", entry.path().stem().string().c_str());
@@ -339,8 +347,12 @@ void update_imgui_guizmo() {
 					if (path.rfind("../", 0) == 0)
 						path.erase(0, 3);
 
-					if (ImGui::Button("", ImVec2(64, 64)))
-						init_skybox(path.c_str());
+
+					if (ImGui::Button("", ImVec2(64, 64))) {
+					
+						init_skybox(path.c_str(), false);
+						st.skybox = path;
+					}
 
 					ImGui::TextWrapped("%s", entry.path().stem().string().c_str());
 				}

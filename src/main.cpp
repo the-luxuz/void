@@ -57,7 +57,7 @@ void update(SDL_Window* window) {
 		);
 
 		projection = glm::perspective(
-			glm::radians(par.fov),
+			glm::radians(st.fov),
 			(float)viewport_width / viewport_height,
 			cam.nearPlane,
 			cam.farPlane
@@ -94,7 +94,7 @@ void update(SDL_Window* window) {
 
 	//----------------------------------------------------
 
-	glViewport(0, 0, par.w, par.h);
+	glViewport(0, 0, st.w, st.h);
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -114,8 +114,8 @@ void update(SDL_Window* window) {
 		);
 
 		projection = glm::perspective(
-			glm::radians(par.fov),
-			(float)par.w / par.h,
+			glm::radians(st.fov),
+			(float)st.w / st.h,
 			cam.nearPlane,
 			cam.farPlane
 		);
@@ -182,7 +182,7 @@ void update(SDL_Window* window) {
 	//----------------------------------------------------
 	// windows
 
-	if (par.last_win_mode != par.win_mode)
+	if (st.last_win_mode != st.win_mode)
 		ApplyWindowMode(window);
 
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -194,7 +194,7 @@ void update(SDL_Window* window) {
 
 int main(int argc, char* args[]) {
 
-	init_("../data/settings.txt");
+	init_("../data/scene.bin");
 
 	while (!quit) {
 
@@ -234,18 +234,18 @@ int main(int argc, char* args[]) {
 
 				if (event.key.scancode == SDL_SCANCODE_F11) {
 
-					switch (par.win_mode) {
+					switch (st.win_mode) {
 
-						case Parser::window_mode::WINDOWED:
-							par.win_mode = Parser::window_mode::WINDOWED_BORDERLESS;
+						case window_mode::WINDOWED:
+							st.win_mode = window_mode::WINDOWED_BORDERLESS;
 							break;
 
-						case Parser::window_mode::WINDOWED_BORDERLESS:
-							par.win_mode = Parser::window_mode::FULLSCREEN;
+						case window_mode::WINDOWED_BORDERLESS:
+							st.win_mode = window_mode::FULLSCREEN;
 							break;
 
-						case Parser::window_mode::FULLSCREEN:
-							par.win_mode = Parser::window_mode::WINDOWED;
+						case window_mode::FULLSCREEN:
+							st.win_mode = window_mode::WINDOWED;
 							break;
 					}
 				}
@@ -330,7 +330,7 @@ int main(int argc, char* args[]) {
 			case SDL_EVENT_KEY_UP:
 
 				if (event.key.scancode == SDL_SCANCODE_LCTRL)
-					SDL_WarpMouseInWindow(window, par.w / 2.0f, par.h / 2.0f);
+					SDL_WarpMouseInWindow(window, st.w / 2.0f, st.h / 2.0f);
 
 				break;
 
