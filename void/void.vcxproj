@@ -111,7 +111,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)external\tinyexr\deps\libdeflate\lib;$(SolutionDir)include\stb;$(SolutionDir)src\headers;$(SolutionDir)external\tinyexr\deps\zstd;$(SolutionDir)external\tinyexr\deps\miniz;$(SolutionDir)external\tinyexr;$(SolutionDir)external\imgui\backends;$(SolutionDir)external\imgui;$(SolutionDir)include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)external\tinyexr\deps\libdeflate\lib;$(SolutionDir)include\stb;$(SolutionDir)src\headers;$(SolutionDir)external\nativefiledialog\include;$(SolutionDir)external\nativefiledialog;$(SolutionDir)external\tinyexr\deps\zstd;$(SolutionDir)external\tinyexr\deps\miniz;$(SolutionDir)external\tinyexr;$(SolutionDir)external\imgui\backends;$(SolutionDir)external\imgui;$(SolutionDir)include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -150,12 +150,19 @@
     <ClCompile Include="..\external\imgui\imgui_draw.cpp" />
     <ClCompile Include="..\external\imgui\imgui_tables.cpp" />
     <ClCompile Include="..\external\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="..\external\nativefiledialog\nfd_win.cpp" />
     <ClCompile Include="..\external\tinyexr\deps\miniz\miniz.c" />
     <ClCompile Include="..\external\tinyexr\tinyexr.cc" />
+    <ClCompile Include="..\src\buffers.cpp" />
+    <ClCompile Include="..\src\helpers.cpp" />
     <ClCompile Include="..\src\ImGuizmo.cpp" />
+    <ClCompile Include="..\src\inits.cpp" />
     <ClCompile Include="..\src\main.cpp" />
     <ClCompile Include="..\src\parser.cpp" />
+    <ClCompile Include="..\src\programs.cpp" />
+    <ClCompile Include="..\src\textures.cpp" />
     <ClCompile Include="..\src\tinyobjloader.cpp" />
+    <ClCompile Include="..\src\updates.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\external\tinyexr\deps\miniz\miniz.h" />

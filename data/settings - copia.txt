@@ -1,0 +1,19 @@
+#window
+wname void
+width 1280
+height 720
+window_mode windowed // fullscreen, borderless, windowed
+VSync 0
+
+#camera
+fov 40
+
+#scene
+skybox data/skybox/skybox.exr
+
+obj floor
+pos 0 0 0
+scal 50 50 50
+rot 0 0 0
+mesh data/objects/plane.obj
+tex data/textures/CubeMap_Bottom.png

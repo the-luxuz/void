@@ -20,59 +20,17 @@ bool hasCopy = false;
 SDL_DisplayID display;
 SDL_Rect rect;
 
+SDL_Event event;
+
+constexpr float angle_speed = glm::radians(90.0f);
+float radius_speed = 20.0f;
+
 enum class view_Mode {
 	EDITOR,
 	PLAY
 };
 
 view_Mode currentViewMode = view_Mode::EDITOR;
-
-void init() {
-
-	glEnable(GL_DEPTH_TEST);
-
-	glEnable(GL_CULL_FACE);
-	glCullFace(GL_BACK);
-	glFrontFace(GL_CCW);
-
-	init_camera();
-
-	init_grid();
-
-	init_skybox(par.skybox.c_str());
-
-	init_viewport();
-
-	read_textures_path();
-
-	ReloadFolder();
-
-	for (int i = 0; i < par.objects.size(); i++) {
-		
-		Object obj;
-
-		std::string fullPath = "../" + par.objects[i].mesh;
-		init_obj(fullPath.c_str(), obj);
-
-		buffer(obj);
-
-		obj.original_vertices = obj.vertices;
-		obj.original_indices = obj.indices;
-
-		obj.mesh = par.objects[i].mesh;
-
-		obj.obj_texture = LoadObjTexture(par.objects[i].tex);
-
-		obj.name = par.objects[i].obj_name;
-
-		obj.position = par.objects[i].position;
-		obj.scale = par.objects[i].scale;
-
-		obj.rotation = par.objects[i].rotation;
-
-		objects.push_back(obj);
-	}
-}
 
 
 void update(SDL_Window* window) {
@@ -236,70 +194,7 @@ void update(SDL_Window* window) {
 
 int main(int argc, char* args[]) {
 
-	par.load("../data/settings.txt");
-
-	windowedSize = { par.w, par.h };
-
-	SDL_Init(SDL_INIT_VIDEO);
-
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-
-	SDL_Window* window = SDL_CreateWindow(par.win_name.c_str(), par.w, par.h, SDL_WINDOW_OPENGL);
-
-	ApplyWindowMode(window);
-
-	SDL_GLContext context = SDL_GL_CreateContext(window);
-
-	if (!par.VSync)
-		SDL_GL_SetSwapInterval(0);
-	else
-		SDL_GL_SetSwapInterval(1);
-	
-	glewExperimental = GL_TRUE;
-	GLenum err = glewInit();
-
-	if (err != GLEW_OK) {
-
-		std::cout << glewGetErrorString(err) << '\n';
-		return -1;
-	}
-
-	IMGUI_CHECKVERSION();
-	ImGui::CreateContext();
-	
-	ImGuiIO& io = ImGui::GetIO();
-	(void)io;
-
-	io.ConfigWindowsMoveFromTitleBarOnly = true;
-
-	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-	io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-
-	ImGuiStyle& style = ImGui::GetStyle();
-
-	if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
-
-		style.WindowRounding = 0.0f;
-		style.Colors[ImGuiCol_WindowBg].w = 1.0f;
-	}
-
-	ImGui::StyleColorsDark();
-
-	ImGui_ImplSDL3_InitForOpenGL(window, context);
-	ImGui_ImplOpenGL3_Init("#version 330");
-
-	create_programs();
-
-	init();
-
-	bool quit = false;
-
-	SDL_Event event;
-
-	constexpr float angle_speed = glm::radians(90.0f);
-	float radius_speed = 20.0f;
+	init_("../data/settings.txt");
 
 	while (!quit) {
 
@@ -490,15 +385,11 @@ int main(int argc, char* args[]) {
 		update(window);
 	}
 
-	glDeleteProgram(program);
-	glDeleteProgram(program_grid);
-
-	ImGui_ImplOpenGL3_Shutdown();
-	ImGui_ImplSDL3_Shutdown();
-	ImGui::DestroyContext();
+	clean();
 
 	SDL_GL_DestroyContext(context);
 	SDL_DestroyWindow(window);
+
 	SDL_Quit();
 
 	return 0;
