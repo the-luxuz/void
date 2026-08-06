@@ -62,6 +62,32 @@ void update_objects() {
 	
 	glUseProgram(program);
 
+	for (int i = 0; i < lightObjects.size(); i++) {
+
+		// this is bcs if i put the up vector like (0, 1, 0), the light directions like (0, -1, 0), will not work
+		glm::vec3 forward = glm::normalize(lights[i].dir);
+
+		glm::vec3 up = glm::vec3(0, 1, 0);
+
+		if (abs(glm::dot(forward, up)) > 0.99f)
+			up = glm::vec3(0, 0, 1);
+
+		glm::mat4 lightView = glm::lookAt(
+			lights[i].pos,
+			lights[i].pos + forward,
+			up
+		);
+
+		glm::mat4 lightProjection = glm::perspective(
+			glm::radians(lights[i].outer * 2.0f),
+			1.0f,
+			cam.nearPlane,
+			cam.farPlane
+		);
+
+		lightVP[i] = lightProjection * lightView;
+	}
+
 	glActiveTexture(GL_TEXTURE0);
 
 	glUniform1i(glGetUniformLocation(program, "tex"), 0);
@@ -166,6 +192,8 @@ void update_objects() {
 
 	for (int i = 0; i < lightObjects.size(); i++) {
 
+		lights[i].pos = lightObjects[i].position;
+
 		glm::mat4 model(1.0f);
 
 		model = glm::translate(model, lightObjects[i].position);
@@ -179,7 +207,6 @@ void update_objects() {
 
 		glDrawElements(GL_TRIANGLES, (GLsizei)lightObjects[i].indices.size(), GL_UNSIGNED_INT, 0);
 	}
-
 }
 
 void update_skybox() {

@@ -237,6 +237,8 @@ void init() {
 		obj.original_vertices = obj.vertices;
 		obj.original_indices = obj.indices;
 
+		obj.norm_map = p.normal_map;		
+
 		UpdateMapping(obj);
 
 		LoadNormalMap(obj);
@@ -302,7 +304,7 @@ void init() {
 		light.name = "Light";
 
 		light.pos = glm::vec3(100.0f);
-		light.dir = glm::normalize(glm::vec3(1.0f, -1.0f, 1.0f));
+		light.dir = glm::normalize(glm::vec3(0.0f, -1.0f, 0.0f));
 		light.col = glm::vec3(1.0f, 1.0f, 1.0f);
 		light.att = glm::vec3(0.f);
 
@@ -317,7 +319,7 @@ void init() {
 		light.outer = 40.0f;
 		light.falloff = 1.0f;
 
-		light.type = "SPOT";
+		light.type = "POINT";
 
 		light.typeID = 0;
 

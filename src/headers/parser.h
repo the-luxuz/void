@@ -47,7 +47,7 @@ struct Parser {
 
 		std::string tex;
 
-		std::string normal_map = "data/textures/default_normal.png";
+		std::string normal_map = "data/textures/brick_normal_map.png";
 		
 		glm::vec3 position;
 		glm::vec3 rotation;
