@@ -130,7 +130,7 @@ struct Object {
     GLuint normalTexture = 0;
     std::string norm_map;
 
-    float shininess;
+    float shininess = 20;
 };
 
 inline ObjectState CaptureState(const Object& o) {
@@ -192,6 +192,8 @@ struct Settings {
 };
 
 struct Light {
+
+    std::string name;
 
     glm::vec3 pos;
     glm::vec3 dir;

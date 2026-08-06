@@ -117,6 +117,7 @@ void RestoreOriginalUV(Object& obj);
 void GeneratePlanarUV(Object& obj, coord_types coordType);
 
 void GenerateCubeUV(Object& obj);
+
 void GenerateCylindricalUV(Object& obj, cylinder_axis axis);
 
 void GenerateSphericalUV(Object& obj);
@@ -130,6 +131,8 @@ std::string GenerateObjectName(const std::string& baseName);
 void read_textures_path();
 
 Object* GetSelectedObject();
+
+Light* GetSelectedLight();
 
 glm::mat4 GetModelMatrix(Object& obj);
 

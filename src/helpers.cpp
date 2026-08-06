@@ -831,10 +831,28 @@ Object* GetSelectedObject() {
 	if (selectedObject < 0)
 		return nullptr;
 
-	if (selectedObject >= objects.size())
+	if (selectedObject < objects.size())
+		return &objects[selectedObject];
+
+	int lightIndex = selectedObject - objects.size();
+
+	if (lightIndex >= lightObjects.size())
 		return nullptr;
 
-	return &objects[selectedObject];
+	return &lightObjects[lightIndex];
+}
+
+Light* GetSelectedLight() {
+
+	if (selectedObject < objects.size())
+		return nullptr;
+
+	int lightIndex = selectedObject - objects.size();
+
+	if (lightIndex >= lights.size())
+		return nullptr;
+
+	return &lights[lightIndex];
 }
 
 glm::mat4 GetModelMatrix(Object& obj) {

@@ -175,7 +175,7 @@ void init_obj(const char* objFile, Light& obj) {
 
 bool init_lights(Light& lgh) {
 
-	init_obj("sphere.obj", lgh);
+	init_obj("../data/objects/sphere.obj", lgh);
 
 	return true;
 }
@@ -251,6 +251,8 @@ void init() {
 
 		if (init_lights(light)) {
 
+			light.name = par.lights[i].name;
+
 			light.pos = par.lights[i].pos;
 			light.dir = par.lights[i].dir;
 			light.col = par.lights[i].col;
@@ -289,7 +291,47 @@ void init() {
 
 			lightObjects.push_back(obj);
 		}
+	}
 
+	Light light;
+
+	Object obj;
+
+	if (init_lights(light)) {
+
+		light.name = "Light";
+
+		light.pos = glm::vec3(100.0f);
+		light.dir = glm::normalize(glm::vec3(1.0f, -1.0f, 1.0f));
+		light.col = glm::vec3(1.0f, 1.0f, 1.0f);
+		light.att = glm::vec3(0.f);
+
+		light.att = glm::vec3(1.0f, 0.09f, 0.032f);
+
+		light.ambient = 0.15f;
+
+		light.bias = 0.00001f;
+		light.pcf = 3.0f;
+
+		light.inner = 10.0f;
+		light.outer = 40.0f;
+		light.falloff = 1.0f;
+
+		light.type = "SPOT";
+
+		light.typeID = 0;
+
+		obj.position = light.pos;
+		obj.rotation = glm::vec3(0.0f);
+		obj.scale = glm::vec3(20.f);
+
+		obj.vertices = light.vertices;
+		obj.indices = light.indices;
+
+		buffer(obj);
+
+		lights.push_back(light);
+		lightObjects.push_back(obj);
 	}
 }
 

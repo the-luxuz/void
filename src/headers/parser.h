@@ -67,6 +67,8 @@ struct Parser {
 
 	struct Light {
 
+		std::string name;
+
 		glm::vec3 pos;
 		glm::vec3 dir;
 		glm::vec3 col;

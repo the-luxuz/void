@@ -64,7 +64,7 @@ void update_objects() {
 
 	glActiveTexture(GL_TEXTURE0);
 
-	glUniform1i(glGetUniformLocation(program, "uTexture"), 0);
+	glUniform1i(glGetUniformLocation(program, "tex"), 0);
 
 	int numLights = lights.size(); // maximum of 8 lights
 	glUniform1i(glGetUniformLocation(program, "numLights"), numLights);
@@ -114,6 +114,7 @@ void update_objects() {
 		glUniformMatrix4fv(3, 1, GL_FALSE, glm::value_ptr(obj.mvp));
 		glUniformMatrix4fv(4, 1, GL_FALSE, glm::value_ptr(obj.model));
 
+		glActiveTexture(GL_TEXTURE0);
 
 		if (currentTexture != obj.obj_texture) {
 			
@@ -221,6 +222,7 @@ void update_imgui_guizmo() {
 
 
 	Object* obj = GetSelectedObject();
+	Light* light = GetSelectedLight();
 
 	if (obj) {
 
@@ -294,6 +296,12 @@ void update_imgui_guizmo() {
 			obj->position = translation;
 			obj->scale = scale;
 			obj->rotation = rotation;
+
+			if (light)
+			{
+				light->pos = translation;
+			}
+
 		}
 
 		if (!usingGizmo && wasUsing) {
@@ -477,6 +485,18 @@ void update_imgui_guizmo() {
 		ImGui::PopID();
 	}
 
+	for (size_t i = 0; i < lightObjects.size(); i++) {
+
+		ImGui::PushID((int)(objects.size() + i));
+
+		bool selected = (selectedObject == (int)(objects.size() + i));
+
+		if (ImGui::Selectable(lightObjects[i].name.c_str(), selected))
+			selectedObject = objects.size() + i;
+
+		ImGui::PopID();
+	}
+
 	ImGui::End();
 
 	//----------------------------------------------------
@@ -520,37 +540,50 @@ void update_imgui_guizmo() {
 		};
 
 		if (selectedObject != -1) {
-	
-			obj = GetSelectedObject();
 
-			int current = (int)obj->mapping;
+			if (selectedObject < objects.size()) {
 
-			if (ImGui::Combo("Mapping", &current, mappings, IM_ARRAYSIZE(mappings))) {
+				Object* obj = GetSelectedObject();
 
-				obj->mapping = (TextureMapping)current;
-				UpdateMapping(*obj);
-			}
+				int current = (int)obj->mapping;
 
-			if (obj->mapping == TextureMapping::Planar) {
+				if (ImGui::Combo("Mapping", &current, mappings, IM_ARRAYSIZE(mappings))) {
 
-				int coord = (int)obj->coordType;
-
-				if (ImGui::Combo("Plane", &coord, planarCoords, IM_ARRAYSIZE(planarCoords))) {
-
-					obj->coordType = (coord_types)coord;
+					obj->mapping = (TextureMapping)current;
 					UpdateMapping(*obj);
 				}
-			}
 
-			if (obj->mapping == TextureMapping::Cylindrical) {
+				if (obj->mapping == TextureMapping::Planar) {
 
-				int coord = (int)obj->cyaxisType;
+					int coord = (int)obj->coordType;
 
-				if (ImGui::Combo("Cylinder", &coord, cylinderAxes, IM_ARRAYSIZE(cylinderAxes))) {
+					if (ImGui::Combo("Plane", &coord, planarCoords, IM_ARRAYSIZE(planarCoords))) {
 
-					obj->cyaxisType = (cylinder_axis)coord;
-					UpdateMapping(*obj);
+						obj->coordType = (coord_types)coord;
+						UpdateMapping(*obj);
+					}
 				}
+
+				if (obj->mapping == TextureMapping::Cylindrical) {
+
+					int coord = (int)obj->cyaxisType;
+
+					if (ImGui::Combo("Cylinder", &coord, cylinderAxes, IM_ARRAYSIZE(cylinderAxes))) {
+
+						obj->cyaxisType = (cylinder_axis)coord;
+						UpdateMapping(*obj);
+					}
+				}
+			}
+			else {
+
+				Light* light = GetSelectedLight();
+
+				ImGui::ColorEdit3("Color", &light->col.x);
+				ImGui::DragFloat3("Position", &light->pos.x, 0.1f);
+
+				// Sincronizar la esfera
+				lightObjects[selectedObject - objects.size()].position = light->pos;
 			}
 		}
 

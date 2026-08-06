@@ -133,7 +133,7 @@ vec3 ShadeSpotLight(Light light, vec3 N, vec3 V, vec3 baseColor) {
 
     specular = spec * light.color * min(att, 1.0) * spotEff;
 
-    return (light.ambient * light.color * baseColor) + (1.0 - shadow) * ((diffuse * baseColor) + specular);
+    return (light.ambient * light.color * baseColor) + (1.0 - shadow) * ((diffuse) + specular);
 }
 
 void main() {
@@ -157,7 +157,10 @@ void main() {
 
     vec3 B = normalize(cross(N0, T));
 
-    mat3 TBN = mat3(T, B, N0);
+    mat3 TBN = mat3(
+        normalize(tangent),
+        normalize(bitangent),
+        normalize(normal));
 
     vec3 N = normalize(TBN * normalTS);
 
@@ -201,6 +204,11 @@ void main() {
             result += ShadeDirLight(lights[i], N, V, baseColor);
         else if (lights[i].type == 2)
             result += ShadeSpotLight(lights[i], N, V, baseColor);
+    }
+
+    if (numLights == 0) {
+        outputColor = vec4(baseColor, 1.0);
+        return;
     }
 
     if (tex_appear)
