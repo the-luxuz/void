@@ -19,8 +19,6 @@ extern camera cam;
 extern Parser par;
 extern Settings st;
 
-extern float alpha, beta, radius;
-
 extern bool quit;
 
 extern const float STEP;
@@ -71,6 +69,12 @@ extern std::filesystem::path newFolder;
 extern std::vector<std::filesystem::directory_entry> folderEntries;
 
 extern glm::ivec2 windowedSize;
+
+extern std::string save_outPath;
+
+extern glm::vec3 cameraPos;
+
+extern bool dont_reload_cam;
 
 void DeleteObjectGPU(Object& o);
 

@@ -12,8 +12,6 @@ camera cam;
 Parser par;
 Settings st;
 
-float alpha, beta, radius;
-
 bool quit = false;
 
 const float STEP = 25.0f;
@@ -72,6 +70,12 @@ std::filesystem::path newFolder;
 std::vector<std::filesystem::directory_entry> folderEntries;
 
 glm::ivec2 windowedSize;
+
+std::string save_outPath = "";
+
+glm::vec3 cameraPos;
+
+bool dont_reload_cam = false;
 
 void DeleteObjectGPU(Object& o) {
 
@@ -185,9 +189,11 @@ void Docking() {
 				
 			}
 
-			if (ImGui::MenuItem("Open")) {
+			if (ImGui::MenuItem("Load")) {
 				
 				nfdu8char_t* outPath = nullptr;
+
+				dont_reload_cam = true;
 
 				nfdfilteritem_t filterItem[1] = {
 					{ "Text file", "bin" }
@@ -204,6 +210,8 @@ void Docking() {
 
 					std::string path = outPath;
 
+					save_outPath = path;
+
 					std::cout << path << std::endl;
 					open_init(path.c_str(), st);
 
@@ -214,6 +222,8 @@ void Docking() {
 			if (ImGui::MenuItem("Save", "Ctrl+S")) {
 				
 				par.skybox = st.skybox;
+
+				cam.cam_position = cameraPos;
 
 				std::cout << par.skybox << std::endl;
 
@@ -233,7 +243,7 @@ void Docking() {
 
 				if (result == NFD_OKAY) {
 
-					par.save(outPath, st, objects);
+					par.save(outPath, st, objects, cam);
 
 					NFD_FreePath(outPath);
 				}
@@ -977,9 +987,9 @@ glm::vec3 get_cam_pos() {
 
 	glm::vec3 pos;
 
-	pos.x = radius * sin(beta) * cos(alpha);
-	pos.y = radius * cos(beta);
-	pos.z = radius * sin(beta) * sin(alpha);
+	pos.x = cam.radius * sin(cam.beta) * cos(cam.alpha);
+	pos.y = cam.radius * cos(cam.beta);
+	pos.z = cam.radius * sin(cam.beta) * sin(cam.alpha);
 
 	return cam.cam_target + pos;
 }
@@ -1072,7 +1082,7 @@ void controls(const bool* keyboard, float angle_step, float radius_step, float d
 
 	glm::vec3 right = glm::normalize(glm::cross(forward, glm::vec3(0, 1, 0)));
 
-	float speed = moveSpeed * (radius * 0.09f);
+	float speed = moveSpeed * (cam.radius * 0.09f);
 
 	if (keyboard[SDL_SCANCODE_W])
 		cam.cam_target += forward * speed * dt;
@@ -1086,9 +1096,9 @@ void controls(const bool* keyboard, float angle_step, float radius_step, float d
 	if (keyboard[SDL_SCANCODE_D])
 		cam.cam_target += right * speed * dt;
 
-	beta = glm::clamp(beta, 0.01f, glm::pi<float>() - 0.01f);
+	cam.beta = glm::clamp(cam.beta, 0.01f, glm::pi<float>() - 0.01f);
 
-	radius = std::max(radius, 0.5f);
+	cam.radius = std::max(cam.radius, 0.5f);
 
 }
 

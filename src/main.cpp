@@ -48,7 +48,7 @@ void update(SDL_Window* window) {
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		glm::vec3 cameraPos = get_cam_pos();
+		cameraPos = get_cam_pos();
 
 		view = glm::lookAt(
 			cameraPos,
@@ -105,7 +105,7 @@ void update(SDL_Window* window) {
 
 		io.ConfigFlags &= ~ImGuiConfigFlags_ViewportsEnable;
 
-		glm::vec3 cameraPos = get_cam_pos();
+		cameraPos = get_cam_pos();
 
 		view = glm::lookAt(
 			cameraPos,
@@ -303,6 +303,67 @@ int main(int argc, char* args[]) {
 							selectedObject = objects.size() - 1;
 						}
 					}
+
+					if (event.key.mod & SDL_KMOD_CTRL && event.key.scancode == SDL_SCANCODE_S) {
+
+						cam.cam_position = cameraPos;
+
+						if(save_outPath != "")
+							par.save(save_outPath.c_str(), st, objects, cam);
+						else {
+						
+							nfdu8char_t* outPath = nullptr;
+
+							nfdfilteritem_t filterItem[1] = {
+								{ "Text file", "bin" }
+							};
+
+							nfdresult_t result = NFD_SaveDialog(
+								&outPath,
+								filterItem,
+								1,
+								nullptr,
+								"scene.bin"
+							);
+
+							if (result == NFD_OKAY) {
+
+								par.save(outPath, st, objects, cam);
+
+								NFD_FreePath(outPath);
+							}
+						}
+					}
+
+					if (event.key.mod & SDL_KMOD_CTRL && event.key.scancode == SDL_SCANCODE_O) {
+					
+						nfdu8char_t* outPath = nullptr;
+
+						dont_reload_cam = true;
+
+						nfdfilteritem_t filterItem[1] = {
+							{ "Text file", "bin" }
+						};
+
+						nfdresult_t result = NFD_OpenDialog(
+							&outPath,
+							filterItem,
+							1,
+							nullptr
+						);
+
+						if (result == NFD_OKAY) {
+
+							std::string path = outPath;
+
+							save_outPath = path;
+
+							std::cout << path << std::endl;
+							open_init(path.c_str(), st);
+
+							NFD_FreePath(outPath);
+						}
+					}
 				}
 
 				break;
@@ -314,10 +375,10 @@ int main(int argc, char* args[]) {
 					SDL_HideCursor();
 					SDL_SetWindowRelativeMouseMode(window, true);
 
-					alpha -= -(event.motion.xrel * mouseSensitivity); 
-					beta -= event.motion.yrel * mouseSensitivity;
+					cam.alpha -= -(event.motion.xrel * mouseSensitivity); 
+					cam.beta -= event.motion.yrel * mouseSensitivity;
 
-					beta = glm::clamp(beta, 0.05f,
+					cam.beta = glm::clamp(cam.beta, 0.05f,
 						glm::pi<float>() - 0.05f);
 				}
 				else {
@@ -336,9 +397,9 @@ int main(int argc, char* args[]) {
 
 			case SDL_EVENT_MOUSE_WHEEL:
 
-				radius -= (event.wheel.y * 10);
+				cam.radius -= (event.wheel.y * 10);
 
-				radius = std::max(radius, 1.0f);
+				cam.radius = std::max(cam.radius, 1.0f);
 
 				break;
 

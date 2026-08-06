@@ -19,7 +19,7 @@ void Parser::ReadString(std::ifstream& in, std::string& str) {
     in.read(str.data(), len);
 }
 
-void Parser::save(const char* fname, Settings& st, const std::vector<Object>& scene) {
+void Parser::save(const char* fname, Settings& st, const std::vector<Object>& scene, camera& cam) {
 
     std::ofstream out(fname, std::ios::binary);
 
@@ -34,6 +34,20 @@ void Parser::save(const char* fname, Settings& st, const std::vector<Object>& sc
 
     WriteString(out, st.win_name);
     WriteString(out, st.skybox);
+
+    Write(out, cam.cam_position);
+    Write(out, cam.cam_target);
+    Write(out, cam.cam_up);
+
+    std::cout << "save Pos:" << cam.cam_position.x << ", " << cam.cam_position.y << ", " << cam.cam_position.z << std::endl;
+    std::cout << "save target:" << cam.cam_target.x << ", " << cam.cam_target.y << ", " << cam.cam_target.z << std::endl;
+    std::cout << "save up:" << cam.cam_up.x << ", " << cam.cam_up.y << ", " << cam.cam_up.z << std::endl;
+
+    Write(out, cam.alpha);
+    Write(out, cam.beta);
+    Write(out, cam.radius);
+
+    std::cout << cam.alpha << ", " << cam.beta << ", " << cam.radius << std::endl;
 
     uint32_t count = scene.size();
 
@@ -59,7 +73,7 @@ void Parser::save(const char* fname, Settings& st, const std::vector<Object>& sc
 
 }
 
-bool Parser::load(const char* fname, Settings& st) {
+bool Parser::load(const char* fname, Settings& st, camera& cam) {
 
     std::ifstream in(fname, std::ios::binary);
 
@@ -77,6 +91,20 @@ bool Parser::load(const char* fname, Settings& st) {
     ReadString(in, st.skybox);
 
     st.last_win_mode = st.win_mode;
+
+    Read(in, cam.cam_position);
+    Read(in, cam.cam_target);
+    Read(in, cam.cam_up);
+
+    std::cout << "load Pos:" << cam.cam_position.x << ", " << cam.cam_position.y << ", " << cam.cam_position.z << std::endl;
+    std::cout << "load target:" << cam.cam_target.x << ", " << cam.cam_target.y << ", " << cam.cam_target.z << std::endl;
+    std::cout << "load up:" << cam.cam_up.x << ", " << cam.cam_up.y << ", " << cam.cam_up.z << std::endl;
+
+    Read(in, cam.alpha);
+    Read(in, cam.beta);
+    Read(in, cam.radius);
+
+    std::cout << cam.alpha << ", " << cam.beta << ", " << cam.radius << std::endl;
 
     uint32_t count;
 

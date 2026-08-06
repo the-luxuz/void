@@ -32,6 +32,8 @@ struct camera {
     float nearPlane;
     float farPlane;
 
+    float alpha, beta, radius;
+
     glm::vec3 cam_position;
     glm::vec3 cam_target;
     glm::vec3 cam_up;

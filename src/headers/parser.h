@@ -17,8 +17,8 @@
 
 struct Parser {
 		
-	bool load(const char* fname, Settings& st);
-	void save(const char* fname, Settings& st, const std::vector<Object>& scene);
+	bool load(const char* fname, Settings& st, camera& cam);
+	void save(const char* fname, Settings& st, const std::vector<Object>& scene, camera& cam);
 
 	void WriteString(std::ofstream& out, const std::string& str);
 	void ReadString(std::ifstream& in, std::string& str);

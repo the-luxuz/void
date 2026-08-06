@@ -44,10 +44,10 @@ void init_camera() {
 
 	glm::vec3 offset = cam.cam_position - cam.cam_target;
 
-	radius = glm::length(offset);
+	cam.radius = glm::length(offset);
 
-	alpha = acos(offset.y / radius);
-	beta = atan2(offset.z, offset.x);
+	cam.alpha = acos(offset.y / cam.radius);
+	cam.beta = atan2(offset.z, offset.x);
 }
 
 void init_obj(const char* objFile, Object& obj) {
@@ -121,7 +121,8 @@ void init() {
 	glCullFace(GL_BACK);
 	glFrontFace(GL_CCW);
 
-	init_camera();
+	if(!dont_reload_cam)
+		init_camera();
 
 	init_grid();
 
@@ -179,9 +180,9 @@ void init_(const char* settings) {
 	//st.VSync = 0;
 	//st.fov = 90;
 	//
-	//par.save(settings, st, objects);
+	//par.save(settings, st, objects, cam);
 
-	if (par.load(settings, st)) {
+	if (par.load(settings, st, cam)) {
 
 		windowedSize = { st.w, st.h };
 
@@ -257,6 +258,6 @@ void open_init(const char* settings, Settings& st) {
 
 	objectNameCounters.clear();
 
-	if(par.load(settings, st))
+	if(par.load(settings, st, cam))
 		init();
 }
