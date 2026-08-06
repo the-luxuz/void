@@ -48,6 +48,9 @@ struct Vertex {
 
     glm::vec2 originalUV = uv;
 
+    glm::vec3 tangent;
+    glm::vec3 bitangent;
+
 };
 
 struct ObjectState {
@@ -63,11 +66,28 @@ struct ObjectState {
 
 };
 
+struct LineVertex {
+
+    glm::vec3 position;
+};
+
 struct Object {
 
     GLuint vao = 0;
     GLuint vbo = 0;
     GLuint ebo = 0;
+
+    GLuint normalVAO;
+    GLuint normalVBO;
+
+    GLuint normalTBVAO;
+    GLuint normalTBVBO;
+
+    GLuint tangentVAO;
+    GLuint tangentVBO;
+
+    GLuint bitangentVAO;
+    GLuint bitangentVBO;
 
     std::string name;
 
@@ -77,6 +97,12 @@ struct Object {
 
     std::vector<Vertex> vertices;
     std::vector<GLuint> indices;
+
+    std::vector<LineVertex> normalLines;
+
+    std::vector<LineVertex> tangentLines;
+    std::vector<LineVertex> bitangentLines;
+    std::vector<LineVertex> normalLinesTBN;
 
     std::vector<Vertex> original_vertices;
     std::vector<GLuint> original_indices;
@@ -95,6 +121,16 @@ struct Object {
 
     std::vector<ObjectState> undoStack;
     std::vector<ObjectState> redoStack;
+
+    glm::mat4 model;
+    glm::mat4 mvp;
+
+    std::string type;
+
+    GLuint normalTexture = 0;
+    std::string norm_map;
+
+    float shininess;
 };
 
 inline ObjectState CaptureState(const Object& o) {
@@ -153,4 +189,28 @@ struct Settings {
     float fov;
 
     bool VSync;
+};
+
+struct Light {
+
+    glm::vec3 pos;
+    glm::vec3 dir;
+    glm::vec3 col;
+    glm::vec3 att;
+
+    float ambient;
+
+    float inner;
+    float outer;
+    float falloff;
+
+    float bias;
+    float pcf;
+
+    std::string type;
+
+    GLuint typeID;
+
+    std::vector<Vertex> vertices;
+    std::vector<GLuint> indices;
 };

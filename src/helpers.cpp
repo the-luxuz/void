@@ -77,6 +77,28 @@ glm::vec3 cameraPos;
 
 bool dont_reload_cam = false;
 
+bool face_normal = false;
+
+bool normals_appear = false;
+bool tangent_appear = false;
+bool bitangent_appear = false;
+
+std::vector<Light> lights;
+
+std::vector<Object> lightObjects;
+
+glm::mat4 lightVP[8];
+
+bool normal_apper = false;
+bool tangent_apper = false;
+bool bitangent_apper = false;
+
+bool tex_appear = true;
+
+int render_modes = 0;
+
+bool shadow_map_render = true;
+
 void DeleteObjectGPU(Object& o) {
 
 	if (o.ebo)
@@ -1146,15 +1168,217 @@ void Create_Grid() {
 	glBindVertexArray(0);
 }
 
+void Build_Normals(Object& obj) {
+
+	obj.normalLines.clear();
+
+	float length = 0.25f;
+
+	for (auto& v : obj.vertices) {
+
+		glm::vec3 p = v.position;
+		glm::vec3 n = glm::normalize(v.normal);
+
+		obj.normalLines.push_back({ p });
+		obj.normalLines.push_back({ p + n * length });
+	}
+}
+
+void Build_TBN(Object& obj) {
+
+	obj.normalLinesTBN.clear();
+	obj.tangentLines.clear();
+	obj.bitangentLines.clear();
+
+	float length = 0.25f;
+
+	for (auto& v : obj.vertices) {
+
+		glm::vec3 p = v.position;
+
+		glm::vec3 N = glm::normalize(v.normal);
+		glm::vec3 T = glm::normalize(v.tangent);
+
+		T = glm::normalize(T - N * glm::dot(N, T));
+
+		glm::vec3 B = -glm::normalize(glm::cross(N, T));
+
+		obj.normalLinesTBN.push_back({ p });
+		obj.normalLinesTBN.push_back({ p + N * length });
+
+		obj.tangentLines.push_back({ p });
+		obj.tangentLines.push_back({ p + T * length });
+
+		obj.bitangentLines.push_back({ p });
+		obj.bitangentLines.push_back({ p + B * length });
+	}
+}
+
+void CreateLineBuffer(GLuint& vao, GLuint& vbo, const std::vector<LineVertex>& data) {
+
+	glBindVertexArray(vao);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+	glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(data.size() * sizeof(LineVertex)), data.data(), GL_STATIC_DRAW);
+
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(LineVertex), (void*)0);
+
+	glBindVertexArray(0);
+}
+
+void Calculate_Average_Normals(Object& obj) {
+
+	float eps = 0.0001f;
+
+	std::vector<glm::vec3> original_normals(obj.vertices.size());
+
+	for (int i = 0; i < obj.vertices.size(); i++)
+		original_normals[i] = obj.vertices[i].normal;
+
+	for (int i = 0; i < obj.vertices.size(); i++) {
+
+		glm::vec3 avg(0.0f);
+		int count = 0;
+
+		for (int j = 0; j < obj.vertices.size(); j++) {
+
+			if (glm::length(obj.vertices[i].position - obj.vertices[j].position) < eps) {
+
+				avg += original_normals[j];
+				count++;
+			}
+		}
+
+		if (count > 0)
+			obj.vertices[i].normal = glm::normalize(avg);
+	}
+}
+
+void Calculate_Average_TBN(Object& obj) {
+
+	const float eps = 0.0001f;
+
+	std::vector<glm::vec3> normals(obj.vertices.size());
+	std::vector<glm::vec3> tangents(obj.vertices.size());
+	std::vector<glm::vec3> bitangents(obj.vertices.size());
+
+	for (size_t i = 0; i < obj.vertices.size(); i++) {
+
+		normals[i] = obj.vertices[i].normal;
+		tangents[i] = obj.vertices[i].tangent;
+		bitangents[i] = obj.vertices[i].bitangent;
+	}
+
+	for (size_t i = 0; i < obj.vertices.size(); i++) {
+
+		glm::vec3 avgN(0.0f);
+		glm::vec3 avgT(0.0f);
+		glm::vec3 avgB(0.0f);
+
+		int count = 0;
+
+		for (size_t j = 0; j < obj.vertices.size(); j++) {
+
+			if (glm::length(obj.vertices[i].position - obj.vertices[j].position) < eps) {
+
+				avgN += normals[j];
+				avgT += tangents[j];
+				avgB += bitangents[j];
+
+				count++;
+			}
+		}
+
+		avgN = glm::normalize(avgN);
+		avgT = glm::normalize(avgT);
+
+		// gram schmidt
+		avgT = glm::normalize(avgT - avgN * glm::dot(avgN, avgT));
+
+		avgB = -glm::normalize(glm::cross(avgN, avgT));
+
+		obj.vertices[i].normal = avgN;
+		obj.vertices[i].tangent = avgT;
+		obj.vertices[i].bitangent = avgB;
+	}
+}
+
+glm::vec3 Compute_Normal(const glm::vec3& a, const glm::vec3& b, const glm::vec3& c) {
+	return glm::normalize(glm::cross(b - a, c - a));
+}
+
 void Add_Vertex(Object& obj, const Vertex& v) {
 
 	obj.vertices.push_back(v);
 	obj.indices.push_back(obj.indices.size());
 }
 
-void Add_Tri(Object& obj, const Vertex& v0, const Vertex& v1, const Vertex& v2) {
+void Add_Vertex(Light& lgh, const Vertex& v) {
+
+	lgh.vertices.push_back(v);
+	lgh.indices.push_back(lgh.indices.size());
+}
+
+void Add_Tri(Object& obj, const Vertex& in_v0, const Vertex& in_v1, const Vertex& in_v2) {
+
+	// the reason for this is that i need to mantain the const, because in gen_figures.h i call this func directly doing Vertex{}, so i must take const
+	// but, to avoid doing a const_cast, i prefer doing this
+	Vertex v0 = in_v0;
+	Vertex v1 = in_v1;
+	Vertex v2 = in_v2;
+
+	glm::vec3 faceN = glm::normalize(glm::cross(v1.position - v0.position, v2.position - v0.position));
+
+	glm::vec3 delta_v1 = v1.position - v0.position;
+	glm::vec3 delta_v2 = v2.position - v0.position;
+
+	glm::vec2 delta_uv1 = v1.uv - v0.uv;
+	glm::vec2 delta_uv2 = v2.uv - v0.uv;
+
+	float f = 1.0f / (delta_uv1.x * delta_uv2.y - delta_uv2.x * delta_uv1.y);
+
+	glm::vec3 T = f * (delta_uv2.y * delta_v1 - delta_uv1.y * delta_v2);
+
+	glm::vec3 B = f * (-delta_uv2.x * delta_v1 + delta_uv1.x * delta_v2);
+
+	glm::vec3 N = faceN;
+
+	v0.tangent += T;
+	v1.tangent += T;
+	v2.tangent += T;
+
+	v0.bitangent += B;
+	v1.bitangent += B;
+	v2.bitangent += B;
+
+	v0.normal += N;
+	v1.normal += N;
+	v2.normal += N;
 
 	Add_Vertex(obj, v0);
 	Add_Vertex(obj, v1);
 	Add_Vertex(obj, v2);
+}
+
+void Add_Tri(Light& lgh, const  Vertex& in_v0, const  Vertex& in_v1, const  Vertex& in_v2) {
+
+	// the reason for this is that i need to mantain the const, because in gen_figures.h i call this func directly doing Vertex{}, so i must take const
+	// but, to avoid doing a const_cast, i prefer doing this
+	Vertex v0 = in_v0;
+	Vertex v1 = in_v1;
+	Vertex v2 = in_v2;
+
+	glm::vec3 faceN = glm::normalize(glm::cross(v1.position - v0.position, v2.position - v0.position));
+
+	v0.tangent = glm::vec3(0);
+	v1.tangent = glm::vec3(0);
+	v2.tangent = glm::vec3(0);
+
+	v0.bitangent = glm::vec3(0);
+	v1.bitangent = glm::vec3(0);
+	v2.bitangent = glm::vec3(0);
+
+	Add_Vertex(lgh, v0);
+	Add_Vertex(lgh, v1);
+	Add_Vertex(lgh, v2);
 }

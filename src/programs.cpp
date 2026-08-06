@@ -1,7 +1,9 @@
 #include "headers/programs.h"
 
 GLuint program;
+GLuint program_line;
 GLuint program_grid;
+GLuint program_depth;
 GLuint program_skybox;
 GLuint program_hdrToCubemap;
 
@@ -58,6 +60,10 @@ GLuint create_shaders(GLuint pro, const char* vertexShaderPath, const char* frag
 void create_programs() {
 
 	program = create_shaders(program, "../data/shaders/vertex.vert", "../data/shaders/fragment.frag");
+
+	program_line = create_shaders(program_line, "../data/shaders/vertex_line.vert", "../data/shaders/fragment_line.frag");
+
+	program_depth = create_shaders(program_depth, "../data/shaders/vertex_depth.vert", "../data/shaders/fragment_depth.frag");
 
 	program_grid = create_shaders(program_grid, "../data/shaders/vertex_grid.vert", "../data/shaders/fragment_grid.frag");
 

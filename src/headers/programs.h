@@ -3,6 +3,7 @@
 #include "local.h"
 
 extern GLuint program;
+extern GLuint program_line;
 extern GLuint program_grid;
 extern GLuint program_skybox;
 extern GLuint program_hdrToCubemap;

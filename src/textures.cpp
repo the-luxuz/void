@@ -250,3 +250,44 @@ void Create_depth_tex(int width, int height) {
 
     glBindTexture(GL_TEXTURE_2D, 0);
 }
+
+void LoadNormalMap(Object& obj) {
+
+    int w, h, channels;
+
+    std::string fullPath = "../" + obj.norm_map;
+
+    unsigned char* data = stbi_load(fullPath.c_str(), &w, &h, &channels, STBI_rgb_alpha);
+
+    std::cout << obj.norm_map << "\n";
+
+    if (!data) {
+
+        std::cout << "Failed to load normal map: " << obj.norm_map << "\n";
+
+        return;
+    }
+
+    glGenTextures(1, &obj.normalTexture);
+
+    glBindTexture(GL_TEXTURE_2D, obj.normalTexture);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    glTexImage2D(
+        GL_TEXTURE_2D,
+        0,
+        GL_RGBA8,
+        w,
+        h,
+        0,
+        GL_RGBA,
+        GL_UNSIGNED_BYTE,
+        data
+    );
+
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+    stbi_image_free(data);
+}

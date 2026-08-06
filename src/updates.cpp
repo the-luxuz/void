@@ -66,18 +66,53 @@ void update_objects() {
 
 	glUniform1i(glGetUniformLocation(program, "uTexture"), 0);
 
+	int numLights = lights.size(); // maximum of 8 lights
+	glUniform1i(glGetUniformLocation(program, "numLights"), numLights);
+
+	for (int i = 0; i < numLights; i++) {
+
+		std::string idx = std::to_string(i);
+
+		glUniform1i(glGetUniformLocation(program, ("lights[" + idx + "].type").c_str()), lights[i].typeID);
+		glUniform3fv(glGetUniformLocation(program, ("lights[" + idx + "].position").c_str()), 1, glm::value_ptr(lights[i].pos));
+		glUniform3fv(glGetUniformLocation(program, ("lights[" + idx + "].direction").c_str()), 1, glm::value_ptr(lights[i].dir));
+		glUniform3fv(glGetUniformLocation(program, ("lights[" + idx + "].attenuation").c_str()), 1, glm::value_ptr(lights[i].att));
+		glUniform1f(glGetUniformLocation(program, ("lights[" + idx + "].ambient").c_str()), lights[i].ambient);
+		glUniform1f(glGetUniformLocation(program, ("lights[" + idx + "].bias").c_str()), lights[i].bias);
+		glUniform1f(glGetUniformLocation(program, ("lights[" + idx + "].pcf").c_str()), lights[i].pcf);
+		glUniform1f(glGetUniformLocation(program, ("lights[" + idx + "].inner").c_str()), lights[i].inner);
+		glUniform1f(glGetUniformLocation(program, ("lights[" + idx + "].outer").c_str()), lights[i].outer);
+		glUniform1f(glGetUniformLocation(program, ("lights[" + idx + "].falloff").c_str()), lights[i].falloff);
+		glUniform3fv(glGetUniformLocation(program, ("lights[" + idx + "].color").c_str()), 1, glm::value_ptr(lights[i].col));
+
+		GLint loc = glGetUniformLocation(program, "lightVP");
+		glUniformMatrix4fv(loc, numLights, GL_FALSE, glm::value_ptr(lightVP[0]));
+
+	}
+
+	glUniform1i(glGetUniformLocation(program, "normalMap"), 1);
+
+	glUniformMatrix4fv(7, 1, GL_FALSE, glm::value_ptr(view));
+
+	glUniform1i(glGetUniformLocation(program, "numLights"), numLights);
+
 	for (Object& obj : objects) {
+
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, obj.normalTexture);
+
+		glUniform3fv(glGetUniformLocation(program, "cameraPos"), 1, glm::value_ptr(cameraPos));
+		glUniform1f(glGetUniformLocation(program, "shininess"), obj.shininess);
 
 		glm::mat4 model = GetModelMatrix(obj);
 
 		glm::mat4 mvp = projection * view * model;
 
-		glUniformMatrix4fv(
-			glGetUniformLocation(program, "uMVP"),
-			1,
-			GL_FALSE,
-			glm::value_ptr(mvp)
-		);
+		obj.model = model;
+		obj.mvp = projection * view * model;
+
+		glUniformMatrix4fv(3, 1, GL_FALSE, glm::value_ptr(obj.mvp));
+		glUniformMatrix4fv(4, 1, GL_FALSE, glm::value_ptr(obj.model));
 
 
 		if (currentTexture != obj.obj_texture) {
@@ -85,6 +120,11 @@ void update_objects() {
 			glBindTexture(GL_TEXTURE_2D, obj.obj_texture);
 			currentTexture = obj.obj_texture;
 		}
+
+		glUniform1i(glGetUniformLocation(program, "tex_appear"), tex_appear);
+		glUniform1i(glGetUniformLocation(program, "normal_apper"), normal_apper);
+		glUniform1i(glGetUniformLocation(program, "tangent_apper"), tangent_apper);
+		glUniform1i(glGetUniformLocation(program, "bitangent_apper"), bitangent_apper);
 
 		glBindVertexArray(obj.vao);
 
@@ -94,6 +134,49 @@ void update_objects() {
 			GL_UNSIGNED_INT,
 			nullptr
 		);
+	}
+
+	//-----------------------------------------------------------------------------------------------
+	// draw the lights and the normals, tangents and bitangents
+
+	glUseProgram(program_line);
+
+	GLint colorLoc = glGetUniformLocation(program_line, "color");
+
+	if (normals_appear) {
+
+		for (auto& obj : objects) {
+
+			glUniformMatrix4fv(3, 1, GL_FALSE, glm::value_ptr(obj.mvp));
+
+			glBindVertexArray(obj.normalTBVAO);
+			glUniform3f(colorLoc, 0.0f, 0.0f, 1.0f); // blue
+			glDrawArrays(GL_LINES, 0, (GLsizei)obj.normalLinesTBN.size());
+
+			glBindVertexArray(obj.tangentVAO);
+			glUniform3f(colorLoc, 1.0f, 0.0f, 0.0f); // red
+			glDrawArrays(GL_LINES, 0, (GLsizei)obj.tangentLines.size());
+
+			glBindVertexArray(obj.bitangentVAO);
+			glUniform3f(colorLoc, 0.0f, 1.0f, 0.0f); // green
+			glDrawArrays(GL_LINES, 0, (GLsizei)obj.bitangentLines.size());
+		}
+	}
+
+	for (int i = 0; i < lightObjects.size(); i++) {
+
+		glm::mat4 model(1.0f);
+
+		model = glm::translate(model, lightObjects[i].position);
+		model = glm::scale(model, lightObjects[i].scale);
+
+		glm::mat4 mvp = projection * view * model;
+
+		glUniformMatrix4fv(3, 1, GL_FALSE, glm::value_ptr(mvp));
+		glUniform3f(colorLoc, 1.0f, 1.0f, 1.0f); // white
+		glBindVertexArray(lightObjects[i].vao);
+
+		glDrawElements(GL_TRIANGLES, (GLsizei)lightObjects[i].indices.size(), GL_UNSIGNED_INT, 0);
 	}
 
 }

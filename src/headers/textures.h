@@ -5,6 +5,7 @@
 #include "tinyexr.h"
 
 #include "local.h"
+#include "classes.h"
 
 #include <filesystem>
 #include <iostream>
@@ -30,3 +31,5 @@ GLuint LoadObjTexture(const std::string& path);
 void Create_viewport_tex(int width, int height);
 
 void Create_depth_tex(int width, int height);
+
+void LoadNormalMap(Object& obj);

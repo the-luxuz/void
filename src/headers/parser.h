@@ -46,10 +46,14 @@ struct Parser {
 		std::string mesh;
 
 		std::string tex;
+
+		std::string normal_map = "data/textures/default_normal.png";
 		
 		glm::vec3 position;
 		glm::vec3 rotation;
 		glm::vec3 scale;
+
+		float ns = 10.0f;
 
 		glm::vec3 min, max;
 
@@ -60,5 +64,24 @@ struct Parser {
 	};
 
 	std::vector<Transform> objects;
+
+	struct Light {
+
+		glm::vec3 pos;
+		glm::vec3 dir;
+		glm::vec3 col;
+		glm::vec3 att;
+
+		float amb = 0.0f;
+		float inner = 0.0f;
+		float outer = 30.0f;
+		float falloff = 1.0f;
+		float bias = 0.005f;
+		float pcf = 1.0f;
+
+		std::string type = "POINT";
+	};
+
+	std::vector<Light> lights;
 
 };

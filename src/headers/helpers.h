@@ -76,6 +76,28 @@ extern glm::vec3 cameraPos;
 
 extern bool dont_reload_cam;
 
+extern bool face_normal;
+
+extern bool normals_appear;
+extern bool tangent_appear;
+extern bool bitangent_appear;
+
+extern std::vector<Light> lights;
+
+extern std::vector<Object> lightObjects;
+
+extern glm::mat4 lightVP[8];
+
+extern bool normal_apper;
+extern bool tangent_apper;
+extern bool bitangent_apper;
+
+extern bool tex_appear;
+
+extern int render_modes;
+
+extern bool shadow_map_render;
+
 void DeleteObjectGPU(Object& o);
 
 void clean();
@@ -129,6 +151,22 @@ void controls(const bool* keyboard, float angle_step, float radius_step, float d
 
 void Create_Grid();
 
+void Build_Normals(Object& obj);
+
+void Build_TBN(Object& obj);
+
+void CreateLineBuffer(GLuint& vao, GLuint& vbo, const std::vector<LineVertex>& data);
+
+void Calculate_Average_Normals(Object& obj);
+
+void Calculate_Average_TBN(Object& obj);
+
+glm::vec3 Compute_Normal(const glm::vec3& a, const glm::vec3& b, const glm::vec3& c);
+
 void Add_Vertex(Object& obj, const Vertex& v);
 
-void Add_Tri(Object& obj, const Vertex& v0, const Vertex& v1, const Vertex& v2);
+void Add_Vertex(Light& lgh, const Vertex& v);
+
+void Add_Tri(Object& obj, const Vertex& in_v0, const Vertex& in_v1, const Vertex& in_v2);
+
+void Add_Tri(Light& lgh, const  Vertex& in_v0, const  Vertex& in_v1, const  Vertex& in_v2);

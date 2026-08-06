@@ -192,6 +192,20 @@ void update(SDL_Window* window) {
 	SDL_GL_SwapWindow(window);
 }
 
+void Rebuild() {
+
+	for (int i = 0; i < par.objects.size(); i++) {
+
+		Object& obj = objects[i];
+
+		// Build_Normals(obj);
+		Build_TBN(obj);
+
+		UpdateMeshBuffers(obj);
+		UpdateLineBuffers(obj);
+	}
+}
+
 int main(int argc, char* args[]) {
 
 	init_("../data/scene.bin");
@@ -209,6 +223,64 @@ int main(int argc, char* args[]) {
 				break;
 
 			case SDL_EVENT_KEY_DOWN:
+
+				if (event.key.scancode == SDL_SCANCODE_M) {
+
+					render_modes++;
+
+					if (render_modes > 3)
+						render_modes = 0;
+
+					switch (render_modes) {
+
+						case 0:
+							tex_appear = true;
+							normal_apper = false;
+							tangent_apper = false;
+							bitangent_apper = false;
+							break;
+
+						case 1:
+							normal_apper = true;
+							tex_appear = false;
+							tangent_apper = false;
+							bitangent_apper = false;
+							break;
+
+						case 2:
+							tangent_apper = true;
+							tex_appear = false;
+							normal_apper = false;
+							bitangent_apper = false;
+							break;
+
+						case 3:
+							bitangent_apper = true;
+							tex_appear = false;
+							normal_apper = false;
+							tangent_apper = false;
+							break;
+					}
+
+
+				}
+
+				if (event.key.scancode == SDL_SCANCODE_Y) {
+				
+					shadow_map_render = !shadow_map_render;
+
+				}
+
+				if (event.key.scancode == SDL_SCANCODE_N) {
+
+					normals_appear = !normals_appear;
+					//Rebuild();
+				}
+
+				if (event.key.scancode == SDL_SCANCODE_F) {
+					face_normal = !face_normal;
+					Rebuild();
+				}
 
 				if (event.key.scancode == SDL_SCANCODE_ESCAPE)
 					quit = true;
