@@ -10,7 +10,7 @@ void init_viewport() {
 
 	Create_viewport_tex(viewport_width, viewport_height);
 
-	Create_depth_tex(viewport_width, viewport_height);
+	//Create_depth_tex(viewport_width, viewport_height);
 
 	glDrawBuffer(GL_COLOR_ATTACHMENT0);
 
@@ -301,14 +301,14 @@ void init() {
 
 	if (init_lights(light)) {
 
-		light.name = "Light";
+		obj.name = "Light";
 
 		light.pos = glm::vec3(100.0f);
 		light.dir = glm::normalize(glm::vec3(0.0f, -1.0f, 0.0f));
 		light.col = glm::vec3(1.0f, 1.0f, 1.0f);
 		light.att = glm::vec3(0.f);
 
-		light.att = glm::vec3(1.0f, 0.09f, 0.032f);
+		light.att = glm::vec3(1.0f, 0.005f, 0.0001f);
 
 		light.ambient = 0.15f;
 
@@ -319,7 +319,7 @@ void init() {
 		light.outer = 40.0f;
 		light.falloff = 1.0f;
 
-		light.type = "POINT";
+		light.type = "SPOT";
 
 		light.typeID = 0;
 

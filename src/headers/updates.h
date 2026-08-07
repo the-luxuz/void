@@ -24,6 +24,8 @@ extern ImGuizmo::OPERATION currentOperation;
 
 void update_grid(glm::vec3 cameraPos);
 
+void update_depthmap();
+
 void update_objects();
 
 void update_skybox();

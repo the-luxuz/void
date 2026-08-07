@@ -1,4 +1,5 @@
 #include "headers/programs.h"
+#include "headers/textures.h"
 
 GLuint program;
 GLuint program_line;
@@ -6,6 +7,8 @@ GLuint program_grid;
 GLuint program_depth;
 GLuint program_skybox;
 GLuint program_hdrToCubemap;
+
+GLuint depthFBO[8];
 
 GLuint create_shaders(GLuint pro, const char* vertexShaderPath, const char* fragmentShaderPath) {
 	
@@ -64,6 +67,16 @@ void create_programs() {
 	program_line = create_shaders(program_line, "../data/shaders/vertex_line.vert", "../data/shaders/fragment_line.frag");
 
 	program_depth = create_shaders(program_depth, "../data/shaders/vertex_depth.vert", "../data/shaders/fragment_depth.frag");
+
+	for (int i = 0; i < 8; i++) {
+
+		glGenFramebuffers(1, &depthFBO[i]);
+		glBindFramebuffer(GL_FRAMEBUFFER, depthFBO[i]);
+
+		Create_depth_tex(viewport_width, viewport_height, i);
+
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}
 
 	program_grid = create_shaders(program_grid, "../data/shaders/vertex_grid.vert", "../data/shaders/fragment_grid.frag");
 

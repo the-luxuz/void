@@ -56,11 +56,9 @@ void update_grid(glm::vec3 cameraPos) {
 	glBindVertexArray(0);
 }
 
-void update_objects() {
-
-	currentTexture = 0;
+void update_depthmap() {
 	
-	glUseProgram(program);
+	//--------------------------------------------------------------------
 
 	for (int i = 0; i < lightObjects.size(); i++) {
 
@@ -88,9 +86,72 @@ void update_objects() {
 		lightVP[i] = lightProjection * lightView;
 	}
 
-	glActiveTexture(GL_TEXTURE0);
+	for (int i = 0; i < lightObjects.size(); i++) {
+
+		/*if (lights[i].typeID != 2)
+			continue;*/
+
+		glBindFramebuffer(GL_FRAMEBUFFER, depthFBO[i]);
+
+		glViewport(0, 0, viewport_width, viewport_height);
+
+		glClear(GL_DEPTH_BUFFER_BIT);
+
+		glUseProgram(program_depth);
+
+		for (auto& obj : objects) {
+
+			// excludes the planes from the depth map
+			if (obj.type == "PLANE")
+				continue;
+
+			glm::mat4 model(1.0f);
+
+			model = glm::translate(model, obj.position);
+
+			model = glm::rotate(model, glm::radians(obj.rotation.x), glm::vec3(1, 0, 0));
+			model = glm::rotate(model, glm::radians(obj.rotation.y), glm::vec3(0, 1, 0));
+			model = glm::rotate(model, glm::radians(obj.rotation.z), glm::vec3(0, 0, 1));
+
+			model = glm::scale(model, obj.scale);
+
+			glm::mat4 lightMVP = lightVP[i] * model;
+
+			glUniformMatrix4fv(3, 1, GL_FALSE, glm::value_ptr(lightMVP));
+
+			glBindVertexArray(obj.vao);
+
+			glDrawElements(
+				GL_TRIANGLES,
+				static_cast<GLsizei>(obj.indices.size()),
+				GL_UNSIGNED_INT,
+				0
+			);
+		}
+	}
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	//--------------------------------------------------------------------
+}
+
+void update_objects() {
+
+	currentTexture = 0;
+	
+	glUseProgram(program);
 
 	glUniform1i(glGetUniformLocation(program, "tex"), 0);
+
+	for (int i = 0; i < lightObjects.size(); i++) {
+
+		glActiveTexture(GL_TEXTURE2 + i);
+		glBindTexture(GL_TEXTURE_2D, depth_texture[i]);
+
+		std::string idx = std::to_string(i);
+
+		glUniform1i(glGetUniformLocation(program, ("depthData[" + idx + "]").c_str()), 2 + i);
+	}
 
 	int numLights = lights.size(); // maximum of 8 lights
 	glUniform1i(glGetUniformLocation(program, "numLights"), numLights);

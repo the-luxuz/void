@@ -368,35 +368,15 @@ void ResizeViewport(int width, int height) {
 
 	glBindTexture(GL_TEXTURE_2D, 0);
 
-	glBindTexture(GL_TEXTURE_2D, depth_texture);
+	for (int i = 0; i < 8; i++) {
 
-	glTexImage2D(
-		GL_TEXTURE_2D,
-		0,
-		GL_DEPTH_COMPONENT24,
-		width,
-		height,
-		0,
-		GL_DEPTH_COMPONENT,
-		GL_FLOAT,
-		nullptr
-	);
+		glGenFramebuffers(1, &depthFBO[i]);
+		glBindFramebuffer(GL_FRAMEBUFFER, depthFBO[i]);
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		Create_depth_tex(viewport_width, viewport_height, i);
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-	glFramebufferTexture2D(
-		GL_FRAMEBUFFER,
-		GL_DEPTH_ATTACHMENT,
-		GL_TEXTURE_2D,
-		depth_texture,
-		0
-	);
-
-	glBindTexture(GL_TEXTURE_2D, 0);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }

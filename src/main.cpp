@@ -35,10 +35,12 @@ view_Mode currentViewMode = view_Mode::EDITOR;
 
 void update(SDL_Window* window) {
 
+	update_depthmap();
 	if (currentViewMode == view_Mode::EDITOR) {
 	
 		if ((int)viewportSize.x != viewport_width || (int)viewportSize.y != viewport_height)
 			ResizeViewport((int)viewportSize.x, (int)viewportSize.y);
+
 
 		glBindFramebuffer(GL_FRAMEBUFFER, viewportFBO);
 
@@ -194,7 +196,7 @@ void update(SDL_Window* window) {
 
 void Rebuild() {
 
-	for (int i = 0; i < par.objects.size(); i++) {
+	for (int i = 0; i < objects.size(); i++) {
 
 		Object& obj = objects[i];
 

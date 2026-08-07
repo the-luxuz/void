@@ -68,7 +68,7 @@ vec3 ShadePointLight(Light light, vec3 N, vec3 V, vec3 baseColor) {
     vec3 R = reflect(-L, N);
     float spec = pow(max(dot(V, R), 0.0), shininess);
 
-    vec3 diffuse = diff * light.color * min(att, 1.0);
+    vec3 diffuse = diff * light.color * min(att, 1.0) * baseColor;
     vec3 specular = spec * light.color * min(att, 1.0);
 
     return (light.ambient * light.color * baseColor) + (1.0 - shadow) * ((diffuse * baseColor) + specular);
@@ -85,7 +85,7 @@ vec3 ShadeDirLight(Light light, vec3 N, vec3 V, vec3 baseColor) {
     vec3 R = reflect(-L, N);
     float spec = pow(max(dot(V, R), 0.0), shininess);
 
-    vec3 diffuse = diff * light.color;
+    vec3 diffuse = diff * light.color * baseColor;
     vec3 specular = spec * light.color;
 
     return (light.ambient * light.color * baseColor) + (1.0 - shadow) * ((diffuse * baseColor) + specular);
@@ -129,11 +129,11 @@ vec3 ShadeSpotLight(Light light, vec3 N, vec3 V, vec3 baseColor) {
 
     float spec = pow(max(dot(V, R), 0.0), shininess);
 
-    diffuse = diff * light.color * min(att, 1.0) * spotEff;
+    diffuse = diff * light.color * min(att, 1.0) * spotEff * baseColor;
 
     specular = spec * light.color * min(att, 1.0) * spotEff;
 
-    return (light.ambient * light.color * baseColor) + (1.0 - shadow) * ((diffuse) + specular);
+    return (light.ambient * light.color * baseColor) + (1.0 - shadow) * ((diffuse * baseColor) + specular);
 }
 
 void main() {
@@ -204,11 +204,6 @@ void main() {
             result += ShadeDirLight(lights[i], N, V, baseColor);
         else if (lights[i].type == 2)
             result += ShadeSpotLight(lights[i], N, V, baseColor);
-    }
-
-    if (numLights == 0) {
-        outputColor = vec4(baseColor, 1.0);
-        return;
     }
 
     if (tex_appear)

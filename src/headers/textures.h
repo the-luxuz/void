@@ -16,7 +16,7 @@ extern int viewport_width;
 extern int viewport_height;
 
 extern GLuint viewport_texture;
-extern GLuint depth_texture;
+extern GLuint depth_texture[8];
 
 extern GLuint skybox_texture;
 
@@ -30,6 +30,6 @@ GLuint LoadObjTexture(const std::string& path);
 
 void Create_viewport_tex(int width, int height);
 
-void Create_depth_tex(int width, int height);
+void Create_depth_tex(int width, int height, int i);
 
 void LoadNormalMap(Object& obj);

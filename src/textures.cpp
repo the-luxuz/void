@@ -8,7 +8,7 @@ int viewport_width = 512;
 int viewport_height = 512;
 
 GLuint viewport_texture;
-GLuint depth_texture;
+GLuint depth_texture[8];
 
 GLuint skybox_texture;
 
@@ -217,10 +217,10 @@ void Create_viewport_tex(int width, int height) {
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-void Create_depth_tex(int width, int height) {
+void Create_depth_tex(int width, int height, int i) {
 
-    glGenTextures(1, &depth_texture);
-    glBindTexture(GL_TEXTURE_2D, depth_texture);
+    glGenTextures(1, &depth_texture[i]);
+    glBindTexture(GL_TEXTURE_2D, depth_texture[i]);
 
     glTexImage2D(
         GL_TEXTURE_2D,
@@ -244,9 +244,14 @@ void Create_depth_tex(int width, int height) {
         GL_FRAMEBUFFER,
         GL_DEPTH_ATTACHMENT,
         GL_TEXTURE_2D,
-        depth_texture,
+        depth_texture[i],
         0
     );
+
+    GLenum drawBuffers[] = { GL_NONE };
+    glDrawBuffers(1, drawBuffers);
+
+    GLenum result = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 
     glBindTexture(GL_TEXTURE_2D, 0);
 }
