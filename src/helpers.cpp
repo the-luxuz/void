@@ -196,7 +196,9 @@ void Docking() {
 
 		ImGui::DockBuilderDockWindow("Tools", dock_right);
 		ImGui::DockBuilderDockWindow("Hierarchy", dock_right);
+
 		ImGui::DockBuilderDockWindow("Assets", dock_bottom);
+		ImGui::DockBuilderDockWindow("Lights", dock_bottom);
 
 		ImGui::DockBuilderDockWindow("ViewPort", dock_main);
 
@@ -1379,4 +1381,52 @@ void Add_Tri(Light& lgh, const  Vertex& in_v0, const  Vertex& in_v1, const  Vert
 	Add_Vertex(lgh, v0);
 	Add_Vertex(lgh, v1);
 	Add_Vertex(lgh, v2);
+}
+
+void CreateLight(const std::string& type) {
+
+	Light light;
+	Object obj;
+
+	if (!init_lights(light))
+		return;
+
+	obj.name = GenerateObjectName("Light");
+
+	light.pos = glm::vec3(0.0f);
+	light.dir = glm::vec3(0.0f, -1.0f, 0.0f);
+
+	light.col = glm::vec3(1.0f);
+
+	light.att = glm::vec3(1.0f, 0.005f, 0.0001f);
+
+	light.ambient = 0.15f;
+
+	light.bias = 0.00001f;
+	light.pcf = 3.0f;
+
+	light.inner = 10.f;
+	light.outer = 40.f;
+	light.falloff = 1.f;
+
+	light.type = type;
+
+	if (type == "POINT")
+		light.typeID = 0;
+	else if (type == "DIR")
+		light.typeID = 1;
+	else
+		light.typeID = 2;
+
+	obj.position = light.pos;
+	obj.rotation = glm::vec3(0.f);
+	obj.scale = glm::vec3(20.f);
+
+	obj.vertices = light.vertices;
+	obj.indices = light.indices;
+
+	buffer(obj);
+
+	lights.push_back(light);
+	lightObjects.push_back(obj);
 }

@@ -513,7 +513,7 @@ void update_imgui_guizmo() {
 							obj.obj_texture = 0;
 
 						objects.push_back(obj);
-						//selectedObject = (int)(objects.size() - 1);
+						selectedObject = (int)(objects.size() - 1);
 					}
 
 					ImGui::TextWrapped("%s", entry.path().stem().string().c_str());
@@ -587,6 +587,36 @@ void update_imgui_guizmo() {
 
 	ImGui::End();
 
+	//----------------------------------------------------
+	// lights
+	
+
+	ImGui::Begin("Lights");
+
+	if (ImGui::Button("+ Point")) {
+
+		CreateLight("POINT");
+		selectedObject = (int)(objects.size() + lightObjects.size() - 1);
+	}
+
+	ImGui::SameLine();
+
+	if (ImGui::Button("+ Spot")) {
+
+		CreateLight("SPOT");
+		selectedObject = (int)(objects.size() + lightObjects.size() - 1);
+	}
+
+	ImGui::SameLine();
+
+	if (ImGui::Button("+ Directional")) {
+
+		CreateLight("DIR");
+		selectedObject = (int)(objects.size() + lightObjects.size() - 1);
+	}
+
+	ImGui::End();
+	
 	//----------------------------------------------------
 	// tools
 
@@ -667,11 +697,81 @@ void update_imgui_guizmo() {
 
 				Light* light = GetSelectedLight();
 
-				ImGui::ColorEdit3("Color", &light->col.x);
-				ImGui::DragFloat3("Position", &light->pos.x, 0.1f);
+				if (light) {
 
-				// Sincronizar la esfera
-				lightObjects[selectedObject - objects.size()].position = light->pos;
+					ImGui::SeparatorText("General");
+
+					//ImGui::InputText("Name", &lightObjects[selectedObject - objects.size()].name);
+
+					ImGui::ColorEdit3("Color", &light->col.x);
+
+					ImGui::DragFloat3("Position", &light->pos.x, 0.1f);
+
+					ImGui::DragFloat3("Direction", &light->dir.x, 0.01f);
+
+					ImGui::DragFloat("Ambient", &light->ambient, 0.01f, 0.f, 1.f);
+
+					lightObjects[selectedObject - objects.size()].position = light->pos;
+
+					ImGui::SeparatorText("Attenuation");
+
+					ImGui::DragFloat("Constant", &light->att.x, 0.001f, 0.f, 10.f);
+
+					ImGui::DragFloat("Linear", &light->att.y, 0.0001f, 0.f, 1.f);
+
+					ImGui::DragFloat("Quadratic", &light->att.z, 0.00001f, 0.f, 1.f);
+
+					if (light->type == "SPOT") {
+
+						ImGui::SeparatorText("Spot");
+
+						ImGui::DragFloat("Inner", &light->inner, 0.25f, 0.f, 90.f);
+
+						ImGui::DragFloat("Outer", &light->outer, 0.25f, 0.f, 90.f);
+
+						ImGui::DragFloat("Falloff", &light->falloff, 0.05f, 0.f, 16.f);
+					}
+
+					ImGui::SeparatorText("Shadow");
+
+					ImGui::DragFloat("Bias", &light->bias, 0.000001f, 0.f, 0.01f, "%.6f");
+
+					ImGui::DragFloat("PCF", &light->pcf, 0.1f, 1.f, 16.f);
+
+					ImGui::SeparatorText("Type");
+
+					const char* types[] = {
+						"Point",
+						"Directional",
+						"Spot"
+					};
+
+					int current = light->typeID;
+
+					if (ImGui::Combo("Light Type", &current, types, IM_ARRAYSIZE(types))) {
+
+						light->typeID = current;
+
+						switch (current)
+						{
+						case 0: light->type = "POINT"; break;
+						case 1: light->type = "DIR"; break;
+						case 2: light->type = "SPOT"; break;
+						}
+					}
+
+					ImGui::Separator();
+
+					if (ImGui::Button("Delete Light")) {
+
+						int index = selectedObject - objects.size();
+
+						lights.erase(lights.begin() + index);
+						lightObjects.erase(lightObjects.begin() + index);
+
+						selectedObject = -1;
+					}
+				}
 			}
 		}
 

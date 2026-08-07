@@ -173,3 +173,5 @@ void Add_Vertex(Light& lgh, const Vertex& v);
 void Add_Tri(Object& obj, const Vertex& in_v0, const Vertex& in_v1, const Vertex& in_v2);
 
 void Add_Tri(Light& lgh, const  Vertex& in_v0, const  Vertex& in_v1, const  Vertex& in_v2);
+
+void CreateLight(const std::string& type);

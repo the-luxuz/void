@@ -294,54 +294,6 @@ void init() {
 			lightObjects.push_back(obj);
 		}
 	}
-
-	Light light;
-
-	Object obj;
-
-	if (init_lights(light)) {
-
-		obj.name = "Light";
-
-		light.pos = glm::vec3(100.0f);
-		light.dir = glm::normalize(glm::vec3(0.0f, -1.0f, 0.0f));
-		light.col = glm::vec3(1.0f, 1.0f, 1.0f);
-		light.att = glm::vec3(0.f);
-
-		light.att = glm::vec3(1.0f, 0.005f, 0.0001f);
-
-		light.ambient = 0.15f;
-
-		light.bias = 0.00001f;
-		light.pcf = 3.0f;
-
-		light.inner = 10.0f;
-		light.outer = 40.0f;
-		light.falloff = 1.0f;
-
-		light.type = "POINT";
-
-		if (light.type == "POINT")
-			light.typeID = 0;
-
-		else if (light.type == "DIR")
-			light.typeID = 1;
-
-		else if (light.type == "SPOT")
-			light.typeID = 2;
-
-		obj.position = light.pos;
-		obj.rotation = glm::vec3(0.0f);
-		obj.scale = glm::vec3(20.f);
-
-		obj.vertices = light.vertices;
-		obj.indices = light.indices;
-
-		buffer(obj);
-
-		lights.push_back(light);
-		lightObjects.push_back(obj);
-	}
 }
 
 
