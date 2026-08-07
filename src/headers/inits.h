@@ -25,6 +25,6 @@ bool init_lights(Light& lgh);
 
 void init();
 
-void init_(const char* settings);
+bool open_init(const char* settings, Settings& st);
 
-void open_init(const char* settings, Settings& st);
+void init_(const char* settings);

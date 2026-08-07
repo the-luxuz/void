@@ -52,10 +52,13 @@ struct Parser {
 		std::string normal_map = "data/textures/brick_normal_map.png";
 		
 		glm::vec3 position;
-		glm::vec3 rotation;
+		glm::quat rotation;
 		glm::vec3 scale;
 
 		glm::vec3 min, max;
+
+		glm::mat4 model;
+		glm::mat4 mvp;
 
 		TextureMapping mapping = TextureMapping::UV;
 		coord_types coordType = coord_types::XZ;

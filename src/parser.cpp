@@ -44,8 +44,12 @@ void Parser::save(const char* fname, Settings& st, camera& cam, const std::vecto
     Write(out, cam.radius);
 
     uint32_t count = scene.size();
+    uint32_t lightObjCount = scene_lgh_obj.size();
+    uint32_t lightCount = scene_lgh.size();
 
     Write(out, count);
+    Write(out, lightObjCount);
+    Write(out, lightCount);
 
     for (auto& obj : scene) {
     
@@ -60,10 +64,16 @@ void Parser::save(const char* fname, Settings& st, camera& cam, const std::vecto
 
         Write(out, obj.position);
         Write(out, obj.scale);
-        Write(out, obj.rotation);
+       
+        glm::vec3 euler = glm::degrees(glm::eulerAngles(obj.rotation));
+
+        Write(out, euler);
 
         Write(out, obj.min);
         Write(out, obj.max);
+
+        Write(out, obj.model);
+        Write(out, obj.mvp);
 
         Write(out, obj.shininess);
 
@@ -85,7 +95,10 @@ void Parser::save(const char* fname, Settings& st, camera& cam, const std::vecto
 
         Write(out, obj.position);
         Write(out, obj.scale);
-        Write(out, obj.rotation);
+
+        glm::vec3 euler = glm::degrees(glm::eulerAngles(obj.rotation));
+
+        Write(out, euler);
 
         Write(out, obj.min);
         Write(out, obj.max);
@@ -148,11 +161,20 @@ bool Parser::load(const char* fname, Settings& st, camera& cam, std::vector<Obje
     Read(in, cam.radius);
 
     uint32_t count;
+    uint32_t lightObjCount;
+    uint32_t lightCount;
 
     Read(in, count);
+    Read(in, lightObjCount);
+    Read(in, lightCount);
 
     objects.clear();
+    scene_lgh_obj.clear();
+    lights.clear();
+
     objects.resize(count);
+    scene_lgh_obj.resize(lightObjCount);
+    lights.resize(lightCount);
 
     for (auto& obj : objects) {
     
@@ -167,10 +189,18 @@ bool Parser::load(const char* fname, Settings& st, camera& cam, std::vector<Obje
 
         Read(in, obj.position);
         Read(in, obj.scale);
-        Read(in, obj.rotation);
+
+        glm::vec3 euler;
+
+        Read(in, euler);
+
+        obj.rotation = glm::quat(glm::radians(euler));
 
         Read(in, obj.min);
         Read(in, obj.max);
+
+        Read(in, obj.model);
+        Read(in, obj.mvp);
 
         Read(in, obj.shininess);
 
@@ -192,7 +222,12 @@ bool Parser::load(const char* fname, Settings& st, camera& cam, std::vector<Obje
 
         Read(in, obj.position);
         Read(in, obj.scale);
-        Read(in, obj.rotation);
+      
+        glm::vec3 euler;
+
+        Read(in, euler);
+
+        obj.rotation = glm::quat(glm::radians(euler));
 
         Read(in, obj.min);
         Read(in, obj.max);

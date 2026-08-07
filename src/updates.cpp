@@ -62,7 +62,8 @@ void update_depthmap() {
 
 	for (int i = 0; i < lightObjects.size(); i++) {
 
-		// this is bcs if i put the up vector like (0, 1, 0), the light directions like (0, -1, 0), will not work
+		lights[i].dir = lightObjects[i].rotation * glm::vec3(0, 0, -1);
+
 		glm::vec3 forward = glm::normalize(lights[i].dir);
 
 		glm::vec3 up = glm::vec3(0, 1, 0);
@@ -101,17 +102,11 @@ void update_depthmap() {
 
 		for (auto& obj : objects) {
 
-			// excludes the planes from the depth map
-			if (obj.type == "PLANE")
-				continue;
-
 			glm::mat4 model(1.0f);
 
 			model = glm::translate(model, obj.position);
 
-			model = glm::rotate(model, glm::radians(obj.rotation.x), glm::vec3(1, 0, 0));
-			model = glm::rotate(model, glm::radians(obj.rotation.y), glm::vec3(0, 1, 0));
-			model = glm::rotate(model, glm::radians(obj.rotation.z), glm::vec3(0, 0, 1));
+			model *= glm::toMat4(obj.rotation);
 
 			model = glm::scale(model, obj.scale);
 
@@ -258,6 +253,7 @@ void update_objects() {
 		glm::mat4 model(1.0f);
 
 		model = glm::translate(model, lightObjects[i].position);
+		model *= glm::toMat4(lightObjects[i].rotation);
 		model = glm::scale(model, lightObjects[i].scale);
 
 		glm::mat4 mvp = projection * view * model;
@@ -308,13 +304,10 @@ void update_imgui_guizmo() {
 
 	ImGui::Image((ImTextureID)(intptr_t)viewport_texture, viewportSize, ImVec2(0, 1), ImVec2(1, 0));
 
-
 	Object* obj = GetSelectedObject();
 	Light* light = GetSelectedLight();
 
 	if (obj) {
-
-		m = GetModelMatrix(*obj);
 
 		ImGuizmo::BeginFrame();
 
@@ -350,7 +343,7 @@ void update_imgui_guizmo() {
 			}
 		}
 
-		ImGuizmo::Manipulate(glm::value_ptr(view), glm::value_ptr(projection), currentOperation, ImGuizmo::LOCAL, glm::value_ptr(m), nullptr, snap);
+		ImGuizmo::Manipulate(glm::value_ptr(view), glm::value_ptr(projection), currentOperation, ImGuizmo::WORLD, glm::value_ptr(obj->model), nullptr, snap);
 
 		static bool wasUsing = false;
 
@@ -365,9 +358,13 @@ void update_imgui_guizmo() {
 
 			glm::vec3 translation = glm::vec3(0.0f);
 			glm::vec3 scale = glm::vec3(50.0f);
-			glm::vec3 rotation = glm::vec3(0.0f);
+			glm::vec3 euler;
 
-			ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(m), glm::value_ptr(translation), glm::value_ptr(rotation), glm::value_ptr(scale));
+			ImGuizmo::DecomposeMatrixToComponents(
+				glm::value_ptr(obj->model),
+				glm::value_ptr(translation),
+				glm::value_ptr(euler),
+				glm::value_ptr(scale));
 
 			if (useSnap && currentOperation == ImGuizmo::ROTATE) {
 
@@ -376,14 +373,14 @@ void update_imgui_guizmo() {
 					return roundf(value / step) * step;
 					};
 
-				rotation.x = Snap(rotation.x, rotateSnap[0]);
-				rotation.y = Snap(rotation.y, rotateSnap[1]);
-				rotation.z = Snap(rotation.z, rotateSnap[2]);
+				euler.x = Snap(euler.x, rotateSnap[0]);
+				euler.y = Snap(euler.y, rotateSnap[1]);
+				euler.z = Snap(euler.z, rotateSnap[2]);
 			}
 
 			obj->position = translation;
 			obj->scale = scale;
-			obj->rotation = rotation;
+			obj->rotation = glm::quat(glm::radians(euler));
 
 			if (light)
 			{
@@ -501,11 +498,13 @@ void update_imgui_guizmo() {
 						buffer(obj);
 
 						obj.position = glm::vec3(0.0f);
-						obj.rotation = glm::vec3(0.0f);
+						obj.rotation = glm::quat(1.f, 0.f, 0.f, 0.f);
 						obj.scale = glm::vec3(50.0f);
 
 						obj.original_vertices = obj.vertices;
 						obj.original_indices = obj.indices;
+
+						obj.model = GetModelMatrix(obj);
 
 						if (!objects.empty())
 							obj.obj_texture = TextureManager::Get(objects[0].tex);

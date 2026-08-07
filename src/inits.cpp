@@ -203,6 +203,10 @@ void init() {
 
 	objects.clear();
 
+	lightObjects.clear();
+
+	lights.clear();
+
 	for (auto& p : par.objects) {
 
 		Object obj;
@@ -237,7 +241,9 @@ void init() {
 		obj.original_vertices = obj.vertices;
 		obj.original_indices = obj.indices;
 
-		obj.norm_map = p.normal_map;		
+		obj.norm_map = p.normal_map;
+
+		obj.model = GetModelMatrix(obj);
 
 		UpdateMapping(obj);
 
@@ -283,32 +289,67 @@ void init() {
 			obj.name = light.name;
 
 			obj.position = light.pos;
-			obj.rotation = glm::vec3(0);
-			obj.scale = glm::vec3(2);
+			obj.rotation = glm::quat(1.f, 0.f, 0.f, 0.f);
+			obj.scale = glm::vec3(20.f);
+
+			obj.model = GetModelMatrix(obj);
 
 			obj.vertices = light.vertices;
 			obj.indices = light.indices;
 
 			buffer(obj);
 
-			lights.push_back(light);
+			lights.push_back(std::move(light));
 
-			lightObjects.push_back(obj);
+			lightObjects.push_back(std::move(obj));
 		}
 	}
 }
 
+bool open_init(const char* settings, Settings& st) {
+
+	selectedObject = -1;
+
+	for (auto& o : objects) {
+
+		o.undoStack.clear();
+		o.redoStack.clear();
+
+		DeleteObjectGPU(o);
+	}
+
+	for (auto& o : lightObjects) {
+
+		o.undoStack.clear();
+		o.redoStack.clear();
+
+		DeleteObjectGPU(o);
+	}
+
+	objects.clear();
+
+	lightObjects.clear();
+
+	lights.clear();
+
+	objectNameCounters.clear();
+
+	if (par.load(settings, st, cam, lightObjects))
+		init();
+
+	return true;
+}
 
 void init_(const char* settings) {
 
-	//st.win_name = "void";
-	//st.win_mode = window_mode::WINDOWED;
-	//st.w = 1280;
-	//st.h = 720;
-	//st.VSync = 0;
-	//st.fov = 90;
-	//
-	//par.save(settings, st, cam, objects, lightObjects, lights);
+	st.win_name = "void";
+	st.win_mode = window_mode::WINDOWED;
+	st.w = 1280;
+	st.h = 720;
+	st.VSync = 0;
+	st.fov = 90;
+	
+	par.save(settings, st, cam, objects, lightObjects, lights);
 
 	if (par.load(settings, st, cam, lightObjects)) {
 
@@ -368,36 +409,4 @@ void init_(const char* settings) {
 
 		init();
 	}
-}
-
-void open_init(const char* settings, Settings& st) {
-
-	selectedObject = -1;
-
-	for (auto& o : objects) {
-
-		o.undoStack.clear();
-		o.redoStack.clear();
-
-		DeleteObjectGPU(o);
-	}
-
-	for (auto& o : lightObjects) {
-
-		o.undoStack.clear();
-		o.redoStack.clear();
-
-		DeleteObjectGPU(o);
-	}
-
-	objects.clear();
-
-	lightObjects.clear();
-
-	lights.clear();
-
-	objectNameCounters.clear();
-
-	if(par.load(settings, st, cam, lightObjects))
-		init();
 }

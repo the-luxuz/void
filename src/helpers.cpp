@@ -222,7 +222,6 @@ void Docking() {
 
 					save_outPath = path;
 
-					std::cout << path << std::endl;
 					open_init(path.c_str(), st);
 
 					NFD_FreePath(outPath);
@@ -832,9 +831,7 @@ glm::mat4 GetModelMatrix(Object& obj) {
 
 	m = glm::translate(m, obj.position);
 
-	m = glm::rotate(m, glm::radians(obj.rotation.x), { 1,0,0 });
-	m = glm::rotate(m, glm::radians(obj.rotation.y), { 0,1,0 });
-	m = glm::rotate(m, glm::radians(obj.rotation.z), { 0,0,1 });
+	m *= glm::toMat4(obj.rotation);
 
 	m = glm::scale(m, obj.scale);
 
@@ -1096,7 +1093,7 @@ void select_object(glm::vec3& rayOrigin, glm::vec3& rayDir) {
 			if (t < nearest) {
 
 				nearest = t;
-				selectedObject = static_cast<int>(i);
+				selectedObject = static_cast<int>(objects.size() + i);
 			}
 		}
 	}
@@ -1399,9 +1396,10 @@ void CreateLight(const std::string& type) {
 	if (!init_lights(light))
 		return;
 
+	light.name = GenerateObjectName("Light");
 	obj.name = GenerateObjectName("Light");
 
-	light.pos = glm::vec3(0.0f);
+	light.pos = glm::vec3(100.0f);
 	light.dir = glm::vec3(0.0f, -1.0f, 0.0f);
 
 	light.col = glm::vec3(1.0f);
@@ -1427,8 +1425,11 @@ void CreateLight(const std::string& type) {
 		light.typeID = 2;
 
 	obj.position = light.pos;
-	obj.rotation = glm::vec3(0.f);
+	obj.rotation = glm::quat(1.f, 0.f, 0.f, 0.f);
 	obj.scale = glm::vec3(20.f);
+
+	obj.model = GetModelMatrix(obj);
+
 
 	obj.vertices = light.vertices;
 	obj.indices = light.indices;

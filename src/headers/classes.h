@@ -56,7 +56,7 @@ struct Vertex {
 struct ObjectState {
 
 	glm::vec3 position;
-	glm::vec3 rotation;
+    glm::quat rotation;
 	glm::vec3 scale;
 
     std::string name;
@@ -108,7 +108,7 @@ struct Object {
     std::vector<GLuint> original_indices;
 
     glm::vec3 position;
-    glm::vec3 rotation;
+    glm::quat rotation;
     glm::vec3 scale;
 
     std::string mesh; // has the .obj path

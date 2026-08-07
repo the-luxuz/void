@@ -22,3 +22,5 @@
 #include "tiny_obj_loader.h"
 
 #include <nfd.h>
+
+#include <glm/gtx/quaternion.hpp>

@@ -293,19 +293,26 @@ int main(int argc, char* args[]) {
 
 				if (currentViewMode == view_Mode::EDITOR) {
 				
-					if (event.key.scancode == SDL_SCANCODE_BACKSPACE) {
+					if (event.key.scancode == SDL_SCANCODE_BACKSPACE)
+					{
+						if (selectedObject != -1)
+						{
+							if (selectedObject < (int)objects.size())
+							{
+								objects.erase(objects.begin() + selectedObject);
+							}
+							else
+							{
+								int lightIndex = selectedObject - (int)objects.size();
 
-						if (selectedObject != -1) {
-
-							for (size_t i = 0; i < objects.size(); i++) {
-
-								if (selectedObject == (int)i) {
-
-									objects.erase(objects.begin() + i);
-									selectedObject = -1;
-									break;
+								if (lightIndex >= 0 && lightIndex < (int)lightObjects.size())
+								{
+									lightObjects.erase(lightObjects.begin() + lightIndex);
+									lights.erase(lights.begin() + lightIndex);
 								}
 							}
+
+							selectedObject = -1;
 						}
 					}
 				}
@@ -408,8 +415,7 @@ int main(int argc, char* args[]) {
 							if (result == NFD_OKAY) {
 
 								par.save(outPath, st, cam, objects, lightObjects, lights);
-								save_outPath = path;
-
+								save_outPath = outPath;
 								NFD_FreePath(outPath);
 							}
 						}
@@ -437,8 +443,6 @@ int main(int argc, char* args[]) {
 							std::string path = outPath;
 
 							save_outPath = path;
-
-							std::cout << path << std::endl;
 							open_init(path.c_str(), st);
 
 							NFD_FreePath(outPath);
