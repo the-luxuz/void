@@ -36,6 +36,7 @@ view_Mode currentViewMode = view_Mode::EDITOR;
 void update(SDL_Window* window) {
 
 	update_depthmap();
+
 	if (currentViewMode == view_Mode::EDITOR) {
 	
 		if ((int)viewportSize.x != viewport_width || (int)viewportSize.y != viewport_height)

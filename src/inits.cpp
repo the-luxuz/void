@@ -10,7 +10,7 @@ void init_viewport() {
 
 	Create_viewport_tex(viewport_width, viewport_height);
 
-	//Create_depth_tex(viewport_width, viewport_height);
+	Create_depth_tex(st.w, st.h, 0);
 
 	glDrawBuffer(GL_COLOR_ATTACHMENT0);
 
@@ -319,9 +319,16 @@ void init() {
 		light.outer = 40.0f;
 		light.falloff = 1.0f;
 
-		light.type = "SPOT";
+		light.type = "POINT";
 
-		light.typeID = 0;
+		if (light.type == "POINT")
+			light.typeID = 0;
+
+		else if (light.type == "DIR")
+			light.typeID = 1;
+
+		else if (light.type == "SPOT")
+			light.typeID = 2;
 
 		obj.position = light.pos;
 		obj.rotation = glm::vec3(0.0f);
