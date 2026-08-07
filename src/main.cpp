@@ -185,8 +185,11 @@ void update(SDL_Window* window) {
 	//----------------------------------------------------
 	// windows
 
-	if (st.last_win_mode != st.win_mode)
+	if (st.last_win_mode != st.win_mode) {
+	
 		ApplyWindowMode(window);
+		init_viewport();
+	}
 
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glBindVertexArray(0);
@@ -323,6 +326,7 @@ int main(int argc, char* args[]) {
 							st.win_mode = window_mode::WINDOWED;
 							break;
 					}
+
 				}
 
 				if (event.key.scancode == SDL_SCANCODE_F5) {
@@ -384,7 +388,7 @@ int main(int argc, char* args[]) {
 						cam.cam_position = cameraPos;
 
 						if(save_outPath != "")
-							par.save(save_outPath.c_str(), st, objects, cam);
+							par.save(save_outPath.c_str(), st, cam, objects, lightObjects, lights);
 						else {
 						
 							nfdu8char_t* outPath = nullptr;
@@ -403,7 +407,8 @@ int main(int argc, char* args[]) {
 
 							if (result == NFD_OKAY) {
 
-								par.save(outPath, st, objects, cam);
+								par.save(outPath, st, cam, objects, lightObjects, lights);
+								save_outPath = path;
 
 								NFD_FreePath(outPath);
 							}

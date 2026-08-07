@@ -17,8 +17,8 @@
 
 struct Parser {
 		
-	bool load(const char* fname, Settings& st, camera& cam);
-	void save(const char* fname, Settings& st, const std::vector<Object>& scene, camera& cam);
+	bool load(const char* fname, Settings& st, camera& cam, std::vector<Object>& scene_lgh_obj);
+	void save(const char* fname, Settings& st, camera& cam, const std::vector<Object>& scene, const std::vector<Object>& scene_lgh_obj, const std::vector<::Light>& scene_lgh);
 
 	void WriteString(std::ofstream& out, const std::string& str);
 	void ReadString(std::ifstream& in, std::string& str);
@@ -46,14 +46,14 @@ struct Parser {
 		std::string mesh;
 
 		std::string tex;
+		GLuint obj_texture;
 
+		GLuint normalTexture;
 		std::string normal_map = "data/textures/brick_normal_map.png";
 		
 		glm::vec3 position;
 		glm::vec3 rotation;
 		glm::vec3 scale;
-
-		float ns = 10.0f;
 
 		glm::vec3 min, max;
 
@@ -61,6 +61,7 @@ struct Parser {
 		coord_types coordType = coord_types::XZ;
 		cylinder_axis cyaxisType = cylinder_axis::Y;
 
+		float shininess;
 	};
 
 	std::vector<Transform> objects;
@@ -74,12 +75,12 @@ struct Parser {
 		glm::vec3 col;
 		glm::vec3 att;
 
-		float amb = 0.0f;
-		float inner = 0.0f;
-		float outer = 30.0f;
-		float falloff = 1.0f;
-		float bias = 0.005f;
-		float pcf = 1.0f;
+		float amb;
+		float inner;
+		float outer;
+		float falloff;
+		float bias;
+		float pcf;
 
 		std::string type = "POINT";
 	};

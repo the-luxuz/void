@@ -98,7 +98,22 @@ extern int render_modes;
 
 extern bool shadow_map_render;
 
-void DeleteObjectGPU(Object& o);
+template<typename T>
+
+void DeleteObjectGPU(T& o) {
+
+	if (o.ebo)
+		glDeleteBuffers(1, &o.ebo);
+
+	if (o.vbo)
+		glDeleteBuffers(1, &o.vbo);
+
+	if (o.vao)
+		glDeleteVertexArrays(1, &o.vao);
+
+	//if (o.obj_texture)
+		//glDeleteTextures(1, &o.obj_texture);
+}
 
 void clean();
 

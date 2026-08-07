@@ -99,20 +99,6 @@ int render_modes = 0;
 
 bool shadow_map_render = true;
 
-void DeleteObjectGPU(Object& o) {
-
-	if (o.ebo)
-		glDeleteBuffers(1, &o.ebo);
-
-	if (o.vbo)
-		glDeleteBuffers(1, &o.vbo);
-
-	if (o.vao)
-		glDeleteVertexArrays(1, &o.vao);
-
-	//if (o.obj_texture)
-		//glDeleteTextures(1, &o.obj_texture);
-}
 
 void clean() {
 
@@ -267,7 +253,9 @@ void Docking() {
 
 				if (result == NFD_OKAY) {
 
-					par.save(outPath, st, objects, cam);
+					par.save(outPath, st, cam, objects, lightObjects, lights);
+
+					save_outPath = outPath;
 
 					NFD_FreePath(outPath);
 				}
@@ -367,6 +355,7 @@ void ResizeViewport(int width, int height) {
 		GL_TEXTURE_2D,
 		viewport_texture,
 		0);
+
 
 	glBindTexture(GL_TEXTURE_2D, 0);
 
@@ -1053,8 +1042,8 @@ bool RayVsAABB(const glm::vec3& rayOrigin, const glm::vec3& rayDir, const glm::v
 
 void BuildRay(float mouseX, float mouseY, glm::vec3& rayOrigin, glm::vec3& rayDir) {
 
-	float x = (2.0f * mouseX) / viewportSize.x - 1.0f;
-	float y = 1.0f - (2.0f * mouseY) / viewportSize.y;
+	float x = (2.0f * mouseX) / viewport_width - 1.0f;
+	float y = 1.0f - (2.0f * mouseY) / viewport_height;
 
 	glm::vec4 rayClip(x, y, -1.0f, 1.0f);
 
@@ -1077,6 +1066,25 @@ void select_object(glm::vec3& rayOrigin, glm::vec3& rayDir) {
 	for (size_t i = 0; i < objects.size(); i++) {
 
 		Object& obj = objects[i];
+
+		glm::vec3 worldMin = obj.min * obj.scale + obj.position;
+		glm::vec3 worldMax = obj.max * obj.scale + obj.position;
+
+		float t;
+
+		if (RayVsAABB(rayOrigin, rayDir, worldMin, worldMax, t)) {
+
+			if (t < nearest) {
+
+				nearest = t;
+				selectedObject = static_cast<int>(i);
+			}
+		}
+	}
+
+	for (size_t i = 0; i < lightObjects.size(); i++) {
+
+		Object& obj = lightObjects[i];
 
 		glm::vec3 worldMin = obj.min * obj.scale + obj.position;
 		glm::vec3 worldMax = obj.max * obj.scale + obj.position;

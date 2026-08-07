@@ -280,6 +280,8 @@ void init() {
 			else if (light.type == "SPOT")
 				light.typeID = 2;
 
+			obj.name = light.name;
+
 			obj.position = light.pos;
 			obj.rotation = glm::vec3(0);
 			obj.scale = glm::vec3(2);
@@ -306,9 +308,9 @@ void init_(const char* settings) {
 	//st.VSync = 0;
 	//st.fov = 90;
 	//
-	//par.save(settings, st, objects, cam);
+	//par.save(settings, st, cam, objects, lightObjects, lights);
 
-	if (par.load(settings, st, cam)) {
+	if (par.load(settings, st, cam, lightObjects)) {
 
 		windowedSize = { st.w, st.h };
 
@@ -380,10 +382,22 @@ void open_init(const char* settings, Settings& st) {
 		DeleteObjectGPU(o);
 	}
 
+	for (auto& o : lightObjects) {
+
+		o.undoStack.clear();
+		o.redoStack.clear();
+
+		DeleteObjectGPU(o);
+	}
+
 	objects.clear();
+
+	lightObjects.clear();
+
+	lights.clear();
 
 	objectNameCounters.clear();
 
-	if(par.load(settings, st, cam))
+	if(par.load(settings, st, cam, lightObjects))
 		init();
 }
