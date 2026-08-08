@@ -8,6 +8,8 @@ int viewport_width = 512;
 int viewport_height = 512;
 
 GLuint viewport_texture;
+GLuint viewportDepthTexture;
+
 GLuint depth_texture[8];
 
 GLuint skybox_texture;
@@ -252,6 +254,51 @@ void Create_depth_tex(int width, int height, int i) {
     glDrawBuffers(1, drawBuffers);
 
     GLenum result = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+
+    if (result != GL_FRAMEBUFFER_COMPLETE)
+        std::cout << "Depth FBO ERROR: " << result << std::endl;
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void CreateViewportDepthTexture(int width, int height) {
+    
+    glGenTextures(1, &viewportDepthTexture);
+    glBindTexture(GL_TEXTURE_2D, viewportDepthTexture);
+
+    glTexImage2D(
+        GL_TEXTURE_2D,
+        0,
+        GL_DEPTH_COMPONENT24,
+        width,
+        height,
+        0,
+        GL_DEPTH_COMPONENT,
+        GL_FLOAT,
+        nullptr
+    );
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    glFramebufferTexture2D(
+        GL_FRAMEBUFFER,
+        GL_DEPTH_ATTACHMENT,
+        GL_TEXTURE_2D,
+        viewportDepthTexture,
+        0
+    );
+
+    GLenum drawBuffers[] = { GL_NONE };
+    glDrawBuffers(1, drawBuffers);
+
+    GLenum result = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+
+    if (result != GL_FRAMEBUFFER_COMPLETE)
+        std::cout << "Depth FBO ERROR: " << result << std::endl;
 
     glBindTexture(GL_TEXTURE_2D, 0);
 }

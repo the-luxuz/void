@@ -32,4 +32,6 @@ void Create_viewport_tex(int width, int height);
 
 void Create_depth_tex(int width, int height, int i);
 
+void CreateViewportDepthTexture(int width, int height);
+
 void LoadNormalMap(Object& obj);

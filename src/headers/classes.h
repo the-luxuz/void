@@ -130,6 +130,8 @@ struct Object {
     GLuint normalTexture = 0;
     std::string norm_map;
 
+    bool has_normal_map = false;
+
     float shininess = 20;
 };
 

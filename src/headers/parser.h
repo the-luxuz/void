@@ -50,6 +50,7 @@ struct Parser {
 
 		GLuint normalTexture;
 		std::string normal_map = "data/textures/brick_normal_map.png";
+		bool has_normal_map = false;
 		
 		glm::vec3 position;
 		glm::quat rotation;

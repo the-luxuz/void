@@ -33,6 +33,8 @@ uniform bool bitangent_apper;
 uniform sampler2D normalMap;
 uniform sampler2D depthData[8];
 
+uniform bool hasNormalMap;
+
 uniform float shininess;
 
 uniform mat4 aView;
@@ -49,7 +51,6 @@ out vec4 outputColor;
 // light
 in vec4 fragPosLight[8];
 float shadow = 0.0;
-
 
 vec3 ShadePointLight(Light light, vec3 N, vec3 V, vec3 baseColor) {
 
@@ -68,10 +69,10 @@ vec3 ShadePointLight(Light light, vec3 N, vec3 V, vec3 baseColor) {
     vec3 R = reflect(-L, N);
     float spec = pow(max(dot(V, R), 0.0), shininess);
 
-    vec3 diffuse = diff * light.color * min(att, 1.0) * baseColor;
+    vec3 diffuse = diff * light.color * min(att, 1.0);
     vec3 specular = spec * light.color * min(att, 1.0);
 
-    return (light.ambient * light.color * baseColor) + (1.0 - shadow) * ((diffuse * baseColor) + specular);
+    return (light.ambient * light.color * baseColor) + (1.0 - shadow) * ((diffuse * baseColor)  + specular);
 }
 
 vec3 ShadeDirLight(Light light, vec3 N, vec3 V, vec3 baseColor) {
@@ -85,7 +86,7 @@ vec3 ShadeDirLight(Light light, vec3 N, vec3 V, vec3 baseColor) {
     vec3 R = reflect(-L, N);
     float spec = pow(max(dot(V, R), 0.0), shininess);
 
-    vec3 diffuse = diff * light.color * baseColor;
+    vec3 diffuse = diff * light.color;
     vec3 specular = spec * light.color;
 
     return (light.ambient * light.color * baseColor) + (1.0 - shadow) * ((diffuse * baseColor) + specular);
@@ -129,7 +130,7 @@ vec3 ShadeSpotLight(Light light, vec3 N, vec3 V, vec3 baseColor) {
 
     float spec = pow(max(dot(V, R), 0.0), shininess);
 
-    diffuse = diff * light.color * min(att, 1.0) * spotEff * baseColor;
+    diffuse = diff * light.color * min(att, 1.0) * spotEff;
 
     specular = spec * light.color * min(att, 1.0) * spotEff;
 
@@ -145,24 +146,27 @@ void main() {
     else
         baseColor = vec3(uv, 0.0);
 
-    vec3 normalTS = texture(normalMap, uv).xyz;
-
-    // tanget space to view space
-    normalTS = normalTS * 2.0 - 1.0;
-
     vec3 T = normalize(tangent);
-    vec3 N0 = normalize(normal);
+    vec3 N = normalize(normal);
 
-    T = normalize(T - N0 * dot(N0, T));
+    T = normalize(T - N * dot(N, T));
 
-    vec3 B = normalize(cross(N0, T));
+    vec3 B = normalize(cross(N, T));
 
-    mat3 TBN = mat3(
-        normalize(tangent),
-        normalize(bitangent),
-        normalize(normal));
+    mat3 TBN = mat3(T, B, N);
 
-    vec3 N = normalize(TBN * normalTS);
+    vec3 finalNormal;
+
+    if(hasNormalMap) {
+
+        vec3 normalTS = texture(normalMap, uv).xyz;
+        normalTS = normalTS * 2.0 - 1.0;
+        finalNormal = normalize(TBN * normalTS);
+    }
+    else {
+
+        finalNormal = normalize(N);
+    }
 
     vec3 V = normalize(-fragPos);
 
@@ -199,11 +203,11 @@ void main() {
         }
 
         if (lights[i].type == 0)
-            result += ShadePointLight(lights[i], N, V, baseColor);
+            result += ShadePointLight(lights[i], finalNormal, V, baseColor);
         else if (lights[i].type == 1)
-            result += ShadeDirLight(lights[i], N, V, baseColor);
+            result += ShadeDirLight(lights[i], finalNormal, V, baseColor);
         else if (lights[i].type == 2)
-            result += ShadeSpotLight(lights[i], N, V, baseColor);
+            result += ShadeSpotLight(lights[i], finalNormal, V, baseColor);
     }
 
     if (tex_appear)

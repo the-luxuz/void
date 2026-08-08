@@ -10,7 +10,7 @@ void init_viewport() {
 
 	Create_viewport_tex(viewport_width, viewport_height);
 
-	Create_depth_tex(st.w, st.h, 0);
+	CreateViewportDepthTexture(st.w, st.h);
 
 	glDrawBuffer(GL_COLOR_ATTACHMENT0);
 
@@ -189,7 +189,7 @@ void init() {
 	glFrontFace(GL_CCW);
 
 	if(!dont_reload_cam)
-		init_camera();
+		//init_camera();
 
 	init_grid();
 
@@ -231,6 +231,8 @@ void init() {
 		obj.cyaxisType = p.cyaxisType;
 		obj.mapping = p.mapping;
 
+		obj.has_normal_map = p.has_normal_map;
+
 		obj.max = p.max;
 		obj.min = p.min;
 
@@ -240,6 +242,8 @@ void init() {
 
 		obj.original_vertices = obj.vertices;
 		obj.original_indices = obj.indices;
+
+		obj.shininess = p.shininess;
 
 		obj.norm_map = p.normal_map;
 
@@ -289,7 +293,7 @@ void init() {
 			obj.name = light.name;
 
 			obj.position = light.pos;
-			obj.rotation = glm::quat(1.f, 0.f, 0.f, 0.f);
+			obj.rotation = glm::identity<glm::quat>();
 			obj.scale = glm::vec3(20.f);
 
 			obj.model = GetModelMatrix(obj);
@@ -326,12 +330,6 @@ bool open_init(const char* settings, Settings& st) {
 		DeleteObjectGPU(o);
 	}
 
-	objects.clear();
-
-	lightObjects.clear();
-
-	lights.clear();
-
 	objectNameCounters.clear();
 
 	if (par.load(settings, st, cam, lightObjects))
@@ -342,14 +340,14 @@ bool open_init(const char* settings, Settings& st) {
 
 void init_(const char* settings) {
 
-	st.win_name = "void";
-	st.win_mode = window_mode::WINDOWED;
-	st.w = 1280;
-	st.h = 720;
-	st.VSync = 0;
-	st.fov = 90;
-	
-	par.save(settings, st, cam, objects, lightObjects, lights);
+	//st.win_name = "void";
+	//st.win_mode = window_mode::WINDOWED;
+	//st.w = 1280;
+	//st.h = 720;
+	//st.VSync = 0;
+	//st.fov = 90;
+	//
+	//par.save(settings, st, cam, objects, lightObjects, lights);
 
 	if (par.load(settings, st, cam, lightObjects)) {
 

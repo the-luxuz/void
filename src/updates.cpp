@@ -62,7 +62,7 @@ void update_depthmap() {
 
 	for (int i = 0; i < lightObjects.size(); i++) {
 
-		lights[i].dir = lightObjects[i].rotation * glm::vec3(0, 0, -1);
+		lights[i].dir = glm::normalize(lightObjects[i].rotation * glm::vec3(0.0f, -1.0f, 0.0f));
 
 		glm::vec3 forward = glm::normalize(lights[i].dir);
 
@@ -101,6 +101,9 @@ void update_depthmap() {
 		glUseProgram(program_depth);
 
 		for (auto& obj : objects) {
+
+			if (obj.type == "PLANE")
+				continue;
 
 			glm::mat4 model(1.0f);
 
@@ -149,7 +152,8 @@ void update_objects() {
 	}
 
 	int numLights = lights.size(); // maximum of 8 lights
-	glUniform1i(glGetUniformLocation(program, "numLights"), numLights);
+
+	std::cout << "numlights: " << numLights << std::endl;
 
 	for (int i = 0; i < numLights; i++) {
 
@@ -208,6 +212,8 @@ void update_objects() {
 		glUniform1i(glGetUniformLocation(program, "normal_apper"), normal_apper);
 		glUniform1i(glGetUniformLocation(program, "tangent_apper"), tangent_apper);
 		glUniform1i(glGetUniformLocation(program, "bitangent_apper"), bitangent_apper);
+
+		glUniform1i(glGetUniformLocation(program, "hasNormalMap"), obj.has_normal_map);
 
 		glBindVertexArray(obj.vao);
 
@@ -478,6 +484,16 @@ void update_imgui_guizmo() {
 						}
 					}
 
+					if (ImGui::BeginDragDropSource()) {
+
+						ImGui::SetDragDropPayload("TEXTURE_FILE", path.c_str(), path.size() + 1);
+
+						ImGui::Image((ImTextureID)(intptr_t)tex, ImVec2(64, 64));
+						ImGui::Text("%s", entry.path().filename().string().c_str());
+
+						ImGui::EndDragDropSource();
+					}
+
 					ImGui::TextWrapped("%s", entry.path().stem().string().c_str());
 				}
 
@@ -504,12 +520,18 @@ void update_imgui_guizmo() {
 						obj.original_vertices = obj.vertices;
 						obj.original_indices = obj.indices;
 
+						obj.shininess = 20;
+
+						obj.has_normal_map = false;
+
 						obj.model = GetModelMatrix(obj);
 
 						if (!objects.empty())
 							obj.obj_texture = TextureManager::Get(objects[0].tex);
 						else
 							obj.obj_texture = 0;
+
+						obj.tex = (objects.empty()) ? "" : objects[0].tex;
 
 						objects.push_back(obj);
 						selectedObject = (int)(objects.size() - 1);
@@ -662,35 +684,138 @@ void update_imgui_guizmo() {
 
 				Object* obj = GetSelectedObject();
 
+				ImGui::Begin("Inspector");
+
+				if (ImGui::CollapsingHeader("General", ImGuiTreeNodeFlags_DefaultOpen)) {
+
+					ImGui::Text("Name: %s", obj->name.c_str());
+
+					ImGui::DragFloat3("Position", &obj->position.x, 0.1f);
+
+					glm::vec3 euler = glm::degrees(glm::eulerAngles(obj->rotation));
+					if (ImGui::DragFloat3("Rotation", &euler.x, 1.0f))
+						obj->rotation = glm::quat(glm::radians(euler));
+
+					ImGui::DragFloat3("Scale", &obj->scale.x, 0.1f);
+				}
+
+				if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen)) {
+
+					ImGui::DragFloat("Shininess", &obj->shininess, 1.0f, 1.0f, 256.0f);
+
+					ImGui::Text("Texture:");
+					ImGui::TextWrapped("%s", obj->tex.c_str());
+
+					ImGui::Text("Normal Map:");
+					ImGui::TextWrapped("%s", obj->norm_map.c_str());
+				}
+
+				ImGui::Text("Normal Map");
+
+				ImGui::Image((ImTextureID)(intptr_t)obj->normalTexture, ImVec2(80, 80));
+
+				ImGui::Button("Drop texture here", ImVec2(80, 80));
+
+				if (ImGui::BeginDragDropTarget()) {
+
+					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("TEXTURE_FILE")) {
+
+						const char* file = (const char*)payload->Data;
+
+						objects[selectedObject].normalTexture = TextureManager::Get(file);
+
+						objects[selectedObject].norm_map = file;
+						objects[selectedObject].has_normal_map = true;
+					}
+
+					ImGui::EndDragDropTarget();
+				}
+
+				if (ImGui::CollapsingHeader("Mesh")) {
+
+					ImGui::TextWrapped("%s", obj->mesh.c_str());
+
+					ImGui::Text("Vertices: %d", (int)obj->vertices.size());
+					ImGui::Text("Triangles: %d", (int)obj->indices.size() / 3);
+				}
+
+				if (ImGui::CollapsingHeader("Bounds")) {
+
+					ImGui::DragFloat3("Min", &obj->min.x, 0.1f);
+					ImGui::DragFloat3("Max", &obj->max.x, 0.1f);
+				}
+
 				int current = (int)obj->mapping;
 
-				if (ImGui::Combo("Mapping", &current, mappings, IM_ARRAYSIZE(mappings))) {
-
+				if (ImGui::Combo("Mapping", &current, mappings, IM_ARRAYSIZE(mappings)))
+				{
 					obj->mapping = (TextureMapping)current;
 					UpdateMapping(*obj);
 				}
 
-				if (obj->mapping == TextureMapping::Planar) {
+				//------------------------------------------------------------
+				// Planar
 
+				if (obj->mapping == TextureMapping::Planar)
+				{
 					int coord = (int)obj->coordType;
 
-					if (ImGui::Combo("Plane", &coord, planarCoords, IM_ARRAYSIZE(planarCoords))) {
-
+					if (ImGui::Combo("Plane", &coord, planarCoords, IM_ARRAYSIZE(planarCoords)))
+					{
 						obj->coordType = (coord_types)coord;
 						UpdateMapping(*obj);
 					}
 				}
 
-				if (obj->mapping == TextureMapping::Cylindrical) {
+				//------------------------------------------------------------
+				// Cubic
 
-					int coord = (int)obj->cyaxisType;
-
-					if (ImGui::Combo("Cylinder", &coord, cylinderAxes, IM_ARRAYSIZE(cylinderAxes))) {
-
-						obj->cyaxisType = (cylinder_axis)coord;
+				if (obj->mapping == TextureMapping::Cubic)
+				{
+					if (ImGui::Button("Regenerate Cube UV"))
+					{
 						UpdateMapping(*obj);
 					}
 				}
+
+				//------------------------------------------------------------
+				// Cylindrical
+
+				if (obj->mapping == TextureMapping::Cylindrical)
+				{
+					int axis = (int)obj->cyaxisType;
+
+					if (ImGui::Combo("Axis", &axis, cylinderAxes, IM_ARRAYSIZE(cylinderAxes)))
+					{
+						obj->cyaxisType = (cylinder_axis)axis;
+						UpdateMapping(*obj);
+					}
+				}
+
+				//------------------------------------------------------------
+				// Spherical
+
+				if (obj->mapping == TextureMapping::Spherical)
+				{
+					if (ImGui::Button("Regenerate Sphere UV"))
+					{
+						UpdateMapping(*obj);
+					}
+				}
+
+				//------------------------------------------------------------
+				// UV
+
+				if (obj->mapping == TextureMapping::UV)
+				{
+					if (ImGui::Button("Restore Original UV"))
+					{
+						UpdateMapping(*obj);
+					}
+				}
+
+				ImGui::End();
+				
 			}
 			else {
 

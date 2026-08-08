@@ -129,6 +129,10 @@ void update(SDL_Window* window) {
 		update_objects();
 
 		//----------------------------------------------------
+		// depthmap
+
+
+		//----------------------------------------------------
 		// skybox
 
 		update_skybox();
@@ -354,21 +358,69 @@ int main(int argc, char* args[]) {
 					
 					if (event.key.mod & SDL_KMOD_CTRL && event.key.scancode == SDL_SCANCODE_Z) {
 
-						if (selectedObject != -1 && !objects[selectedObject].undoStack.empty()) {
+						if (selectedObject != -1) {
 
-							objects[selectedObject].redoStack.push_back(CaptureState(objects[selectedObject]));
-							ApplyState(objects[selectedObject], objects[selectedObject].undoStack.back());
-							objects[selectedObject].undoStack.pop_back();
+							if (selectedObject < objects.size()) {
+
+								Object& obj = objects[selectedObject];
+
+								if (!obj.undoStack.empty()) {
+
+									obj.redoStack.push_back(CaptureState(obj));
+									ApplyState(obj, obj.undoStack.back());
+									obj.undoStack.pop_back();
+								}
+							}
+							else {
+
+								int lightIndex = selectedObject - objects.size();
+
+								Object& obj = lightObjects[lightIndex];
+
+								if (!obj.undoStack.empty()) {
+
+									obj.redoStack.push_back(CaptureState(obj));
+									ApplyState(obj, obj.undoStack.back());
+									obj.undoStack.pop_back();
+
+									lights[lightIndex].pos = obj.position;
+									lights[lightIndex].dir = glm::normalize(obj.rotation * glm::vec3(0.0f, -1.0f, 0.0f));
+								}
+							}
 						}
 					}
 
 					if (event.key.mod & SDL_KMOD_CTRL && event.key.scancode == SDL_SCANCODE_Y) {
 
-						if (selectedObject != -1 && !objects[selectedObject].redoStack.empty()) {
+						if (selectedObject != -1) {
 
-							objects[selectedObject].undoStack.push_back(CaptureState(objects[selectedObject]));
-							ApplyState(objects[selectedObject], objects[selectedObject].redoStack.back());
-							objects[selectedObject].redoStack.pop_back();
+							if (selectedObject < objects.size()) {
+
+								Object& obj = objects[selectedObject];
+
+								if (!obj.redoStack.empty()) {
+
+									obj.undoStack.push_back(CaptureState(obj));
+									ApplyState(obj, obj.redoStack.back());
+									obj.redoStack.pop_back();
+								}
+							}
+							else {
+
+								int lightIndex = selectedObject - objects.size();
+
+								Object& obj = lightObjects[lightIndex];
+
+								if (!obj.redoStack.empty()) {
+
+									obj.undoStack.push_back(CaptureState(obj));
+									ApplyState(obj, obj.redoStack.back());
+									obj.redoStack.pop_back();
+
+									lights[lightIndex].pos = obj.position;
+									lights[lightIndex].dir = glm::normalize(obj.rotation * glm::vec3(0.0f, -1.0f, 0.0f));
+								}
+							}
 						}
 					}
 

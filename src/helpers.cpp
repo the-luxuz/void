@@ -182,6 +182,7 @@ void Docking() {
 
 		ImGui::DockBuilderDockWindow("Tools", dock_right);
 		ImGui::DockBuilderDockWindow("Hierarchy", dock_right);
+		ImGui::DockBuilderDockWindow("Inspector", dock_right);
 
 		ImGui::DockBuilderDockWindow("Assets", dock_bottom);
 		ImGui::DockBuilderDockWindow("Lights", dock_bottom);
@@ -1261,46 +1262,60 @@ void Calculate_Average_Normals(Object& obj) {
 
 void Calculate_Average_TBN(Object& obj) {
 
-	const float eps = 0.0001f;
+	const float posEps = 0.0001f;
+	const float uvEps = 0.0001f;
 
 	std::vector<glm::vec3> normals(obj.vertices.size());
 	std::vector<glm::vec3> tangents(obj.vertices.size());
-	std::vector<glm::vec3> bitangents(obj.vertices.size());
 
 	for (size_t i = 0; i < obj.vertices.size(); i++) {
 
 		normals[i] = obj.vertices[i].normal;
 		tangents[i] = obj.vertices[i].tangent;
-		bitangents[i] = obj.vertices[i].bitangent;
 	}
 
 	for (size_t i = 0; i < obj.vertices.size(); i++) {
 
 		glm::vec3 avgN(0.0f);
 		glm::vec3 avgT(0.0f);
-		glm::vec3 avgB(0.0f);
 
 		int count = 0;
 
 		for (size_t j = 0; j < obj.vertices.size(); j++) {
 
-			if (glm::length(obj.vertices[i].position - obj.vertices[j].position) < eps) {
+			bool samePos =
+				glm::length(obj.vertices[i].position - obj.vertices[j].position) < posEps;
+
+			bool sameUV =
+				glm::length(obj.vertices[i].uv - obj.vertices[j].uv) < uvEps;
+
+			if (samePos && sameUV) {
 
 				avgN += normals[j];
 				avgT += tangents[j];
-				avgB += bitangents[j];
-
 				count++;
 			}
 		}
 
+		if (count == 0)
+			continue;
+
 		avgN = glm::normalize(avgN);
-		avgT = glm::normalize(avgT);
 
-		// gram schmidt
-		avgT = glm::normalize(avgT - avgN * glm::dot(avgN, avgT));
+		avgT = avgT - avgN * glm::dot(avgN, avgT);
 
-		avgB = -glm::normalize(glm::cross(avgN, avgT));
+		if (glm::length2(avgT) < 1e-8f){
+
+			if (fabs(avgN.y) < 0.999f)
+				avgT = glm::normalize(glm::cross(glm::vec3(0, 1, 0), avgN));
+			else
+				avgT = glm::normalize(glm::cross(glm::vec3(1, 0, 0), avgN));
+		}
+		else
+			avgT = glm::normalize(avgT);
+		
+
+		glm::vec3 avgB = glm::normalize(glm::cross(avgN, avgT));
 
 		obj.vertices[i].normal = avgN;
 		obj.vertices[i].tangent = avgT;
@@ -1340,7 +1355,12 @@ void Add_Tri(Object& obj, const Vertex& in_v0, const Vertex& in_v1, const Vertex
 	glm::vec2 delta_uv1 = v1.uv - v0.uv;
 	glm::vec2 delta_uv2 = v2.uv - v0.uv;
 
-	float f = 1.0f / (delta_uv1.x * delta_uv2.y - delta_uv2.x * delta_uv1.y);
+	float det = delta_uv1.x * delta_uv2.y - delta_uv2.x * delta_uv1.y;
+
+	if (fabs(det) < 1e-8f)
+		return;
+
+	float f = 1.0f / det;
 
 	glm::vec3 T = f * (delta_uv2.y * delta_v1 - delta_uv1.y * delta_v2);
 
@@ -1404,11 +1424,11 @@ void CreateLight(const std::string& type) {
 
 	light.col = glm::vec3(1.0f);
 
-	light.att = glm::vec3(1.0f, 0.005f, 0.0001f);
+	light.att = glm::vec3(1.0f, 0.0005f, 0.00001f);
 
 	light.ambient = 0.15f;
 
-	light.bias = 0.00001f;
+	light.bias = 0.002f;
 	light.pcf = 3.0f;
 
 	light.inner = 10.f;
@@ -1425,11 +1445,10 @@ void CreateLight(const std::string& type) {
 		light.typeID = 2;
 
 	obj.position = light.pos;
-	obj.rotation = glm::quat(1.f, 0.f, 0.f, 0.f);
+	obj.rotation = glm::identity<glm::quat>();
 	obj.scale = glm::vec3(20.f);
 
 	obj.model = GetModelMatrix(obj);
-
 
 	obj.vertices = light.vertices;
 	obj.indices = light.indices;

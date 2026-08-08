@@ -62,6 +62,8 @@ void Parser::save(const char* fname, Settings& st, camera& cam, const std::vecto
         Write(out, obj.obj_texture);
         Write(out, obj.normalTexture);
 
+        Write(out, obj.has_normal_map);
+
         Write(out, obj.position);
         Write(out, obj.scale);
        
@@ -186,6 +188,8 @@ bool Parser::load(const char* fname, Settings& st, camera& cam, std::vector<Obje
 
         Read(in, obj.obj_texture);
         Read(in, obj.normalTexture);
+
+        Read(in, obj.has_normal_map);
 
         Read(in, obj.position);
         Read(in, obj.scale);
