@@ -4,6 +4,7 @@
 #include <GL/GL.h>
 #include <SDL3/SDL.h>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/quaternion.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
 #include <string>
@@ -13,6 +14,7 @@
 #include <array>
 #include <vector>
 
+#include "local.h"
 #include "classes.h"
 
 struct Parser {
@@ -78,6 +80,8 @@ struct Parser {
 		glm::vec3 dir;
 		glm::vec3 col;
 		glm::vec3 att;
+
+		glm::quat rotation;
 
 		float amb;
 		float inner;

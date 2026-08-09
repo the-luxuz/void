@@ -1,6 +1,7 @@
 #pragma once
 
 #include "local.h"
+#include <glm/gtx/quaternion.hpp>
 #include <unordered_map>
 
 enum class TextureMapping {
@@ -201,6 +202,8 @@ struct Light {
     glm::vec3 dir;
     glm::vec3 col;
     glm::vec3 att;
+
+    glm::quat rotation;
 
     float ambient;
 

@@ -42,7 +42,6 @@ void update(SDL_Window* window) {
 		if ((int)viewportSize.x != viewport_width || (int)viewportSize.y != viewport_height)
 			ResizeViewport((int)viewportSize.x, (int)viewportSize.y);
 
-
 		glBindFramebuffer(GL_FRAMEBUFFER, viewportFBO);
 
 		glViewport(0, 0, viewport_width, viewport_height);
@@ -127,10 +126,6 @@ void update(SDL_Window* window) {
 		// obj
 
 		update_objects();
-
-		//----------------------------------------------------
-		// depthmap
-
 
 		//----------------------------------------------------
 		// skybox

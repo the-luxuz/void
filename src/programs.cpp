@@ -68,16 +68,6 @@ void create_programs() {
 
 	program_depth = create_shaders(program_depth, "../data/shaders/vertex_depth.vert", "../data/shaders/fragment_depth.frag");
 
-	for (int i = 0; i < 8; i++) {
-
-		glGenFramebuffers(1, &depthFBO[i]);
-		glBindFramebuffer(GL_FRAMEBUFFER, depthFBO[i]);
-
-		Create_depth_tex(viewport_width, viewport_height, i);
-
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	}
-
 	program_grid = create_shaders(program_grid, "../data/shaders/vertex_grid.vert", "../data/shaders/fragment_grid.frag");
 
 	program_skybox = create_shaders(program_skybox, "../data/shaders/vertex_skybox.vert", "../data/shaders/fragment_skybox.frag");

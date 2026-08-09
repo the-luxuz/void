@@ -89,8 +89,8 @@ void update_depthmap() {
 
 	for (int i = 0; i < lightObjects.size(); i++) {
 
-		/*if (lights[i].typeID != 2)
-			continue;*/
+		if (lights[i].typeID != 2)
+			continue;
 
 		glBindFramebuffer(GL_FRAMEBUFFER, depthFBO[i]);
 
@@ -101,9 +101,6 @@ void update_depthmap() {
 		glUseProgram(program_depth);
 
 		for (auto& obj : objects) {
-
-			if (obj.type == "PLANE")
-				continue;
 
 			glm::mat4 model(1.0f);
 
@@ -152,8 +149,6 @@ void update_objects() {
 	}
 
 	int numLights = lights.size(); // maximum of 8 lights
-
-	std::cout << "numlights: " << numLights << std::endl;
 
 	for (int i = 0; i < numLights; i++) {
 

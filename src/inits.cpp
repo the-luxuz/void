@@ -5,6 +5,16 @@ SDL_GLContext context;
 
 void init_viewport() {
 
+	for (int i = 0; i < 8; i++) {
+
+		glGenFramebuffers(1, &depthFBO[i]);
+		glBindFramebuffer(GL_FRAMEBUFFER, depthFBO[i]);
+
+		Create_depth_tex(viewport_width, viewport_height, i);
+
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}
+
 	glGenFramebuffers(1, &viewportFBO);
 	glBindFramebuffer(GL_FRAMEBUFFER, viewportFBO);
 
@@ -293,7 +303,7 @@ void init() {
 			obj.name = light.name;
 
 			obj.position = light.pos;
-			obj.rotation = glm::identity<glm::quat>();
+			obj.rotation = par.lights[i].rotation;
 			obj.scale = glm::vec3(20.f);
 
 			obj.model = GetModelMatrix(obj);

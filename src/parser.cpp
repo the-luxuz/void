@@ -84,53 +84,56 @@ void Parser::save(const char* fname, Settings& st, camera& cam, const std::vecto
         Write(out, obj.cyaxisType);
     }
 
-    for (auto& obj : scene_lgh_obj) {
+    for (int i = 0; i < lightObjCount; ++i) {
 
-        WriteString(out, obj.name);
-        WriteString(out, obj.mesh);
-        WriteString(out, obj.tex);
+        WriteString(out, scene_lgh_obj[i].name);
+        WriteString(out, scene_lgh_obj[i].mesh);
+        WriteString(out, scene_lgh_obj[i].tex);
 
-        WriteString(out, obj.norm_map);
+        WriteString(out, scene_lgh_obj[i].norm_map);
 
-        Write(out, obj.obj_texture);
-        Write(out, obj.normalTexture);
+        Write(out, scene_lgh_obj[i].obj_texture);
+        Write(out, scene_lgh_obj[i].normalTexture);
 
-        Write(out, obj.position);
-        Write(out, obj.scale);
+        Write(out, scene_lgh_obj[i].position);
+        Write(out, scene_lgh_obj[i].scale);
 
-        glm::vec3 euler = glm::degrees(glm::eulerAngles(obj.rotation));
+        glm::vec3 euler = glm::degrees(glm::eulerAngles(scene_lgh_obj[i].rotation));
 
         Write(out, euler);
 
-        Write(out, obj.min);
-        Write(out, obj.max);
+        Write(out, scene_lgh_obj[i].min);
+        Write(out, scene_lgh_obj[i].max);
 
-        Write(out, obj.shininess);
+        Write(out, scene_lgh_obj[i].shininess);
 
-        Write(out, obj.mapping);
-        Write(out, obj.coordType);
-        Write(out, obj.cyaxisType);
+        Write(out, scene_lgh_obj[i].mapping);
+        Write(out, scene_lgh_obj[i].coordType);
+        Write(out, scene_lgh_obj[i].cyaxisType);
     }
 
-    for (auto& lgh : scene_lgh) {
+    for (int i = 0; i < lightCount; ++i) {
 
-        WriteString(out, lgh.name);
+        WriteString(out, scene_lgh[i].name);
 
-        Write(out, lgh.pos);
-        Write(out, lgh.dir);
-        Write(out, lgh.col);
-        Write(out, lgh.att);
+        Write(out, scene_lgh[i].pos);
+        Write(out, scene_lgh[i].dir);
+        Write(out, scene_lgh[i].col);
+        Write(out, scene_lgh[i].att);
 
-        Write(out, lgh.ambient);
+        glm::vec3 euler = glm::degrees(glm::eulerAngles(scene_lgh_obj[i].rotation));
+        Write(out, euler);
 
-        Write(out, lgh.inner);
-        Write(out, lgh.outer);
-        Write(out, lgh.falloff);
+        Write(out, scene_lgh[i].ambient);
 
-        Write(out, lgh.bias);
-        Write(out, lgh.pcf);
+        Write(out, scene_lgh[i].inner);
+        Write(out, scene_lgh[i].outer);
+        Write(out, scene_lgh[i].falloff);
 
-        WriteString(out, lgh.type);
+        Write(out, scene_lgh[i].bias);
+        Write(out, scene_lgh[i].pcf);
+
+        WriteString(out, scene_lgh[i].type);
     }
 
 }
@@ -251,6 +254,12 @@ bool Parser::load(const char* fname, Settings& st, camera& cam, std::vector<Obje
         Read(in, lgh.dir);
         Read(in, lgh.col);
         Read(in, lgh.att);
+
+        glm::vec3 euler;
+
+        Read(in, euler);
+
+        lgh.rotation = glm::quat(glm::radians(euler));
 
         Read(in, lgh.amb);
 

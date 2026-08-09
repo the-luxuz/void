@@ -356,8 +356,8 @@ void ResizeViewport(int width, int height) {
 		viewport_texture,
 		0);
 
-
 	glBindTexture(GL_TEXTURE_2D, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	for (int i = 0; i < 8; i++) {
 
@@ -369,7 +369,6 @@ void ResizeViewport(int width, int height) {
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	}
 
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void ApplyWindowMode(SDL_Window* window) {
@@ -1428,7 +1427,7 @@ void CreateLight(const std::string& type) {
 
 	light.ambient = 0.15f;
 
-	light.bias = 0.002f;
+	light.bias = 0.000008f;
 	light.pcf = 3.0f;
 
 	light.inner = 10.f;
