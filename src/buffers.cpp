@@ -4,7 +4,6 @@
 void buffer(Object& objects) {
 
 	glGenVertexArrays(1, &objects.vao);
-	glGenVertexArrays(1, &objects.vao);
 	glGenBuffers(1, &objects.vbo);
 	glGenBuffers(1, &objects.ebo);
 

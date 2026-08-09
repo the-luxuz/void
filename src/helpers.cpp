@@ -99,6 +99,7 @@ int render_modes = 0;
 
 bool shadow_map_render = true;
 
+Tools currentTool = Tools::TRANSLATE;
 
 void clean() {
 
@@ -180,8 +181,7 @@ void Docking() {
 			nullptr,
 			&dock_main);
 
-		ImGui::DockBuilderDockWindow("Tools", dock_right);
-		ImGui::DockBuilderDockWindow("Hierarchy", dock_right);
+		ImGui::DockBuilderDockWindow("Hierarchy", dock_left);
 		ImGui::DockBuilderDockWindow("Inspector", dock_right);
 
 		ImGui::DockBuilderDockWindow("Assets", dock_bottom);
@@ -1412,7 +1412,7 @@ void CreateLight(const std::string& type) {
 	Light light;
 	Object obj;
 
-	if (!init_lights(light))
+	if (!init_lights(obj))
 		return;
 
 	light.name = GenerateObjectName("Light");
@@ -1449,11 +1449,86 @@ void CreateLight(const std::string& type) {
 
 	obj.model = GetModelMatrix(obj);
 
-	obj.vertices = light.vertices;
-	obj.indices = light.indices;
-
 	buffer(obj);
 
 	lights.push_back(light);
 	lightObjects.push_back(obj);
+}
+
+void ReplaceMesh(Object& obj, const std::string& path) {
+
+	Object mesh;
+
+	init_obj(path.c_str(), mesh);
+	buffer(mesh);
+
+	mesh.position = obj.position;
+	mesh.rotation = obj.rotation;
+	mesh.scale = obj.scale;
+
+	mesh.original_vertices = mesh.vertices;
+	mesh.original_indices = mesh.indices;
+
+	mesh.obj_texture = obj.obj_texture;
+	mesh.tex = obj.tex;
+	mesh.normalTexture = obj.normalTexture;
+	mesh.norm_map = obj.norm_map;
+	mesh.has_normal_map = obj.has_normal_map;
+	mesh.shininess = obj.shininess;
+
+	mesh.name = obj.name;
+	mesh.mesh = path;
+
+	obj = std::move(mesh);
+}
+void DestroyBuffers(Object& obj) {
+
+	if (obj.vao)
+		glDeleteVertexArrays(1, &obj.vao);
+
+	if (obj.vbo)
+		glDeleteBuffers(1, &obj.vbo);
+
+	if (obj.ebo)
+		glDeleteBuffers(1, &obj.ebo);
+
+	if(obj.normalVAO)
+		glDeleteBuffers(1, &obj.normalVBO);
+
+	if (obj.normalVAO)
+		glDeleteBuffers(1, &obj.normalVAO);
+
+	if (obj.normalTBVAO)
+		glDeleteBuffers(1, &obj.normalTBVAO);
+
+	if (obj.normalTBVBO)
+		glDeleteBuffers(1, &obj.normalTBVBO);
+
+	if (obj.tangentVAO)
+		glDeleteBuffers(1, &obj.tangentVAO);
+
+	if (obj.tangentVBO)
+		glDeleteBuffers(1, &obj.tangentVBO);
+
+	if (obj.bitangentVAO)
+		glDeleteBuffers(1, &obj.bitangentVAO);
+
+	if (obj.bitangentVBO)
+		glDeleteBuffers(1, &obj.bitangentVBO);
+
+	obj.vao = 0;
+	obj.vbo = 0;
+	obj.ebo = 0;
+
+	obj.normalVAO = 0;
+	obj.normalVBO = 0;
+
+	obj.normalTBVAO = 0;
+	obj.normalTBVBO = 0;
+
+	obj.tangentVAO = 0;
+	obj.tangentVBO = 0;
+
+	obj.bitangentVAO = 0;
+	obj.bitangentVBO = 0;
 }

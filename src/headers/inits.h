@@ -21,7 +21,7 @@ void init_obj(const char* objFile, Object& obj);
 
 void init_obj(const char* objFile, Light& obj);
 
-bool init_lights(Light& lgh);
+bool init_lights(Object& obj);
 
 void init();
 

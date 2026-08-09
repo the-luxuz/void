@@ -98,6 +98,14 @@ extern int render_modes;
 
 extern bool shadow_map_render;
 
+enum class Tools {
+	TRANSLATE,
+	ROTATE,
+	SCALE
+};
+
+extern Tools currentTool;
+
 template<typename T>
 
 void DeleteObjectGPU(T& o) {
@@ -190,3 +198,7 @@ void Add_Tri(Object& obj, const Vertex& in_v0, const Vertex& in_v1, const Vertex
 void Add_Tri(Light& lgh, const  Vertex& in_v0, const  Vertex& in_v1, const  Vertex& in_v2);
 
 void CreateLight(const std::string& type);
+
+void ReplaceMesh(Object& obj, const std::string& path);
+
+void DestroyBuffers(Object& obj);

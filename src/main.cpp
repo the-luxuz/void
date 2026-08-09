@@ -229,14 +229,22 @@ int main(int argc, char* args[]) {
 
 			case SDL_EVENT_KEY_DOWN:
 
-				if (event.key.scancode == SDL_SCANCODE_M) {
+				
+				
 
-					render_modes++;
+				if (event.key.scancode == SDL_SCANCODE_ESCAPE)
+					quit = true;
 
-					if (render_modes > 3)
-						render_modes = 0;
+				if (currentViewMode == view_Mode::EDITOR) {
 
-					switch (render_modes) {
+					if (event.key.scancode == SDL_SCANCODE_M) {
+
+						render_modes++;
+
+						if (render_modes > 3)
+							render_modes = 0;
+
+						switch (render_modes) {
 
 						case 0:
 							tex_appear = true;
@@ -265,47 +273,41 @@ int main(int argc, char* args[]) {
 							normal_apper = false;
 							tangent_apper = false;
 							break;
+						}
+
+
 					}
 
+					if (event.key.scancode == SDL_SCANCODE_Y) {
 
-				}
+						shadow_map_render = !shadow_map_render;
 
-				if (event.key.scancode == SDL_SCANCODE_Y) {
+					}
+
+					if (event.key.scancode == SDL_SCANCODE_N) {
+
+						normals_appear = !normals_appear;
+						//Rebuild();
+					}
+
+					if (event.key.scancode == SDL_SCANCODE_F) {
+						face_normal = !face_normal;
+						Rebuild();
+					}
 				
-					shadow_map_render = !shadow_map_render;
+					if (event.key.scancode == SDL_SCANCODE_BACKSPACE) {
 
-				}
+						if (selectedObject != -1) {
 
-				if (event.key.scancode == SDL_SCANCODE_N) {
-
-					normals_appear = !normals_appear;
-					//Rebuild();
-				}
-
-				if (event.key.scancode == SDL_SCANCODE_F) {
-					face_normal = !face_normal;
-					Rebuild();
-				}
-
-				if (event.key.scancode == SDL_SCANCODE_ESCAPE)
-					quit = true;
-
-				if (currentViewMode == view_Mode::EDITOR) {
-				
-					if (event.key.scancode == SDL_SCANCODE_BACKSPACE)
-					{
-						if (selectedObject != -1)
-						{
 							if (selectedObject < (int)objects.size())
-							{
 								objects.erase(objects.begin() + selectedObject);
-							}
-							else
-							{
+
+							else {
+
 								int lightIndex = selectedObject - (int)objects.size();
 
-								if (lightIndex >= 0 && lightIndex < (int)lightObjects.size())
-								{
+								if (lightIndex >= 0 && lightIndex < (int)lightObjects.size()) {
+
 									lightObjects.erase(lightObjects.begin() + lightIndex);
 									lights.erase(lights.begin() + lightIndex);
 								}
@@ -314,43 +316,11 @@ int main(int argc, char* args[]) {
 							selectedObject = -1;
 						}
 					}
-				}
 
-				if (event.key.scancode == SDL_SCANCODE_F11) {
-
-					switch (st.win_mode) {
-
-						case window_mode::WINDOWED:
-							st.win_mode = window_mode::WINDOWED_BORDERLESS;
-							break;
-
-						case window_mode::WINDOWED_BORDERLESS:
-							st.win_mode = window_mode::FULLSCREEN;
-							break;
-
-						case window_mode::FULLSCREEN:
-							st.win_mode = window_mode::WINDOWED;
-							break;
+					if (event.key.scancode == SDL_SCANCODE_F5) {
+						read_textures_path();
 					}
 
-				}
-
-				if (event.key.scancode == SDL_SCANCODE_F5) {
-					read_textures_path();
-				}
-
-				if (event.key.scancode == SDL_SCANCODE_T) {
-
-					if(currentViewMode == view_Mode::EDITOR) {
-						currentViewMode = view_Mode::PLAY;
-					}
-					else {
-						currentViewMode = view_Mode::EDITOR;
-					}
-				}
-
-				if (currentViewMode == view_Mode::EDITOR) {
-					
 					if (event.key.mod & SDL_KMOD_CTRL && event.key.scancode == SDL_SCANCODE_Z) {
 
 						if (selectedObject != -1) {
@@ -381,6 +351,9 @@ int main(int argc, char* args[]) {
 									lights[lightIndex].pos = obj.position;
 									lights[lightIndex].dir = glm::normalize(obj.rotation * glm::vec3(0.0f, -1.0f, 0.0f));
 								}
+
+								obj.model = GetModelMatrix(obj);
+								obj.mvp = projection * view * obj.model;
 							}
 						}
 					}
@@ -415,6 +388,9 @@ int main(int argc, char* args[]) {
 									lights[lightIndex].pos = obj.position;
 									lights[lightIndex].dir = glm::normalize(obj.rotation * glm::vec3(0.0f, -1.0f, 0.0f));
 								}
+
+								obj.model = GetModelMatrix(obj);
+								obj.mvp = projection * view * obj.model;
 							}
 						}
 					}
@@ -441,10 +417,10 @@ int main(int argc, char* args[]) {
 
 						cam.cam_position = cameraPos;
 
-						if(save_outPath != "")
+						if (save_outPath != "")
 							par.save(save_outPath.c_str(), st, cam, objects, lightObjects, lights);
 						else {
-						
+
 							nfdu8char_t* outPath = nullptr;
 
 							nfdfilteritem_t filterItem[1] = {
@@ -469,7 +445,7 @@ int main(int argc, char* args[]) {
 					}
 
 					if (event.key.mod & SDL_KMOD_CTRL && event.key.scancode == SDL_SCANCODE_O) {
-					
+
 						nfdu8char_t* outPath = nullptr;
 
 						dont_reload_cam = true;
@@ -494,6 +470,35 @@ int main(int argc, char* args[]) {
 
 							NFD_FreePath(outPath);
 						}
+					}
+				}
+
+				if (event.key.scancode == SDL_SCANCODE_F11) {
+
+					switch (st.win_mode) {
+
+						case window_mode::WINDOWED:
+							st.win_mode = window_mode::WINDOWED_BORDERLESS;
+							break;
+
+						case window_mode::WINDOWED_BORDERLESS:
+							st.win_mode = window_mode::FULLSCREEN;
+							break;
+
+						case window_mode::FULLSCREEN:
+							st.win_mode = window_mode::WINDOWED;
+							break;
+					}
+
+				}
+
+				if (event.key.scancode == SDL_SCANCODE_T) {
+
+					if(currentViewMode == view_Mode::EDITOR) {
+						currentViewMode = view_Mode::PLAY;
+					}
+					else {
+						currentViewMode = view_Mode::EDITOR;
 					}
 				}
 
@@ -536,31 +541,72 @@ int main(int argc, char* args[]) {
 
 			case SDL_EVENT_MOUSE_BUTTON_UP:
 
-				if (event.button.button == SDL_BUTTON_LEFT) {
+				if (currentViewMode == view_Mode::EDITOR) {
 
-					if (ImGuizmo::IsOver() || ImGuizmo::IsUsing())
-						break;
+					if (event.button.button == SDL_BUTTON_LEFT) {
 
-					//if (ImGui::GetIO().WantCaptureMouse)
-					//	break;
+						if (ImGuizmo::IsOver() || ImGuizmo::IsUsing())
+							break;
 
-					float mx = event.button.x - viewportPos.x;
-					float my = event.button.y - viewportPos.y;
+						//if (ImGui::GetIO().WantCaptureMouse)
+						//	break;
 
-					if (mx < 0 || my < 0 || mx > viewport_width || my > viewport_height)
-						break;
+						ImVec2 mouse = ImGui::GetMousePos();
 
-					BuildRay(mx, my, rayOrigin, rayDir);
+						float mx = mouse.x - viewportPos.x;
+						float my = mouse.y - viewportPos.y;
 
-					select_object(rayOrigin, rayDir);
+						if (mx < 0 || my < 0 || mx > viewport_width || my > viewport_height)
+							break;
 
-					/*if (selectedObject != nullptr) {
-						std::cout << "selected" << std::endl;
-					}*/
-				}
+						BuildRay(mx, my, rayOrigin, rayDir);
 
-				if (event.button.button == SDL_BUTTON_RIGHT) {
-					selectedObject = -1;
+						select_object(rayOrigin, rayDir);
+
+						/*if (selectedObject != nullptr) {
+							std::cout << "selected" << std::endl;
+						}*/
+					}
+
+					if (event.button.button == SDL_BUTTON_RIGHT) {
+						selectedObject = -1;
+					}
+
+					if (event.button.button == SDL_BUTTON_X1) {
+
+						switch (currentTool) {
+
+						case Tools::TRANSLATE:
+							currentTool = Tools::SCALE;
+							break;
+
+						case Tools::ROTATE:
+							currentTool = Tools::TRANSLATE;
+							break;
+						case Tools::SCALE:
+							currentTool = Tools::ROTATE;
+							break;
+						}
+					}
+
+					if (event.button.button == SDL_BUTTON_X2) {
+
+						switch (currentTool) {
+
+						case Tools::TRANSLATE:
+							currentTool = Tools::ROTATE;
+							break;
+
+						case Tools::ROTATE:
+							currentTool = Tools::SCALE;
+							break;
+						case Tools::SCALE:
+							currentTool = Tools::TRANSLATE;
+							break;
+						}
+					}
+
+					break;
 				}
 
 				break;

@@ -398,6 +398,11 @@ void update_imgui_guizmo() {
 
 		wasUsing = usingGizmo;
 
+		if (currentOperation != ImGuizmo::SCALE && light)
+		{
+			obj->scale = glm::vec3(50.0f);
+		}
+
 	}
 
 	ImGui::End();
@@ -463,6 +468,8 @@ void update_imgui_guizmo() {
 
 				if (ext == ".png" || ext == ".jpg" || ext == ".jpeg") {
 
+					ImGui::PushID(entry.path().string().c_str());
+
 					std::string path = entry.path().string();
 
 					if (path.rfind("../", 0) == 0)
@@ -473,7 +480,7 @@ void update_imgui_guizmo() {
 					if (ImGui::ImageButton("", (ImTextureID)(intptr_t)tex, ImVec2(64, 64), ImVec2(0, 1), ImVec2(1, 0))) {
 
 						if (selectedObject != -1) {
-						
+
 							objects[selectedObject].obj_texture = tex;
 							objects[selectedObject].tex = path;
 						}
@@ -481,15 +488,18 @@ void update_imgui_guizmo() {
 
 					if (ImGui::BeginDragDropSource()) {
 
-						ImGui::SetDragDropPayload("TEXTURE_FILE", path.c_str(), path.size() + 1);
+						ImGui::SetDragDropPayload("IMAGE_FILE", path.c_str(), path.size() + 1);
 
 						ImGui::Image((ImTextureID)(intptr_t)tex, ImVec2(64, 64));
 						ImGui::Text("%s", entry.path().filename().string().c_str());
 
 						ImGui::EndDragDropSource();
+
 					}
 
 					ImGui::TextWrapped("%s", entry.path().stem().string().c_str());
+
+					ImGui::PopID();
 				}
 
 				if (ext == ".obj") {
@@ -530,6 +540,17 @@ void update_imgui_guizmo() {
 
 						objects.push_back(obj);
 						selectedObject = (int)(objects.size() - 1);
+					}
+
+					if (ImGui::BeginDragDropSource()) {
+
+						ImGui::SetDragDropPayload("OBJ_FILE", path.c_str(), path.size() + 1);
+
+						ImGui::Image((ImTextureID)(intptr_t)nullptr, ImVec2(64, 64));
+						ImGui::Text("%s", entry.path().filename().string().c_str());
+
+						ImGui::EndDragDropSource();
+
 					}
 
 					ImGui::TextWrapped("%s", entry.path().stem().string().c_str());
@@ -634,86 +655,88 @@ void update_imgui_guizmo() {
 	ImGui::End();
 	
 	//----------------------------------------------------
-	// tools
+	// Inspector
+
+	static const char* mappings[] = {
+		"UV",
+		"Planar",
+		"Cube",
+		"Cylinder",
+		"Sphere"
+	};
+
+	static const char* planarCoords[] = {
+		"XZ",
+		"XY",
+		"YZ"
+	};
+	
+	static const char* cylinderAxes[] = {
+		"X",
+		"Y",
+		"Z"
+	};
 
 	if (selectedObject != -1) {
-	
-		ImGui::Begin("Tools");
 
-		if (ImGui::RadioButton("Move", currentOperation == ImGuizmo::TRANSLATE))
-			currentOperation = ImGuizmo::TRANSLATE;
+		if (selectedObject < objects.size()) {
 
-		ImGui::SameLine();
+			Object* obj = GetSelectedObject();
 
-		if (ImGui::RadioButton("Rotate", currentOperation == ImGuizmo::ROTATE))
-			currentOperation = ImGuizmo::ROTATE;
+			ImGui::Begin("Inspector");
 
-		ImGui::SameLine();
+			if (ImGui::CollapsingHeader("General", ImGuiTreeNodeFlags_DefaultOpen)) {
 
-		if (ImGui::RadioButton("Scale", currentOperation == ImGuizmo::SCALE))
-			currentOperation = ImGuizmo::SCALE;
+				ImGui::Text("Name: %s", obj->name.c_str());
 
-		static const char* mappings[] = {
-			"UV",
-			"Planar",
-			"Cube",
-			"Cylinder",
-			"Sphere"
-		};
+				ImGui::DragFloat3("Position", &obj->position.x, 0.1f);
 
-		static const char* planarCoords[] = {
-			"XZ",
-			"XY",
-			"YZ"
-		};
-	
-		static const char* cylinderAxes[] = {
-			"X",
-			"Y",
-			"Z"
-		};
+				glm::vec3 euler = glm::degrees(glm::eulerAngles(obj->rotation));
+				if (ImGui::DragFloat3("Rotation", &euler.x, 1.0f))
+					obj->rotation = glm::quat(glm::radians(euler));
 
-		if (selectedObject != -1) {
+				ImGui::DragFloat3("Scale", &obj->scale.x, 0.1f);
+			}
 
-			if (selectedObject < objects.size()) {
+			if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen)) {
 
-				Object* obj = GetSelectedObject();
+				ImGui::DragFloat("Shininess", &obj->shininess, 1.0f, 1.0f, 256.0f);
 
-				ImGui::Begin("Inspector");
+				ImGui::Text("Texture:");
 
-				if (ImGui::CollapsingHeader("General", ImGuiTreeNodeFlags_DefaultOpen)) {
+				ImGui::TextWrapped("%s", obj->tex.c_str());
 
-					ImGui::Text("Name: %s", obj->name.c_str());
+				ImGui::Image((ImTextureID)(intptr_t)obj->obj_texture, ImVec2(80, 80));
 
-					ImGui::DragFloat3("Position", &obj->position.x, 0.1f);
-
-					glm::vec3 euler = glm::degrees(glm::eulerAngles(obj->rotation));
-					if (ImGui::DragFloat3("Rotation", &euler.x, 1.0f))
-						obj->rotation = glm::quat(glm::radians(euler));
-
-					ImGui::DragFloat3("Scale", &obj->scale.x, 0.1f);
-				}
-
-				if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen)) {
-
-					ImGui::DragFloat("Shininess", &obj->shininess, 1.0f, 1.0f, 256.0f);
-
-					ImGui::Text("Texture:");
-					ImGui::TextWrapped("%s", obj->tex.c_str());
-
-					ImGui::Text("Normal Map:");
-					ImGui::TextWrapped("%s", obj->norm_map.c_str());
-				}
-
-				ImGui::Text("Normal Map");
-
-				ImGui::Image((ImTextureID)(intptr_t)obj->normalTexture, ImVec2(80, 80));
-
-				ImGui::Button("Drop texture here", ImVec2(80, 80));
+				ImGui::Button("Drop texture here##Texture", ImVec2(80, 80));
 
 				if (ImGui::BeginDragDropTarget()) {
 
-					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("TEXTURE_FILE")) {
+					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("IMAGE_FILE")) {
+
+						const char* file = (const char*)payload->Data;
+
+						objects[selectedObject].obj_texture = TextureManager::Get(file);
+
+						objects[selectedObject].tex = file;
+					}
+
+					ImGui::EndDragDropTarget();
+				}
+
+				//------------------------------------------------------------
+
+				ImGui::Text("Normal Map:");
+
+				ImGui::TextWrapped("%s", obj->norm_map.c_str());
+
+				ImGui::Image((ImTextureID)(intptr_t)obj->normalTexture, ImVec2(80, 80));
+
+				ImGui::Button("Drop texture here##NormalMap", ImVec2(80, 80));
+
+				if (ImGui::BeginDragDropTarget()) {
+
+					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("IMAGE_FILE")) {
 
 						const char* file = (const char*)payload->Data;
 
@@ -726,174 +749,230 @@ void update_imgui_guizmo() {
 					ImGui::EndDragDropTarget();
 				}
 
-				if (ImGui::CollapsingHeader("Mesh")) {
+			}
 
-					ImGui::TextWrapped("%s", obj->mesh.c_str());
+			if (ImGui::CollapsingHeader("Mesh")) {
 
-					ImGui::Text("Vertices: %d", (int)obj->vertices.size());
-					ImGui::Text("Triangles: %d", (int)obj->indices.size() / 3);
+				ImGui::TextWrapped("%s", obj->mesh.c_str());
+
+				ImGui::Text("Mesh:");
+
+				ImGui::Button("Drop .obj here##Mesh", ImVec2(200, 80));
+
+				if (ImGui::BeginDragDropTarget()) {
+
+					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("OBJ_FILE")) {
+
+						DestroyBuffers(*obj);
+
+						obj->vertices.clear();
+						obj->indices.clear();
+
+						obj->normalLines.clear();
+
+						obj->tangentLines.clear();
+						obj->bitangentLines.clear();
+						obj->normalLinesTBN.clear();
+
+						obj->original_vertices.clear();
+						obj->original_indices.clear();
+
+						ReplaceMesh(objects[selectedObject], (const char*)payload->Data);
+					}
+
+					ImGui::EndDragDropTarget();
 				}
 
-				if (ImGui::CollapsingHeader("Bounds")) {
+				ImGui::TextWrapped("%s", obj->mesh.c_str());
 
-					ImGui::DragFloat3("Min", &obj->min.x, 0.1f);
-					ImGui::DragFloat3("Max", &obj->max.x, 0.1f);
-				}
+				ImGui::Text("Vertices: %d", (int)obj->vertices.size());
+				ImGui::Text("Triangles: %d", (int)obj->indices.size() / 3);
+			}
 
-				int current = (int)obj->mapping;
+			if (ImGui::CollapsingHeader("Bounds")) {
 
-				if (ImGui::Combo("Mapping", &current, mappings, IM_ARRAYSIZE(mappings)))
+				ImGui::DragFloat3("Min", &obj->min.x, 0.1f);
+				ImGui::DragFloat3("Max", &obj->max.x, 0.1f);
+			}
+
+			ImGui::Separator();
+
+			int current = (int)obj->mapping;
+
+			if (ImGui::Combo("Mapping", &current, mappings, IM_ARRAYSIZE(mappings))) {
+
+				obj->mapping = (TextureMapping)current;
+				UpdateMapping(*obj);
+			}
+
+			//------------------------------------------------------------
+			// Planar
+
+			if (obj->mapping == TextureMapping::Planar)
+			{
+				int coord = (int)obj->coordType;
+
+				if (ImGui::Combo("Plane", &coord, planarCoords, IM_ARRAYSIZE(planarCoords)))
 				{
-					obj->mapping = (TextureMapping)current;
+					obj->coordType = (coord_types)coord;
 					UpdateMapping(*obj);
 				}
-
-				//------------------------------------------------------------
-				// Planar
-
-				if (obj->mapping == TextureMapping::Planar)
-				{
-					int coord = (int)obj->coordType;
-
-					if (ImGui::Combo("Plane", &coord, planarCoords, IM_ARRAYSIZE(planarCoords)))
-					{
-						obj->coordType = (coord_types)coord;
-						UpdateMapping(*obj);
-					}
-				}
-
-				//------------------------------------------------------------
-				// Cubic
-
-				if (obj->mapping == TextureMapping::Cubic)
-				{
-					if (ImGui::Button("Regenerate Cube UV"))
-					{
-						UpdateMapping(*obj);
-					}
-				}
-
-				//------------------------------------------------------------
-				// Cylindrical
-
-				if (obj->mapping == TextureMapping::Cylindrical)
-				{
-					int axis = (int)obj->cyaxisType;
-
-					if (ImGui::Combo("Axis", &axis, cylinderAxes, IM_ARRAYSIZE(cylinderAxes)))
-					{
-						obj->cyaxisType = (cylinder_axis)axis;
-						UpdateMapping(*obj);
-					}
-				}
-
-				//------------------------------------------------------------
-				// Spherical
-
-				if (obj->mapping == TextureMapping::Spherical)
-				{
-					if (ImGui::Button("Regenerate Sphere UV"))
-					{
-						UpdateMapping(*obj);
-					}
-				}
-
-				//------------------------------------------------------------
-				// UV
-
-				if (obj->mapping == TextureMapping::UV)
-				{
-					if (ImGui::Button("Restore Original UV"))
-					{
-						UpdateMapping(*obj);
-					}
-				}
-
-				ImGui::End();
-				
 			}
-			else {
 
-				Light* light = GetSelectedLight();
+			//------------------------------------------------------------
+			// Cubic
 
-				if (light) {
+			if (obj->mapping == TextureMapping::Cubic)
+			{
+				if (ImGui::Button("Regenerate Cube UV"))
+				{
+					UpdateMapping(*obj);
+				}
+			}
 
-					ImGui::SeparatorText("General");
+			//------------------------------------------------------------
+			// Cylindrical
 
-					//ImGui::InputText("Name", &lightObjects[selectedObject - objects.size()].name);
+			if (obj->mapping == TextureMapping::Cylindrical)
+			{
+				int axis = (int)obj->cyaxisType;
 
-					ImGui::ColorEdit3("Color", &light->col.x);
+				if (ImGui::Combo("Axis", &axis, cylinderAxes, IM_ARRAYSIZE(cylinderAxes)))
+				{
+					obj->cyaxisType = (cylinder_axis)axis;
+					UpdateMapping(*obj);
+				}
+			}
 
-					ImGui::DragFloat3("Position", &light->pos.x, 0.1f);
+			//------------------------------------------------------------
+			// Spherical
 
-					ImGui::DragFloat3("Direction", &light->dir.x, 0.01f);
+			if (obj->mapping == TextureMapping::Spherical)
+			{
+				if (ImGui::Button("Regenerate Sphere UV"))
+				{
+					UpdateMapping(*obj);
+				}
+			}
 
-					ImGui::DragFloat("Ambient", &light->ambient, 0.01f, 0.f, 1.f);
+			//------------------------------------------------------------
+			// UV
 
-					lightObjects[selectedObject - objects.size()].position = light->pos;
+			if (obj->mapping == TextureMapping::UV)
+			{
+				if (ImGui::Button("Restore Original UV"))
+				{
+					UpdateMapping(*obj);
+				}
+			}
+			
+		}
+		else {
 
-					ImGui::SeparatorText("Attenuation");
+			Light* light = GetSelectedLight();
+			Object* obj = GetSelectedObject();
 
-					ImGui::DragFloat("Constant", &light->att.x, 0.001f, 0.f, 10.f);
+			if (light) {
 
-					ImGui::DragFloat("Linear", &light->att.y, 0.0001f, 0.f, 1.f);
+				ImGui::Begin("Inspector");
 
-					ImGui::DragFloat("Quadratic", &light->att.z, 0.00001f, 0.f, 1.f);
+				ImGui::SeparatorText("General");
 
-					if (light->type == "SPOT") {
+				//ImGui::InputText("Name", &lightObjects[selectedObject - objects.size()].name);
 
-						ImGui::SeparatorText("Spot");
+				ImGui::ColorEdit3("Color", &light->col.x);
 
-						ImGui::DragFloat("Inner", &light->inner, 0.25f, 0.f, 90.f);
+				ImGui::DragFloat3("Position", &light->pos.x, 0.1f);
 
-						ImGui::DragFloat("Outer", &light->outer, 0.25f, 0.f, 90.f);
+				glm::vec3 euler = glm::degrees(glm::eulerAngles(obj->rotation));
 
-						ImGui::DragFloat("Falloff", &light->falloff, 0.05f, 0.f, 16.f);
+				if (ImGui::DragFloat3("Rotation", &euler.x, 1.0f)) {
+
+					obj->rotation = glm::quat(glm::radians(euler));
+				}
+
+				ImGui::DragFloat3("Direction", &light->dir.x, 0.01f);
+
+				ImGui::DragFloat("Ambient", &light->ambient, 0.01f, 0.f, 1.f);
+
+				lightObjects[selectedObject - objects.size()].position = light->pos;
+
+				ImGui::SeparatorText("Attenuation");
+
+				ImGui::DragFloat("Constant", &light->att.x, 0.001f, 0.f, 10.f);
+
+				ImGui::DragFloat("Linear", &light->att.y, 0.0001f, 0.f, 1.f);
+
+				ImGui::DragFloat("Quadratic", &light->att.z, 0.00001f, 0.f, 1.f);
+
+				if (light->type == "SPOT") {
+
+					ImGui::SeparatorText("Spot");
+
+					ImGui::DragFloat("Inner", &light->inner, 0.25f, 0.f, 90.f);
+
+					ImGui::DragFloat("Outer", &light->outer, 0.25f, 0.f, 90.f);
+
+					ImGui::DragFloat("Falloff", &light->falloff, 0.05f, 0.f, 16.f);
+				}
+
+				ImGui::SeparatorText("Shadow");
+
+				ImGui::DragFloat("Bias", &light->bias, 0.000001f, 0.f, 0.01f, "%.6f");
+
+				ImGui::DragFloat("PCF", &light->pcf, 0.1f, 1.f, 16.f);
+
+				ImGui::SeparatorText("Type");
+
+				static const char* types[] = {
+					"Point",
+					"Directional",
+					"Spot"
+				};
+
+				static int current = light->typeID;
+
+				if (ImGui::Combo("Light Type", &current, types, IM_ARRAYSIZE(types))) {
+
+					light->typeID = current;
+
+					switch (current)
+					{
+					case 0: light->type = "POINT"; break;
+					case 1: light->type = "DIR"; break;
+					case 2: light->type = "SPOT"; break;
 					}
+				}
 
-					ImGui::SeparatorText("Shadow");
+				ImGui::Separator();
 
-					ImGui::DragFloat("Bias", &light->bias, 0.000001f, 0.f, 0.01f, "%.6f");
+				if (ImGui::Button("Delete Light")) {
 
-					ImGui::DragFloat("PCF", &light->pcf, 0.1f, 1.f, 16.f);
+					int index = selectedObject - objects.size();
 
-					ImGui::SeparatorText("Type");
+					lights.erase(lights.begin() + index);
+					lightObjects.erase(lightObjects.begin() + index);
 
-					const char* types[] = {
-						"Point",
-						"Directional",
-						"Spot"
-					};
-
-					int current = light->typeID;
-
-					if (ImGui::Combo("Light Type", &current, types, IM_ARRAYSIZE(types))) {
-
-						light->typeID = current;
-
-						switch (current)
-						{
-						case 0: light->type = "POINT"; break;
-						case 1: light->type = "DIR"; break;
-						case 2: light->type = "SPOT"; break;
-						}
-					}
-
-					ImGui::Separator();
-
-					if (ImGui::Button("Delete Light")) {
-
-						int index = selectedObject - objects.size();
-
-						lights.erase(lights.begin() + index);
-						lightObjects.erase(lightObjects.begin() + index);
-
-						selectedObject = -1;
-					}
+					selectedObject = -1;
 				}
 			}
 		}
 
 		ImGui::End();
+
+	}
+
+	switch (currentTool) {
+
+		case Tools::TRANSLATE:
+			currentOperation = ImGuizmo::TRANSLATE;
+			break;
+
+		case Tools::ROTATE:
+			currentOperation = ImGuizmo::ROTATE;
+			break;
+		case Tools::SCALE:
+			currentOperation = ImGuizmo::SCALE;
+			break;
 	}
 }
