@@ -132,6 +132,11 @@ enum class Tools {
 extern Tools currentTool;
 
 //--------------------------------------------------------------------------
+// Load scene in the good way
+
+bool load_scene_ok(const char* scene);
+
+//--------------------------------------------------------------------------
 // ImGui docking
 
 void Docking();
@@ -255,20 +260,6 @@ void CreateLight(const std::string& type);
 
 void clean();
 void DestroyBuffers(Object& obj);
-
-template<typename T>
-
-void DeleteObjectGPU(T& o) {
-
-	if (o.ebo)
-		glDeleteBuffers(1, &o.ebo);
-
-	if (o.vbo)
-		glDeleteBuffers(1, &o.vbo);
-
-	if (o.vao)
-		glDeleteVertexArrays(1, &o.vao);
-}
 
 //--------------------------------------------------------------------------
 // Mesh replacement

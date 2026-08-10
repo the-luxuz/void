@@ -129,6 +129,9 @@ Tools currentTool = Tools::TRANSLATE;
 //docking
 static bool showGraphicsSettings = false;
 
+//--------------------------------------------------------------------------
+// Load scene in the good way
+
 bool load_scene_ok(const char* scene) {
 
 	selectedObject = -1;
@@ -138,7 +141,24 @@ bool load_scene_ok(const char* scene) {
 		o.undoStack.clear();
 		o.redoStack.clear();
 
-		DeleteObjectGPU(o);
+		DestroyBuffers(o);
+
+		o.vao = 0;
+		o.vbo = 0;
+		o.ebo = 0;
+
+		o.normalVAO = 0;
+		o.normalVBO = 0;
+
+		o.normalTBVAO = 0;
+		o.normalTBVBO = 0;
+
+		o.tangentVAO = 0;
+		o.tangentVBO = 0;
+
+		o.bitangentVAO = 0;
+		o.bitangentVBO = 0;
+
 	}
 
 	for (auto& o : lightObjects) {
@@ -146,8 +166,34 @@ bool load_scene_ok(const char* scene) {
 		o.undoStack.clear();
 		o.redoStack.clear();
 
-		DeleteObjectGPU(o);
+		DestroyBuffers(o);
+
+		o.vao = 0;
+		o.vbo = 0;
+		o.ebo = 0;
+
+		o.normalVAO = 0;
+		o.normalVBO = 0;
+
+		o.normalTBVAO = 0;
+		o.normalTBVBO = 0;
+
+		o.tangentVAO = 0;
+		o.tangentVBO = 0;
+
+		o.bitangentVAO = 0;
+		o.bitangentVBO = 0;
 	}
+
+	for (auto& o : lights) {
+
+		o.undoStack.clear();
+		o.redoStack.clear();
+	}
+
+	objects.clear();
+	lightObjects.clear();
+	lights.clear();
 
 	objectNameCounters.clear();
 
@@ -1799,6 +1845,7 @@ void CreateLight(const std::string& type) {
 
 //--------------------------------------------------------------------------
 // Clean buffers and objects
+
 void clean() {
 
 	glDeleteProgram(program);
@@ -1813,6 +1860,7 @@ void clean() {
 		glDeleteBuffers(1, &obj.ebo);
 	}
 }
+
 void DestroyBuffers(Object& obj) {
 
 	if (obj.vao)
@@ -1825,28 +1873,28 @@ void DestroyBuffers(Object& obj) {
 		glDeleteBuffers(1, &obj.ebo);
 
 	if(obj.normalVAO)
-		glDeleteBuffers(1, &obj.normalVBO);
+		glDeleteVertexArrays(1, &obj.normalVBO);
 
 	if (obj.normalVAO)
-		glDeleteBuffers(1, &obj.normalVAO);
+		glDeleteVertexArrays(1, &obj.normalVAO);
 
 	if (obj.normalTBVAO)
-		glDeleteBuffers(1, &obj.normalTBVAO);
+		glDeleteVertexArrays(1, &obj.normalTBVAO);
 
 	if (obj.normalTBVBO)
-		glDeleteBuffers(1, &obj.normalTBVBO);
+		glDeleteVertexArrays(1, &obj.normalTBVBO);
 
 	if (obj.tangentVAO)
-		glDeleteBuffers(1, &obj.tangentVAO);
+		glDeleteVertexArrays(1, &obj.tangentVAO);
 
 	if (obj.tangentVBO)
-		glDeleteBuffers(1, &obj.tangentVBO);
+		glDeleteVertexArrays(1, &obj.tangentVBO);
 
 	if (obj.bitangentVAO)
-		glDeleteBuffers(1, &obj.bitangentVAO);
+		glDeleteVertexArrays(1, &obj.bitangentVAO);
 
 	if (obj.bitangentVBO)
-		glDeleteBuffers(1, &obj.bitangentVBO);
+		glDeleteVertexArrays(1, &obj.bitangentVBO);
 
 	obj.vao = 0;
 	obj.vbo = 0;

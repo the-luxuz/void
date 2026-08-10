@@ -275,7 +275,23 @@ bool open_init(const char* settings, const char* scene, Settings& st) {
 		o.undoStack.clear();
 		o.redoStack.clear();
 
-		DeleteObjectGPU(o);
+		DestroyBuffers(o);
+
+		o.vao = 0;
+		o.vbo = 0;
+		o.ebo = 0;
+
+		o.normalVAO = 0;
+		o.normalVBO = 0;
+
+		o.normalTBVAO = 0;
+		o.normalTBVBO = 0;
+
+		o.tangentVAO = 0;
+		o.tangentVBO = 0;
+
+		o.bitangentVAO = 0;
+		o.bitangentVBO = 0;
 	}
 
 	for (auto& o : lightObjects) {
@@ -283,8 +299,34 @@ bool open_init(const char* settings, const char* scene, Settings& st) {
 		o.undoStack.clear();
 		o.redoStack.clear();
 
-		DeleteObjectGPU(o);
+		DestroyBuffers(o);
+
+		o.vao = 0;
+		o.vbo = 0;
+		o.ebo = 0;
+
+		o.normalVAO = 0;
+		o.normalVBO = 0;
+
+		o.normalTBVAO = 0;
+		o.normalTBVBO = 0;
+
+		o.tangentVAO = 0;
+		o.tangentVBO = 0;
+
+		o.bitangentVAO = 0;
+		o.bitangentVBO = 0;
 	}
+
+	for (auto& o : lights) {
+
+		o.undoStack.clear();
+		o.redoStack.clear();
+	}
+
+	objects.clear();
+	lightObjects.clear();
+	lights.clear();
 
 	objectNameCounters.clear();
 

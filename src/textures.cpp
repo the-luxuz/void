@@ -92,7 +92,7 @@ GLuint LoadHDRTexture(const std::string& path) {
 
     if (!data) {
 
-        std::cout << "No se pudo cargar HDR\n";
+        std::cout << "Couldn't load HDR\n";
         return 0;
     }
 
@@ -143,7 +143,7 @@ void Load_Skybox(const std::string& path) {
     else if (ext == ".hdr")
         skybox_texture = LoadHDRTexture(path);
     else
-        std::cout << "Formato no soportado: " << ext << std::endl;
+        std::cout << "Not supported: " << ext << "\n";
    
 }
 
@@ -237,6 +237,7 @@ void Create_viewport_tex(int width, int height) {
 
     glBindTexture(GL_TEXTURE_2D, 0);
 }
+
 void CreateViewportDepthTexture(int width, int height) {
     
     glGenTextures(1, &viewportDepthTexture);
