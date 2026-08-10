@@ -30,6 +30,7 @@ class TextureManager {
 
 public:
     static GLuint Get(const std::string& path);
+    static void Clear();
 
 };
 

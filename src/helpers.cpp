@@ -1369,6 +1369,16 @@ GLuint TextureManager::Get(const std::string& path) {
 	return texture;
 }
 
+void TextureManager::Clear() {
+
+	for (auto& [path, id] : textures) {
+
+		glDeleteTextures(1, &id);
+	}
+
+	textures.clear();
+}
+
 //--------------------------------------------------------------------------
 // Ray-AABB intersection test
 
@@ -1849,19 +1859,27 @@ void CreateLight(const std::string& type) {
 void clean() {
 
 	glDeleteProgram(program);
+	glDeleteProgram(program_line);
 	glDeleteProgram(program_grid);
+	glDeleteProgram(program_depth);
 	glDeleteProgram(program_skybox);
 	glDeleteProgram(program_hdrToCubemap);
 
 	for (auto& obj : objects) {
 
-		glDeleteVertexArrays(1, &obj.vao);
-		glDeleteBuffers(1, &obj.vbo);
-		glDeleteBuffers(1, &obj.ebo);
+		DestroyBuffers(obj);
 	}
+
+	for (auto& obj : lightObjects) {
+
+		DestroyBuffers(obj);
+	}
+
+	TextureManager::Clear();
 }
 
 void DestroyBuffers(Object& obj) {
+
 
 	if (obj.vao)
 		glDeleteVertexArrays(1, &obj.vao);

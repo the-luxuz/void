@@ -602,7 +602,6 @@ void update_imgui_guizmo() {
 					if (ImGui::Button("", ImVec2(64, 64))) {
 
 						load_scene_ok(path.c_str());
-
 					}
 
 					ImGui::TextWrapped("%s", entry.path().stem().string().c_str());

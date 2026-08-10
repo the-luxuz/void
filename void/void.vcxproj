@@ -44,6 +44,7 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v145</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
+    <EnableASAN>true</EnableASAN>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -111,7 +112,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)external\tinyexr\deps\libdeflate\lib;$(SolutionDir)include\stb;$(SolutionDir)src\headers;$(SolutionDir)external\nativefiledialog\include;$(SolutionDir)external\nativefiledialog;$(SolutionDir)external\tinyexr\deps\zstd;$(SolutionDir)external\tinyexr\deps\miniz;$(SolutionDir)external\tinyexr;$(SolutionDir)external\imgui\backends;$(SolutionDir)external\imgui;$(SolutionDir)include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)external\tinyexr\deps\libdeflate\lib;$(SolutionDir)include\stb;$(SolutionDir)src\headers;$(SolutionDir)external\tinyexr\deps\zstd;$(SolutionDir)external\tinyexr\deps\miniz;$(SolutionDir)external\tinyexr;$(SolutionDir)external\imgui\backends;$(SolutionDir)external\imgui;$(SolutionDir)include;$(SolutionDir)external\nativefiledialog\include;$(SolutionDir)external\nativefiledialog;$(SolutionDir)external\tinyexr\deps\zstd;$(SolutionDir)external\tinyexr\deps\miniz;$(SolutionDir)external\tinyexr;$(SolutionDir)external\imgui\backends;$(SolutionDir)external\imgui;$(SolutionDir)include;$(SolutionDir)external\nativefiledialog\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -132,11 +133,13 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)external\tinyexr\deps\libdeflate\lib;$(SolutionDir)include\stb;$(SolutionDir)src\headers;$(SolutionDir)external\tinyexr\deps\zstd;$(SolutionDir)external\tinyexr\deps\miniz;$(SolutionDir)external\tinyexr;$(SolutionDir)external\imgui\backends;$(SolutionDir)external\imgui;$(SolutionDir)include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)external\tinyexr\deps\libdeflate\lib;$(SolutionDir)include\stb;$(SolutionDir)src\headers;$(SolutionDir)external\tinyexr\deps\zstd;$(SolutionDir)external\tinyexr\deps\miniz;$(SolutionDir)external\tinyexr;$(SolutionDir)external\imgui\backends;$(SolutionDir)external\imgui;$(SolutionDir)include;$(SolutionDir)external\nativefiledialog\include;$(SolutionDir)external\nativefiledialog</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>SDL3.lib;glew32.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <Manifest>
       <EnableSegmentHeap>true</EnableSegmentHeap>

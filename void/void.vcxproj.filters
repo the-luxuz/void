@@ -126,5 +126,9 @@
     <None Include="..\data\shaders\vertex_skybox.vert" />
     <None Include="..\data\shaders\fragment_hdrToCubemap.frag" />
     <None Include="..\data\shaders\vertex_hdrToCubemap.vert" />
+    <None Include="..\data\shaders\fragment_depth.frag" />
+    <None Include="..\data\shaders\fragment_line.frag" />
+    <None Include="..\data\shaders\vertex_depth.vert" />
+    <None Include="..\data\shaders\vertex_line.vert" />
   </ItemGroup>
 </Project>
