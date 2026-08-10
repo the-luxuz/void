@@ -1872,29 +1872,29 @@ void DestroyBuffers(Object& obj) {
 	if (obj.ebo)
 		glDeleteBuffers(1, &obj.ebo);
 
-	if(obj.normalVAO)
-		glDeleteVertexArrays(1, &obj.normalVBO);
-
 	if (obj.normalVAO)
 		glDeleteVertexArrays(1, &obj.normalVAO);
+
+	if (obj.normalVBO)
+		glDeleteBuffers(1, &obj.normalVBO);
 
 	if (obj.normalTBVAO)
 		glDeleteVertexArrays(1, &obj.normalTBVAO);
 
 	if (obj.normalTBVBO)
-		glDeleteVertexArrays(1, &obj.normalTBVBO);
+		glDeleteBuffers(1, &obj.normalTBVBO);
 
 	if (obj.tangentVAO)
 		glDeleteVertexArrays(1, &obj.tangentVAO);
 
 	if (obj.tangentVBO)
-		glDeleteVertexArrays(1, &obj.tangentVBO);
+		glDeleteBuffers(1, &obj.tangentVBO);
 
 	if (obj.bitangentVAO)
 		glDeleteVertexArrays(1, &obj.bitangentVAO);
 
 	if (obj.bitangentVBO)
-		glDeleteVertexArrays(1, &obj.bitangentVBO);
+		glDeleteBuffers(1, &obj.bitangentVBO);
 
 	obj.vao = 0;
 	obj.vbo = 0;
