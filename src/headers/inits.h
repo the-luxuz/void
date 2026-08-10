@@ -6,8 +6,15 @@
 #include "helpers.h"
 #include "buffers.h"
 
+//--------------------------------------------------------------------------
+// global variables
+
+// window and context
 extern SDL_Window* window;
 extern SDL_GLContext context;
+
+//--------------------------------------------------------------------------
+// init functions
 
 void init_viewport();
 
@@ -25,6 +32,9 @@ bool init_lights(Object& obj);
 
 void init();
 
-bool open_init(const char* settings, Settings& st);
+bool open_init(const char* settings, const char* scene, Settings& st);
 
-void init_(const char* settings);
+//--------------------------------------------------------------------------
+// main init function
+
+void init_(const char* settings, const char* scene);

@@ -1,5 +1,14 @@
 #include "headers/helpers.h"
 
+//--------------------------------------------------------------------------
+// global variables
+
+// structures
+camera cam;
+Parser par;
+Settings st;
+
+// buffers
 GLuint viewportFBO;
 GLuint dynamic_cubemap;
 
@@ -8,43 +17,42 @@ GLuint envCubemap;
 GLuint captureFBO;
 GLuint captureRBO;
 
-camera cam;
-Parser par;
-Settings st;
-
-bool quit = false;
-
-const float STEP = 25.0f;
-
-ImVec2 viewportPos;
-ImVec2 viewportSize;
-
 GLuint gridVAO;
 GLuint gridVBO;
-
-int gridVertexCount;
-
-float moveSpeed = 10.0f;
-float mouseSensitivity = 0.005f;
-
-int selectedObject = -1;
 
 GLuint skyVAO;
 GLuint skyVBO;
 
+GLuint skyboxVAO;
+GLuint skyboxVBO;
+
+// viewport
+ImVec2 viewportPos;
+ImVec2 viewportSize;
+
+// vectors
+std::vector<Object> objects;
+std::vector<Light> lights;
+std::vector<Object> lightObjects;
+
+// light view-proj matrices
+glm::mat4 lightVP[8];
+
 glm::mat4 view;
 glm::mat4 projection;
+
+// selected object and ray casting
+int selectedObject = -1;
 
 glm::vec3 rayOrigin;
 glm::vec3 rayDir;
 
-std::vector<Object> objects;
+// movement
+float moveSpeed = 10.0f;
+float mouseSensitivity = 0.005f;
 
-GLuint skyboxVAO;
-GLuint skyboxVBO;
-
+// skybox
 glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
-
 glm::mat4 captureViews[] = {
 
     glm::lookAt(glm::vec3(0), glm::vec3( 1, 0, 0), glm::vec3(0,-1,0)),
@@ -55,26 +63,45 @@ glm::mat4 captureViews[] = {
     glm::lookAt(glm::vec3(0), glm::vec3(0, 0,-1), glm::vec3(0,-1,0))
 };
 
-std::vector<std::filesystem::path> pathTextures;
+// grid
+const float STEP = 25.0f;
+const float cellSize = 90.0f;
+int gridVertexCount;
 
+// folder and textures
 std::string dirPath = "data/textures";
 
 std::filesystem::path rootFolder = "../data";
 std::filesystem::path currentFolder = rootFolder;
 
-std::unordered_map<std::string, int> objectNameCounters;
+std::vector<std::filesystem::path> pathTextures;
 
 bool reloadFolder = false;
 std::filesystem::path newFolder;
-
 std::vector<std::filesystem::directory_entry> folderEntries;
-
-glm::ivec2 windowedSize;
 
 std::string save_outPath = "";
 
+// unordered mapo names
+std::unordered_map<std::string, int> objectNameCounters;
+
+// undo/redo
+Object objCopy;
+Light lightCopy;
+
+bool hasObjectCopy;
+bool hasLightCopy;
+
+ObjectState prevState;
+LightState prevLightState;
+
+// camera pos
 glm::vec3 cameraPos;
 
+// windowed size
+glm::ivec2 windowedSize;
+
+// flags
 bool dont_reload_cam = false;
 
 bool face_normal = false;
@@ -83,38 +110,57 @@ bool normals_appear = false;
 bool tangent_appear = false;
 bool bitangent_appear = false;
 
-std::vector<Light> lights;
-
-std::vector<Object> lightObjects;
-
-glm::mat4 lightVP[8];
-
 bool normal_apper = false;
 bool tangent_apper = false;
 bool bitangent_apper = false;
 
 bool tex_appear = true;
 
-int render_modes = 0;
-
 bool shadow_map_render = true;
 
+bool quit = false;
+
+// render modes
+int render_modes = 0;
+
+// tools
 Tools currentTool = Tools::TRANSLATE;
 
-void clean() {
+//docking
+static bool showGraphicsSettings = false;
 
-	glDeleteProgram(program);
-	glDeleteProgram(program_grid);
-	glDeleteProgram(program_skybox);
-	glDeleteProgram(program_hdrToCubemap);
+bool load_scene_ok(const char* scene) {
 
-	for (auto& obj : objects) {
+	selectedObject = -1;
 
-		glDeleteVertexArrays(1, &obj.vao);
-		glDeleteBuffers(1, &obj.vbo);
-		glDeleteBuffers(1, &obj.ebo);
+	for (auto& o : objects) {
+
+		o.undoStack.clear();
+		o.redoStack.clear();
+
+		DeleteObjectGPU(o);
 	}
+
+	for (auto& o : lightObjects) {
+
+		o.undoStack.clear();
+		o.redoStack.clear();
+
+		DeleteObjectGPU(o);
+	}
+
+	objectNameCounters.clear();
+
+	std::ifstream in(scene, std::ios::binary);
+
+	if (par.load_scene(in, lightObjects))
+		init();
+
+	return true;
 }
+
+//--------------------------------------------------------------------------
+// ImGui docking
 
 void Docking() {
 	
@@ -182,10 +228,12 @@ void Docking() {
 			&dock_main);
 
 		ImGui::DockBuilderDockWindow("Hierarchy", dock_left);
+		ImGui::DockBuilderDockWindow("Lights", dock_left);
+
 		ImGui::DockBuilderDockWindow("Inspector", dock_right);
+		ImGui::DockBuilderDockWindow("Graphics Settings", dock_right);
 
 		ImGui::DockBuilderDockWindow("Assets", dock_bottom);
-		ImGui::DockBuilderDockWindow("Lights", dock_bottom);
 
 		ImGui::DockBuilderDockWindow("ViewPort", dock_main);
 
@@ -197,10 +245,39 @@ void Docking() {
 		if (ImGui::BeginMenu("File")) {
 
 			if (ImGui::MenuItem("New")) {
-				
+
+				nfdu8char_t* outPath = nullptr;
+
+				nfdfilteritem_t filterItem[1] = {
+					{ "Text file", "bin" }
+				};
+
+				nfdresult_t result = NFD_SaveDialog(
+					&outPath,
+					filterItem,
+					1,
+					nullptr,
+					nullptr
+				);
+
+				if (result == NFD_OKAY) {
+
+					st.win_name = "void";
+					st.win_mode = window_mode::WINDOWED;
+					st.w = 1280;
+					st.h = 720;
+					st.VSync = 0;
+					st.fov = 90;
+
+					par.save("../data/settings.bin", outPath, st, cam, objects, lightObjects, lights);
+
+					save_outPath = outPath;
+
+					NFD_FreePath(outPath);
+				}
 			}
 
-			if (ImGui::MenuItem("Load")) {
+			if (ImGui::MenuItem("Load", "Ctrl+O")) {
 				
 				nfdu8char_t* outPath = nullptr;
 
@@ -223,7 +300,7 @@ void Docking() {
 
 					save_outPath = path;
 
-					open_init(path.c_str(), st);
+					open_init("../data/settings.bin", path.c_str(), st);
 
 					NFD_FreePath(outPath);
 				}
@@ -234,8 +311,6 @@ void Docking() {
 				par.skybox = st.skybox;
 
 				cam.cam_position = cameraPos;
-
-				std::cout << par.skybox << std::endl;
 
 				nfdu8char_t* outPath = nullptr;
 
@@ -253,7 +328,86 @@ void Docking() {
 
 				if (result == NFD_OKAY) {
 
-					par.save(outPath, st, cam, objects, lightObjects, lights);
+					par.save("../data/settings.bin", outPath, st, cam, objects, lightObjects, lights);
+
+					save_outPath = outPath;
+
+					NFD_FreePath(outPath);
+				}
+			}
+
+			ImGui::Separator();
+
+			if (ImGui::MenuItem("Load_Camera")) {
+				
+				std::ifstream in("../data/settings.bin", std::ios::binary);
+
+				par.load_settings(in, st, cam);
+			}
+
+			if (ImGui::MenuItem("Save_Camera")) {
+				
+				par.skybox = st.skybox;
+
+				cam.cam_position = cameraPos;
+
+				std::ofstream out("../data/settings.bin", std::ios::binary);
+
+				par.save_settings(out, st, cam);
+			}
+
+			ImGui::Separator();
+
+			if (ImGui::MenuItem("Load_Scene")) {
+				
+				nfdu8char_t* outPath = nullptr;
+
+				dont_reload_cam = true;
+
+				nfdfilteritem_t filterItem[1] = {
+					{ "Text file", "bin" }
+				};
+
+				nfdresult_t result = NFD_OpenDialog(
+					&outPath,
+					filterItem,
+					1,
+					nullptr
+				);
+
+				if (result == NFD_OKAY) {
+
+					std::string path = outPath;
+
+					save_outPath = path;
+
+					load_scene_ok(outPath);
+
+					NFD_FreePath(outPath);
+				}
+			}
+
+			if (ImGui::MenuItem("Save_Scene")) {
+				
+				nfdu8char_t* outPath = nullptr;
+
+				nfdfilteritem_t filterItem[1] = {
+					{ "Text file", "bin" }
+				};
+
+				nfdresult_t result = NFD_SaveDialog(
+					&outPath,
+					filterItem,
+					1,
+					nullptr,
+					"scene.bin"
+				);
+
+				if (result == NFD_OKAY) {
+
+					std::ofstream out(outPath, std::ios::binary);
+
+					par.save_scene(out, objects, lightObjects, lights);
 
 					save_outPath = outPath;
 
@@ -271,53 +425,201 @@ void Docking() {
 			ImGui::EndMenu();
 		}
 
-		if (ImGui::BeginMenu("Edit"))
-		{
+		if (ImGui::BeginMenu("Edit")) {
+
+			if (ImGui::MenuItem("Copy", "Ctrl+C")) {
+
+				if (selectedObject != -1) {
+
+					if (selectedObject < (int)objects.size()) {
+
+						objCopy = objects[selectedObject];
+						hasObjectCopy = true;
+						hasLightCopy = false;
+
+					}
+					else {
+
+						int lightIndex = selectedObject - (int)objects.size();
+
+						objCopy = lightObjects[lightIndex];
+						lightCopy = lights[lightIndex];
+
+						hasObjectCopy = true;
+						hasLightCopy = true;
+					}
+				}
+			}
+
+			if (ImGui::MenuItem("Paste", "Ctrl+V")) {
+
+				if (hasObjectCopy) {
+
+					if (hasLightCopy) {
+
+						lightObjects.push_back(objCopy);
+						lights.push_back(lightCopy);
+
+						selectedObject = (int)(objects.size() + lightObjects.size() - 1);
+
+					}
+					else {
+
+						objects.push_back(objCopy);
+						selectedObject = (int)objects.size() - 1;
+					}
+				}
+			}
+
 			if (ImGui::MenuItem("Undo", "Ctrl+Z")) {
 				
-				if (selectedObject != -1 && !objects[selectedObject].undoStack.empty()) {
+				if (selectedObject != -1) {
 
-					objects[selectedObject].redoStack.push_back(CaptureState(objects[selectedObject]));
-					ApplyState(objects[selectedObject], objects[selectedObject].undoStack.back());
-					objects[selectedObject].undoStack.pop_back();
+					if (selectedObject < objects.size()) {
+
+						Object& obj = objects[selectedObject];
+
+						if (!obj.undoStack.empty()) {
+
+							obj.redoStack.push_back(CaptureState(obj));
+							ApplyState(obj, obj.undoStack.back());
+							obj.undoStack.pop_back();
+							UpdateMapping(obj);
+						}
+					}
+					else {
+
+						int lightIndex = selectedObject - objects.size();
+
+						Object& obj = lightObjects[lightIndex];
+						Light& light = lights[lightIndex];
+
+						if (!obj.undoStack.empty()) {
+
+							obj.redoStack.push_back(CaptureState(obj));
+							light.redoStack.push_back(CaptureLightState(light));
+
+							ApplyState(obj, obj.undoStack.back());
+							ApplyLightState(light, light.undoStack.back());
+
+							obj.undoStack.pop_back();
+							light.undoStack.pop_back();
+
+							light.pos = obj.position;
+							light.dir = glm::normalize(obj.rotation * glm::vec3(0.0f, -1.0f, 0.0f));
+
+							obj.model = GetModelMatrix(obj);
+							obj.mvp = projection * view * obj.model;
+						}
+					}
 				}
 			}
 
 			if (ImGui::MenuItem("Redo", "Ctrl+Y")) {
 				
-				if (selectedObject != -1 && !objects[selectedObject].redoStack.empty()) {
+				if (selectedObject != -1) {
 
-					objects[selectedObject].undoStack.push_back(CaptureState(objects[selectedObject]));
-					ApplyState(objects[selectedObject], objects[selectedObject].redoStack.back());
-					objects[selectedObject].redoStack.pop_back();
+					if (selectedObject < objects.size()) {
+
+						Object& obj = objects[selectedObject];
+
+						if (!obj.redoStack.empty()) {
+
+							obj.undoStack.push_back(CaptureState(obj));
+							ApplyState(obj, obj.redoStack.back());
+							obj.redoStack.pop_back();
+							UpdateMapping(obj);
+						}
+					}
+					else {
+
+						int lightIndex = selectedObject - objects.size();
+
+						Object& obj = lightObjects[lightIndex];
+						Light& light = lights[lightIndex];
+
+						if (!obj.redoStack.empty()) {
+
+							obj.undoStack.push_back(CaptureState(obj));
+							light.undoStack.push_back(CaptureLightState(light));
+
+							ApplyState(obj, obj.redoStack.back());
+							ApplyLightState(light, light.redoStack.back());
+
+							obj.redoStack.pop_back();
+							light.redoStack.pop_back();
+
+							light.pos = obj.position;
+							light.dir = glm::normalize(obj.rotation * glm::vec3(0.0f, -1.0f, 0.0f));
+
+							obj.model = GetModelMatrix(obj);
+							obj.mvp = projection * view * obj.model;
+						}
+					}
 				}
 			}
 
-			ImGui::Separator();
-			ImGui::MenuItem("Preferences");
 			ImGui::EndMenu();
 		}
 
-		if (ImGui::BeginMenu("View"))
-		{
-			ImGui::MenuItem("Hierarchy");
-			ImGui::MenuItem("Assets");
-			ImGui::MenuItem("Tools");
-			ImGui::EndMenu();
-		}
+		//if (ImGui::BeginMenu("View")) {
 
-		if (ImGui::BeginMenu("Settings"))
-		{
-			ImGui::MenuItem("Graphics");
-			ImGui::MenuItem("Input");
+		//	ImGui::MenuItem("Hierarchy");
+		//	ImGui::MenuItem("Assets");
+		//	ImGui::MenuItem("Tools");
+		//	ImGui::EndMenu();
+		//}
+
+
+		if (ImGui::BeginMenu("Settings")) {
+
+			showGraphicsSettings = true;
+
 			ImGui::EndMenu();
 		}
 
 		ImGui::EndMenuBar();
 	}
 
+	if (showGraphicsSettings) {
+
+		ImGui::Begin("Graphics Settings", &showGraphicsSettings);
+
+		ImGui::Checkbox("VSync", &st.VSync);
+
+		if (!st.VSync)
+			SDL_GL_SetSwapInterval(0);
+		else
+			SDL_GL_SetSwapInterval(1);
+
+		ImGui::Separator();
+
+		ImGui::Checkbox("Show Light", &st.light_active);
+
+		ImGui::Checkbox("Show Shadows", &st.shadow_active);
+
+		ImGui::Checkbox("Show Normal Map", &st.normal_map_active);
+
+		ImGui::Checkbox("Show Wireframe", &st.wireframe_active);
+
+		if (ImGui::SliderFloat("FOV", &st.fov, 30.0f, 120.0f, "%.1f°")) {
+
+			projection = glm::perspective(
+				glm::radians(st.fov),
+				(float)viewport_width / viewport_height,
+				cam.nearPlane,
+				cam.farPlane
+			);
+		}
+
+		ImGui::End();
+	}
+
 	ImGui::End();
 }
+
+//--------------------------------------------------------------------------
+// Viewport update size
 
 void ResizeViewport(int width, int height) {
 
@@ -436,6 +738,9 @@ void ApplyWindowMode(SDL_Window* window) {
 
 	st.last_win_mode = st.win_mode;
 }
+
+//--------------------------------------------------------------------------
+// Mapping
 
 void FixCylinder(Object& obj) {
 
@@ -747,6 +1052,9 @@ void UpdateMapping(Object& obj) {
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, obj.indices.size() * sizeof(unsigned int), obj.indices.data(), GL_STATIC_DRAW);
 }
 
+//--------------------------------------------------------------------------
+// Reload folder
+
 void ReloadFolder() {
 
 	folderEntries.clear();
@@ -754,6 +1062,9 @@ void ReloadFolder() {
 	for (auto& e : std::filesystem::directory_iterator(currentFolder))
 		folderEntries.push_back(e);
 }
+
+//--------------------------------------------------------------------------
+// Obj names
 
 std::string GenerateObjectName(const std::string& baseName) {
 
@@ -768,6 +1079,9 @@ std::string GenerateObjectName(const std::string& baseName) {
 	return baseName + "_" + std::to_string(counter++);
 }
 
+//--------------------------------------------------------------------------
+// Reload textures path
+
 void read_textures_path() {
 
 	pathTextures.clear();
@@ -781,62 +1095,8 @@ void read_textures_path() {
 	}
 }
 
-GLuint TextureManager::Get(const std::string& path) {
-
-	auto it = textures.find(path);
-
-	if (it != textures.end())
-		return it->second;
-
-	GLuint texture = LoadObjTexture(path);
-
-	if (texture != 0)
-		textures[path] = texture;
-
-	return texture;
-}
-
-Object* GetSelectedObject() {
-
-	if (selectedObject < 0)
-		return nullptr;
-
-	if (selectedObject < objects.size())
-		return &objects[selectedObject];
-
-	int lightIndex = selectedObject - objects.size();
-
-	if (lightIndex >= lightObjects.size())
-		return nullptr;
-
-	return &lightObjects[lightIndex];
-}
-
-Light* GetSelectedLight() {
-
-	if (selectedObject < objects.size())
-		return nullptr;
-
-	int lightIndex = selectedObject - objects.size();
-
-	if (lightIndex >= lights.size())
-		return nullptr;
-
-	return &lights[lightIndex];
-}
-
-glm::mat4 GetModelMatrix(Object& obj) {
-
-	glm::mat4 m(1);
-
-	m = glm::translate(m, obj.position);
-
-	m *= glm::toMat4(obj.rotation);
-
-	m = glm::scale(m, obj.scale);
-
-	return m;
-}
+//--------------------------------------------------------------------------
+// Skybox and cubemap
 
 void gen_cubemap() {
 
@@ -991,6 +1251,9 @@ void GenSkybox() {
 	glEnableVertexAttribArray(0);
 }
 
+//--------------------------------------------------------------------------
+// Getters
+
 glm::vec3 get_cam_pos() {
 
 	glm::vec3 pos;
@@ -1001,6 +1264,67 @@ glm::vec3 get_cam_pos() {
 
 	return cam.cam_target + pos;
 }
+
+
+Object* GetSelectedObject() {
+
+	if (selectedObject < 0)
+		return nullptr;
+
+	if (selectedObject < objects.size())
+		return &objects[selectedObject];
+
+	int lightIndex = selectedObject - objects.size();
+
+	if (lightIndex >= lightObjects.size())
+		return nullptr;
+
+	return &lightObjects[lightIndex];
+}
+
+Light* GetSelectedLight() {
+
+	if (selectedObject < objects.size())
+		return nullptr;
+
+	int lightIndex = selectedObject - objects.size();
+
+	if (lightIndex >= lights.size())
+		return nullptr;
+
+	return &lights[lightIndex];
+}
+
+glm::mat4 GetModelMatrix(Object& obj) {
+
+	glm::mat4 m(1);
+
+	m = glm::translate(m, obj.position);
+
+	m *= glm::toMat4(obj.rotation);
+
+	m = glm::scale(m, obj.scale);
+
+	return m;
+}
+
+GLuint TextureManager::Get(const std::string& path) {
+
+	auto it = textures.find(path);
+
+	if (it != textures.end())
+		return it->second;
+
+	GLuint texture = LoadObjTexture(path);
+
+	if (texture != 0)
+		textures[path] = texture;
+
+	return texture;
+}
+
+//--------------------------------------------------------------------------
+// Ray-AABB intersection test
 
 bool RayVsAABB(const glm::vec3& rayOrigin, const glm::vec3& rayDir, const glm::vec3& boxMin, const glm::vec3& boxMax, float& t) {
 
@@ -1054,6 +1378,9 @@ void BuildRay(float mouseX, float mouseY, glm::vec3& rayOrigin, glm::vec3& rayDi
 	rayOrigin = get_cam_pos();
 }
 
+//--------------------------------------------------------------------------
+// Select obj
+
 void select_object(glm::vec3& rayOrigin, glm::vec3& rayDir) {
 
 	float nearest = FLT_MAX;
@@ -1099,6 +1426,9 @@ void select_object(glm::vec3& rayOrigin, glm::vec3& rayDir) {
 	}
 }
 
+//--------------------------------------------------------------------------
+// Controls
+
 void controls(const bool* keyboard, float angle_step, float radius_step, float dt) {
 
 	glm::vec3 cameraPos = get_cam_pos();
@@ -1128,6 +1458,9 @@ void controls(const bool* keyboard, float angle_step, float radius_step, float d
 	cam.radius = std::max(cam.radius, 0.5f);
 
 }
+
+//--------------------------------------------------------------------------
+// Grid
 
 void Create_Grid() {
 
@@ -1172,6 +1505,9 @@ void Create_Grid() {
 
 	glBindVertexArray(0);
 }
+
+//--------------------------------------------------------------------------
+// Lines
 
 void Build_Normals(Object& obj) {
 
@@ -1326,6 +1662,9 @@ glm::vec3 Compute_Normal(const glm::vec3& a, const glm::vec3& b, const glm::vec3
 	return glm::normalize(glm::cross(b - a, c - a));
 }
 
+//--------------------------------------------------------------------------
+// Vertex and triangle helpers
+
 void Add_Vertex(Object& obj, const Vertex& v) {
 
 	obj.vertices.push_back(v);
@@ -1407,6 +1746,9 @@ void Add_Tri(Light& lgh, const  Vertex& in_v0, const  Vertex& in_v1, const  Vert
 	Add_Vertex(lgh, v2);
 }
 
+//--------------------------------------------------------------------------
+// Create Lights
+
 void CreateLight(const std::string& type) {
 
 	Light light;
@@ -1455,31 +1797,21 @@ void CreateLight(const std::string& type) {
 	lightObjects.push_back(obj);
 }
 
-void ReplaceMesh(Object& obj, const std::string& path) {
+//--------------------------------------------------------------------------
+// Clean buffers and objects
+void clean() {
 
-	Object mesh;
+	glDeleteProgram(program);
+	glDeleteProgram(program_grid);
+	glDeleteProgram(program_skybox);
+	glDeleteProgram(program_hdrToCubemap);
 
-	init_obj(path.c_str(), mesh);
-	buffer(mesh);
+	for (auto& obj : objects) {
 
-	mesh.position = obj.position;
-	mesh.rotation = obj.rotation;
-	mesh.scale = obj.scale;
-
-	mesh.original_vertices = mesh.vertices;
-	mesh.original_indices = mesh.indices;
-
-	mesh.obj_texture = obj.obj_texture;
-	mesh.tex = obj.tex;
-	mesh.normalTexture = obj.normalTexture;
-	mesh.norm_map = obj.norm_map;
-	mesh.has_normal_map = obj.has_normal_map;
-	mesh.shininess = obj.shininess;
-
-	mesh.name = obj.name;
-	mesh.mesh = path;
-
-	obj = std::move(mesh);
+		glDeleteVertexArrays(1, &obj.vao);
+		glDeleteBuffers(1, &obj.vbo);
+		glDeleteBuffers(1, &obj.ebo);
+	}
 }
 void DestroyBuffers(Object& obj) {
 
@@ -1531,4 +1863,67 @@ void DestroyBuffers(Object& obj) {
 
 	obj.bitangentVAO = 0;
 	obj.bitangentVBO = 0;
+}
+
+//--------------------------------------------------------------------------
+// Mesh replacement
+
+void ReplaceMesh(Object& obj, const std::string& path) {
+
+	Object mesh;
+
+	init_obj(path.c_str(), mesh);
+	buffer(mesh);
+
+	mesh.position = obj.position;
+	mesh.rotation = obj.rotation;
+	mesh.scale = obj.scale;
+
+	mesh.original_vertices = mesh.vertices;
+	mesh.original_indices = mesh.indices;
+
+	mesh.obj_texture = obj.obj_texture;
+	mesh.tex = obj.tex;
+	mesh.normalTexture = obj.normalTexture;
+	mesh.norm_map = obj.norm_map;
+	mesh.has_normal_map = obj.has_normal_map;
+	mesh.shininess = obj.shininess;
+
+	mesh.name = obj.name;
+	mesh.mesh = path;
+
+	obj = std::move(mesh);
+}
+
+//--------------------------------------------------------------------------
+// Undo/Redo
+
+void HandleInspectorUndo(Object& obj) {
+
+	static ObjectState state;
+
+	if (ImGui::IsItemActivated())
+		state = CaptureState(obj);
+
+	if (ImGui::IsItemDeactivatedAfterEdit()) {
+
+		obj.undoStack.push_back(state);
+		obj.redoStack.clear();
+	}
+}
+
+void HandleInspectorUndo(Light& light, Object& lightObj) {
+
+	if (ImGui::IsItemActivated()) {
+		prevLightState = CaptureLightState(light);
+		prevState = CaptureState(lightObj);
+	}
+
+	if (ImGui::IsItemDeactivatedAfterEdit()) {
+		light.undoStack.push_back(prevLightState);
+		light.redoStack.clear();
+
+		lightObj.undoStack.push_back(prevState);
+		lightObj.redoStack.clear();
+	}
 }

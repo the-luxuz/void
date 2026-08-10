@@ -24,21 +24,27 @@ enum class cylinder_axis {
     Z
 };
 
-struct camera {
+class TextureManager {
 
-    camera() : fov(90), nearPlane(.1f), farPlane(5000.0f), cam_position(100, 100, 100), cam_target(0, 0, 0), cam_up(0, 1, 0) {}
+    static std::unordered_map<std::string, GLuint> textures;
 
-    float fov;
+public:
+    static GLuint Get(const std::string& path);
 
-    float nearPlane;
-    float farPlane;
+};
 
-    float alpha, beta, radius;
+struct Program {
 
-    glm::vec3 cam_position;
-    glm::vec3 cam_target;
-    glm::vec3 cam_up;
+    GLuint id;
 
+    GLint mvpLoc;
+    GLint textureLoc;
+};
+
+enum  class window_mode {
+    WINDOWED,
+    WINDOWED_BORDERLESS,
+    FULLSCREEN
 };
 
 struct Vertex {
@@ -56,20 +62,94 @@ struct Vertex {
 
 struct ObjectState {
 
-	glm::vec3 position;
+    glm::vec3 position;
     glm::quat rotation;
-	glm::vec3 scale;
+    glm::vec3 scale;
 
     std::string name;
     std::string mesh;
 
-    GLuint obj_texture = 0;
+    GLuint obj_texture;
+    std::string tex; // has the texture path
+
+    glm::vec3 min, max;
+
+    TextureMapping mapping;
+    coord_types coordType;
+    cylinder_axis cyaxisType;
+
+    GLuint normalTexture;
+    std::string norm_map;
+
+    bool has_normal_map;
+
+    float shininess;
+
+};
+
+struct LightState {
+
+    glm::vec3 col;
+    glm::vec3 att;
+
+    float ambient;
+
+    float inner;
+    float outer;
+    float falloff;
+
+    float bias;
+    float pcf;
+
+    std::string type;
+
+    GLuint typeID;
 
 };
 
 struct LineVertex {
 
     glm::vec3 position;
+};
+
+struct Settings {
+
+    window_mode win_mode;
+
+    window_mode last_win_mode;
+
+    std::string win_name;
+
+    std::string skybox;
+
+    int w = 1280;
+    int h = 720;
+
+    float fov;
+
+    bool VSync;
+
+    bool light_active = true;
+    bool normal_map_active = true;
+    bool shadow_active = true;
+    bool wireframe_active = false;
+};
+
+struct camera {
+
+    camera() : fov(90), nearPlane(.1f), farPlane(5000.0f), cam_position(100, 100, 100), cam_target(0, 0, 0), cam_up(0, 1, 0) {}
+
+    float fov;
+
+    float nearPlane;
+    float farPlane;
+
+    float alpha, beta, radius;
+
+    glm::vec3 cam_position;
+    glm::vec3 cam_target;
+    glm::vec3 cam_up;
+
 };
 
 struct Object {
@@ -136,64 +216,6 @@ struct Object {
     float shininess = 20;
 };
 
-inline ObjectState CaptureState(const Object& o) {
-
-    return { o.position, o.rotation, o.scale, o.name, o.mesh, o.obj_texture };
-}
-
-inline void ApplyState(Object& o, const ObjectState& s) {
-
-    o.position = s.position;
-    o.rotation = s.rotation;
-    o.scale = s.scale;
-
-	o.name = s.name;
-	o.mesh = s.mesh;
-
-	o.obj_texture = s.obj_texture;
-}
-
-class TextureManager {
-
-    static std::unordered_map<std::string, GLuint> textures;
-
-public:
-    static GLuint Get(const std::string& path);
-
-};
-
-struct Program {
-
-    GLuint id;
-
-    GLint mvpLoc;
-    GLint textureLoc;
-};
-
-enum  class window_mode {
-    WINDOWED,
-    WINDOWED_BORDERLESS,
-    FULLSCREEN
-};
-
-struct Settings {
-
-    window_mode win_mode;
-
-    window_mode last_win_mode;
-
-    std::string win_name;
-
-    std::string skybox;
-
-    int w = 1280;
-    int h = 720;
-
-    float fov;
-
-    bool VSync;
-};
-
 struct Light {
 
     std::string name;
@@ -220,4 +242,62 @@ struct Light {
 
     std::vector<Vertex> vertices;
     std::vector<GLuint> indices;
+
+    std::vector<LightState> undoStack;
+    std::vector<LightState> redoStack;
 };
+
+inline LightState CaptureLightState(const Light& l) {
+
+    return { l.col, l.att, l.ambient, l.inner, l.outer, l.falloff, l.bias, l.pcf, l.type, l.typeID };
+}
+
+inline void ApplyLightState(Light& l, const LightState& s) {
+
+    l.col = s.col;
+    l.att = s.att;
+
+    l.ambient = s.ambient;
+
+    l.inner = s.inner;
+    l.outer = s.outer;
+
+    l.falloff = s.falloff;
+
+    l.bias = s.bias;
+    l.pcf = s.pcf;
+
+    l.type = s.type;
+    l.typeID = s.typeID;
+}
+
+inline ObjectState CaptureState(const Object& o) {
+
+    return { o.position, o.rotation, o.scale, o.name, o.mesh, o.obj_texture, o.tex, o.min, o.max, o.mapping, o.coordType, o.cyaxisType, o.normalTexture, o.norm_map, o.has_normal_map, o.shininess };
+}
+
+inline void ApplyState(Object& o, const ObjectState& s) {
+
+    o.position = s.position;
+    o.rotation = s.rotation;
+    o.scale = s.scale;
+
+	o.name = s.name;
+	o.mesh = s.mesh;
+
+	o.obj_texture = s.obj_texture;
+	o.tex = s.tex;
+
+	o.min = s.min;
+	o.max = s.max;
+
+	o.mapping = s.mapping;
+	o.coordType = s.coordType;
+	o.cyaxisType = s.cyaxisType;
+
+	o.normalTexture = s.normalTexture;
+	o.norm_map = s.norm_map;
+	o.has_normal_map = s.has_normal_map;
+
+	o.shininess = s.shininess;
+}

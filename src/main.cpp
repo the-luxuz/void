@@ -14,9 +14,6 @@ float totalTime = 0.0f;
 
 static float fps = 0.0f;
 
-Object objCopy;
-bool hasCopy = false;
-
 SDL_DisplayID display;
 SDL_Rect rect;
 
@@ -213,13 +210,15 @@ void Rebuild() {
 
 int main(int argc, char* args[]) {
 
-	init_("../data/scene.bin");
+	init_("../data/settings.bin", "../data/scene/scene.bin");
 
 	while (!quit) {
 
 		while (SDL_PollEvent(&event)) {
 
 			ImGui_ImplSDL3_ProcessEvent(&event);
+
+			ImGuiIO& io = ImGui::GetIO();
 
 			switch (event.type) {
 
@@ -229,13 +228,11 @@ int main(int argc, char* args[]) {
 
 			case SDL_EVENT_KEY_DOWN:
 
-				
-				
-
 				if (event.key.scancode == SDL_SCANCODE_ESCAPE)
 					quit = true;
 
-				if (currentViewMode == view_Mode::EDITOR) {
+
+				if (currentViewMode == view_Mode::EDITOR && !io.WantCaptureKeyboard) {
 
 					if (event.key.scancode == SDL_SCANCODE_M) {
 
@@ -299,17 +296,46 @@ int main(int argc, char* args[]) {
 
 						if (selectedObject != -1) {
 
-							if (selectedObject < (int)objects.size())
+							if (selectedObject < (int)objects.size()) {
+
+								DestroyBuffers(objects[selectedObject]);
+
+								objects[selectedObject].vertices.clear();
+								objects[selectedObject].indices.clear();
+
+								objects[selectedObject].normalLines.clear();
+
+								objects[selectedObject].tangentLines.clear();
+								objects[selectedObject].bitangentLines.clear();
+								objects[selectedObject].normalLinesTBN.clear();
+
+								objects[selectedObject].original_vertices.clear();
+								objects[selectedObject].original_indices.clear();
+
 								objects.erase(objects.begin() + selectedObject);
 
-							else {
+							} else {
 
 								int lightIndex = selectedObject - (int)objects.size();
 
 								if (lightIndex >= 0 && lightIndex < (int)lightObjects.size()) {
 
-									lightObjects.erase(lightObjects.begin() + lightIndex);
+									DestroyBuffers(objects[selectedObject]);
+
+									lightObjects[lightIndex].vertices.clear();
+									lightObjects[lightIndex].indices.clear();
+
+									lightObjects[lightIndex].normalLines.clear();
+
+									lightObjects[lightIndex].tangentLines.clear();
+									lightObjects[lightIndex].bitangentLines.clear();
+									lightObjects[lightIndex].normalLinesTBN.clear();
+
+									lightObjects[lightIndex].original_vertices.clear();
+									lightObjects[lightIndex].original_indices.clear();
+
 									lights.erase(lights.begin() + lightIndex);
+									lightObjects.erase(lightObjects.begin() + lightIndex);
 								}
 							}
 
@@ -334,6 +360,7 @@ int main(int argc, char* args[]) {
 									obj.redoStack.push_back(CaptureState(obj));
 									ApplyState(obj, obj.undoStack.back());
 									obj.undoStack.pop_back();
+									UpdateMapping(obj);
 								}
 							}
 							else {
@@ -341,19 +368,25 @@ int main(int argc, char* args[]) {
 								int lightIndex = selectedObject - objects.size();
 
 								Object& obj = lightObjects[lightIndex];
+								Light& light = lights[lightIndex];
 
 								if (!obj.undoStack.empty()) {
 
 									obj.redoStack.push_back(CaptureState(obj));
+									light.redoStack.push_back(CaptureLightState(light));
+
 									ApplyState(obj, obj.undoStack.back());
+									ApplyLightState(light, light.undoStack.back());
+
 									obj.undoStack.pop_back();
+									light.undoStack.pop_back();
 
-									lights[lightIndex].pos = obj.position;
-									lights[lightIndex].dir = glm::normalize(obj.rotation * glm::vec3(0.0f, -1.0f, 0.0f));
+									light.pos = obj.position;
+									light.dir = glm::normalize(obj.rotation * glm::vec3(0.0f, -1.0f, 0.0f));
+
+									obj.model = GetModelMatrix(obj);
+									obj.mvp = projection * view * obj.model;
 								}
-
-								obj.model = GetModelMatrix(obj);
-								obj.mvp = projection * view * obj.model;
 							}
 						}
 					}
@@ -371,6 +404,7 @@ int main(int argc, char* args[]) {
 									obj.undoStack.push_back(CaptureState(obj));
 									ApplyState(obj, obj.redoStack.back());
 									obj.redoStack.pop_back();
+									UpdateMapping(obj);
 								}
 							}
 							else {
@@ -378,38 +412,68 @@ int main(int argc, char* args[]) {
 								int lightIndex = selectedObject - objects.size();
 
 								Object& obj = lightObjects[lightIndex];
+								Light& light = lights[lightIndex];
 
 								if (!obj.redoStack.empty()) {
 
 									obj.undoStack.push_back(CaptureState(obj));
+									light.undoStack.push_back(CaptureLightState(light));
+
 									ApplyState(obj, obj.redoStack.back());
+									ApplyLightState(light, light.redoStack.back());
+
 									obj.redoStack.pop_back();
+									light.redoStack.pop_back();
 
-									lights[lightIndex].pos = obj.position;
-									lights[lightIndex].dir = glm::normalize(obj.rotation * glm::vec3(0.0f, -1.0f, 0.0f));
+									light.pos = obj.position;
+									light.dir = glm::normalize(obj.rotation * glm::vec3(0.0f, -1.0f, 0.0f));
+
+									obj.model = GetModelMatrix(obj);
+									obj.mvp = projection * view * obj.model;
 								}
-
-								obj.model = GetModelMatrix(obj);
-								obj.mvp = projection * view * obj.model;
 							}
 						}
 					}
 
-					if (event.key.mod & SDL_KMOD_CTRL && event.key.scancode == SDL_SCANCODE_C) {
+					if ((event.key.mod & SDL_KMOD_CTRL) && event.key.scancode == SDL_SCANCODE_C) {
 
 						if (selectedObject != -1) {
 
-							objCopy = objects[selectedObject];
-							hasCopy = true;
+							if (selectedObject < (int)objects.size()) {
+
+								objCopy = objects[selectedObject];
+								hasObjectCopy = true;
+								hasLightCopy = false;
+
+							} else {
+
+								int lightIndex = selectedObject - (int)objects.size();
+
+								objCopy = lightObjects[lightIndex];
+								lightCopy = lights[lightIndex];
+
+								hasObjectCopy = true;
+								hasLightCopy = true;
+							}
 						}
 					}
 
-					if (event.key.mod & SDL_KMOD_CTRL && event.key.scancode == SDL_SCANCODE_V) {
+					if ((event.key.mod & SDL_KMOD_CTRL) && event.key.scancode == SDL_SCANCODE_V) {
 
-						if (hasCopy) {
+						if (hasObjectCopy) {
 
-							objects.push_back(objCopy);
-							selectedObject = objects.size() - 1;
+							if (hasLightCopy) {
+
+								lightObjects.push_back(objCopy);
+								lights.push_back(lightCopy);
+
+								selectedObject = (int)(objects.size() + lightObjects.size() - 1);
+
+							} else {
+
+								objects.push_back(objCopy);
+								selectedObject = (int)objects.size() - 1;
+							}
 						}
 					}
 
@@ -418,7 +482,7 @@ int main(int argc, char* args[]) {
 						cam.cam_position = cameraPos;
 
 						if (save_outPath != "")
-							par.save(save_outPath.c_str(), st, cam, objects, lightObjects, lights);
+							par.save("../data/settings.bin", save_outPath.c_str(), st, cam, objects, lightObjects, lights);
 						else {
 
 							nfdu8char_t* outPath = nullptr;
@@ -437,7 +501,7 @@ int main(int argc, char* args[]) {
 
 							if (result == NFD_OKAY) {
 
-								par.save(outPath, st, cam, objects, lightObjects, lights);
+								par.save("../data/settings.bin", outPath, st, cam, objects, lightObjects, lights);
 								save_outPath = outPath;
 								NFD_FreePath(outPath);
 							}
@@ -466,7 +530,7 @@ int main(int argc, char* args[]) {
 							std::string path = outPath;
 
 							save_outPath = path;
-							open_init(path.c_str(), st);
+							open_init("../data/settings.bin", path.c_str(), st);
 
 							NFD_FreePath(outPath);
 						}
@@ -492,7 +556,7 @@ int main(int argc, char* args[]) {
 
 				}
 
-				if (event.key.scancode == SDL_SCANCODE_T) {
+				if (event.key.scancode == SDL_SCANCODE_T && !io.WantCaptureKeyboard) {
 
 					if(currentViewMode == view_Mode::EDITOR) {
 						currentViewMode = view_Mode::PLAY;
@@ -539,7 +603,7 @@ int main(int argc, char* args[]) {
 
 				break;
 
-			case SDL_EVENT_MOUSE_BUTTON_UP:
+			case SDL_EVENT_MOUSE_BUTTON_DOWN:
 
 				if (currentViewMode == view_Mode::EDITOR) {
 
@@ -616,7 +680,10 @@ int main(int argc, char* args[]) {
 
 		const bool* keyboard = SDL_GetKeyboardState(nullptr);
 
-		controls(keyboard, angle_speed, radius_speed, 1 / fps);
+		ImGuiIO& io = ImGui::GetIO();
+
+		if(!io.WantCaptureKeyboard)
+			controls(keyboard, angle_speed, radius_speed, 1 / fps);
 
 		totalTime += 1.0f / fps;
 

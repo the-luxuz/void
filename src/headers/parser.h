@@ -19,8 +19,14 @@
 
 struct Parser {
 		
-	bool load(const char* fname, Settings& st, camera& cam, std::vector<Object>& scene_lgh_obj);
-	void save(const char* fname, Settings& st, camera& cam, const std::vector<Object>& scene, const std::vector<Object>& scene_lgh_obj, const std::vector<::Light>& scene_lgh);
+	bool load(const char* settings_name, const char* scene_name, Settings& st, camera& cam, std::vector<Object>& scene, std::vector<Object>& scene_lgh_obj);
+	void save(const char* settings_name, const char* scene_name, Settings& st, camera& cam, const std::vector<Object>& scene, const std::vector<Object>& scene_lgh_obj, const std::vector<::Light>& scene_lgh);
+
+	void load_settings(std::ifstream& in, Settings& st, camera& cam);
+	void save_settings(std::ofstream& out, Settings& st, camera& cam);
+
+	bool load_scene(std::ifstream& in, std::vector<Object>& scene_lgh_obj);
+	void save_scene(std::ofstream& out, const std::vector<Object>& scene, const std::vector<Object>& scene_lgh_obj, const std::vector<::Light>& scene_lgh);
 
 	void WriteString(std::ofstream& out, const std::string& str);
 	void ReadString(std::ifstream& in, std::string& str);

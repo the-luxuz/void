@@ -1,7 +1,14 @@
 #include "headers/inits.h"
 
+//--------------------------------------------------------------------------
+// global variables
+
+// window and context
 SDL_Window* window;
 SDL_GLContext context;
+
+//--------------------------------------------------------------------------
+// init functions
 
 void init_viewport() {
 
@@ -259,7 +266,7 @@ void init() {
 	}
 }
 
-bool open_init(const char* settings, Settings& st) {
+bool open_init(const char* settings, const char* scene, Settings& st) {
 
 	selectedObject = -1;
 
@@ -281,13 +288,16 @@ bool open_init(const char* settings, Settings& st) {
 
 	objectNameCounters.clear();
 
-	if (par.load(settings, st, cam, lightObjects))
+	if (par.load(settings, scene, st, cam, objects, lightObjects))
 		init();
 
 	return true;
 }
 
-void init_(const char* settings) {
+//--------------------------------------------------------------------------
+// main init function
+
+void init_(const char* settings, const char* scene) {
 
 	//st.win_name = "void";
 	//st.win_mode = window_mode::WINDOWED;
@@ -296,9 +306,9 @@ void init_(const char* settings) {
 	//st.VSync = 0;
 	//st.fov = 90;
 	//
-	//par.save(settings, st, cam, objects, lightObjects, lights);
+	//par.save(settings, scene, st, cam, objects, lightObjects, lights);
 
-	if (par.load(settings, st, cam, lightObjects)) {
+	if (par.load(settings, scene,  st, cam, objects, lightObjects)) {
 
 		windowedSize = { st.w, st.h };
 

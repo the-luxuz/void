@@ -1,22 +1,22 @@
 #include "headers/updates.h"
 
+//--------------------------------------------------------------------------
+// global variables
+
+// current mesh, texture and operation for ImGuizmo
 int currentMesh = 0;
-
 GLuint currentTexture = 0;
-
-bool useSnap;
-
-float* snap;
-
-glm::mat4 m;
-
-const float cellSize = 90.0f;
-
-ObjectState prevState;
-
 ImGuizmo::OPERATION currentOperation = ImGuizmo::TRANSLATE;
 
+// snap imguizmo
+bool useSnap;
+float* snap;
+
+// texture manager
 std::unordered_map<std::string, GLuint> TextureManager::textures;
+
+//--------------------------------------------------------------------------
+// Update Grid
 
 void update_grid(glm::vec3 cameraPos) {
 
@@ -30,12 +30,7 @@ void update_grid(glm::vec3 cameraPos) {
 
 	glm::mat4 mvp = projection * view * model;
 
-	glUniformMatrix4fv(
-		glGetUniformLocation(program_grid, "uMVP"),
-		1,
-		GL_FALSE,
-		glm::value_ptr(mvp)
-	);
+	glUniformMatrix4fv(glGetUniformLocation(program_grid, "uMVP"), 1, GL_FALSE, glm::value_ptr(mvp));
 
 	glBindVertexArray(gridVAO);
 
@@ -55,6 +50,9 @@ void update_grid(glm::vec3 cameraPos) {
 
 	glBindVertexArray(0);
 }
+
+//--------------------------------------------------------------------------
+// Update Depth Map
 
 void update_depthmap() {
 	
@@ -85,9 +83,6 @@ void update_depthmap() {
 		);
 
 		lightVP[i] = lightProjection * lightView;
-	}
-
-	for (int i = 0; i < lightObjects.size(); i++) {
 
 		if (lights[i].typeID != 2)
 			continue;
@@ -130,6 +125,9 @@ void update_depthmap() {
 	//--------------------------------------------------------------------
 }
 
+//--------------------------------------------------------------------------
+// Update Objects
+
 void update_objects() {
 
 	currentTexture = 0;
@@ -137,6 +135,8 @@ void update_objects() {
 	glUseProgram(program);
 
 	glUniform1i(glGetUniformLocation(program, "tex"), 0);
+
+	int numLights = lights.size(); // maximum of 8 lights
 
 	for (int i = 0; i < lightObjects.size(); i++) {
 
@@ -146,13 +146,8 @@ void update_objects() {
 		std::string idx = std::to_string(i);
 
 		glUniform1i(glGetUniformLocation(program, ("depthData[" + idx + "]").c_str()), 2 + i);
-	}
 
-	int numLights = lights.size(); // maximum of 8 lights
-
-	for (int i = 0; i < numLights; i++) {
-
-		std::string idx = std::to_string(i);
+		glBindTexture(GL_TEXTURE_2D, 0);
 
 		glUniform1i(glGetUniformLocation(program, ("lights[" + idx + "].type").c_str()), lights[i].typeID);
 		glUniform3fv(glGetUniformLocation(program, ("lights[" + idx + "].position").c_str()), 1, glm::value_ptr(lights[i].pos));
@@ -166,10 +161,10 @@ void update_objects() {
 		glUniform1f(glGetUniformLocation(program, ("lights[" + idx + "].falloff").c_str()), lights[i].falloff);
 		glUniform3fv(glGetUniformLocation(program, ("lights[" + idx + "].color").c_str()), 1, glm::value_ptr(lights[i].col));
 
-		GLint loc = glGetUniformLocation(program, "lightVP");
-		glUniformMatrix4fv(loc, numLights, GL_FALSE, glm::value_ptr(lightVP[0]));
-
 	}
+
+	GLint loc = glGetUniformLocation(program, "lightVP");
+	glUniformMatrix4fv(loc, numLights, GL_FALSE, glm::value_ptr(lightVP[0]));
 
 	glUniform1i(glGetUniformLocation(program, "normalMap"), 1);
 
@@ -210,7 +205,17 @@ void update_objects() {
 
 		glUniform1i(glGetUniformLocation(program, "hasNormalMap"), obj.has_normal_map);
 
+		glUniform1i(glGetUniformLocation(program, "light_active"), st.light_active);
+		glUniform1i(glGetUniformLocation(program, "normal_map_active"), st.normal_map_active);
+		glUniform1i(glGetUniformLocation(program, "shadow_active"), st.shadow_active);
+
 		glBindVertexArray(obj.vao);
+
+		if(st.wireframe_active) {
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		}else {
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		}
 
 		glDrawElements(
 			GL_TRIANGLES,
@@ -267,6 +272,9 @@ void update_objects() {
 	}
 }
 
+//--------------------------------------------------------------------------
+// Update Skybox
+
 void update_skybox() {
 	
 	glUseProgram(program_skybox);
@@ -293,6 +301,9 @@ void update_skybox() {
 	glEnable(GL_CULL_FACE);
 	glDepthFunc(GL_LESS);
 }
+
+//--------------------------------------------------------------------------
+// Update Imgui and guizmo
 
 void update_imgui_guizmo() {
 
@@ -355,10 +366,15 @@ void update_imgui_guizmo() {
 			prevState = CaptureState(*obj);
 		}
 
+		if (usingGizmo && !wasUsing && light) {
+
+			prevLightState = CaptureLightState(*light);
+		}
+
 		if (ImGuizmo::IsUsing()) {
 
 			glm::vec3 translation = glm::vec3(0.0f);
-			glm::vec3 scale = glm::vec3(50.0f);
+			glm::vec3 scale = glm::vec3(20.0f);
 			glm::vec3 euler;
 
 			ImGuizmo::DecomposeMatrixToComponents(
@@ -383,8 +399,8 @@ void update_imgui_guizmo() {
 			obj->scale = scale;
 			obj->rotation = glm::quat(glm::radians(euler));
 
-			if (light)
-			{
+			if (light) {
+
 				light->pos = translation;
 			}
 
@@ -396,11 +412,17 @@ void update_imgui_guizmo() {
 			obj->redoStack.clear();
 		}
 
+		if (!usingGizmo && wasUsing && light) {
+
+			light->undoStack.push_back(prevLightState);
+			light->redoStack.clear();
+		}
+
 		wasUsing = usingGizmo;
 
 		if (currentOperation != ImGuizmo::SCALE && light)
 		{
-			obj->scale = glm::vec3(50.0f);
+			obj->scale = glm::vec3(20.0f);
 		}
 
 	}
@@ -677,212 +699,276 @@ void update_imgui_guizmo() {
 		"Z"
 	};
 
-	if (selectedObject != -1) {
+	ImGui::Begin("Inspector");
 
-		if (selectedObject < objects.size()) {
+	if (selectedObject != -1 && selectedObject < (int)objects.size()) {
 
-			Object* obj = GetSelectedObject();
+		Object* obj = GetSelectedObject();
 
-			ImGui::Begin("Inspector");
+		if (ImGui::CollapsingHeader("General", ImGuiTreeNodeFlags_DefaultOpen)) {
 
-			if (ImGui::CollapsingHeader("General", ImGuiTreeNodeFlags_DefaultOpen)) {
+			ImGui::Text("Name: %s", obj->name.c_str());
 
-				ImGui::Text("Name: %s", obj->name.c_str());
+			ImGui::DragFloat3("Position", &obj->position.x, 0.1f);
+			HandleInspectorUndo(*obj);
 
-				ImGui::DragFloat3("Position", &obj->position.x, 0.1f);
+			glm::vec3 euler = glm::degrees(glm::eulerAngles(obj->rotation));
+			if (ImGui::DragFloat3("Rotation", &euler.x, 1.0f))
+				obj->rotation = glm::quat(glm::radians(euler));
 
-				glm::vec3 euler = glm::degrees(glm::eulerAngles(obj->rotation));
-				if (ImGui::DragFloat3("Rotation", &euler.x, 1.0f))
-					obj->rotation = glm::quat(glm::radians(euler));
+			HandleInspectorUndo(*obj);
 
-				ImGui::DragFloat3("Scale", &obj->scale.x, 0.1f);
-			}
+			ImGui::DragFloat3("Scale", &obj->scale.x, 0.1f);
+			HandleInspectorUndo(*obj);
+		}
 
-			if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen)) {
+		if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen)) {
 
-				ImGui::DragFloat("Shininess", &obj->shininess, 1.0f, 1.0f, 256.0f);
+			ImGui::DragFloat("Shininess", &obj->shininess, 1.0f, 1.0f, 256.0f);
+			HandleInspectorUndo(*obj);
 
-				ImGui::Text("Texture:");
+			ImGui::Text("Texture:");
 
-				ImGui::TextWrapped("%s", obj->tex.c_str());
+			ImGui::TextWrapped("%s", obj->tex.c_str());
 
-				ImGui::Image((ImTextureID)(intptr_t)obj->obj_texture, ImVec2(80, 80));
+			ImGui::Image((ImTextureID)(intptr_t)obj->obj_texture, ImVec2(80, 80));
 
-				ImGui::Button("Drop texture here##Texture", ImVec2(80, 80));
+			ImGui::Button("Drop texture here##Texture", ImVec2(80, 80));
 
-				if (ImGui::BeginDragDropTarget()) {
+			if (ImGui::BeginDragDropTarget()) {
 
-					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("IMAGE_FILE")) {
+				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("IMAGE_FILE")) {
 
-						const char* file = (const char*)payload->Data;
+					obj->undoStack.push_back(CaptureState(*obj));
+					obj->redoStack.clear();
 
-						objects[selectedObject].obj_texture = TextureManager::Get(file);
+					const char* file = (const char*)payload->Data;
 
-						objects[selectedObject].tex = file;
-					}
+					objects[selectedObject].obj_texture = TextureManager::Get(file);
 
-					ImGui::EndDragDropTarget();
+					objects[selectedObject].tex = file;
 				}
 
-				//------------------------------------------------------------
+				ImGui::EndDragDropTarget();
+			}
 
-				ImGui::Text("Normal Map:");
+			//------------------------------------------------------------
 
-				ImGui::TextWrapped("%s", obj->norm_map.c_str());
+			ImGui::Text("Normal Map:");
 
-				ImGui::Image((ImTextureID)(intptr_t)obj->normalTexture, ImVec2(80, 80));
+			ImGui::TextWrapped("%s", obj->norm_map.c_str());
 
-				ImGui::Button("Drop texture here##NormalMap", ImVec2(80, 80));
+			ImGui::Image((ImTextureID)(intptr_t)obj->normalTexture, ImVec2(80, 80));
 
-				if (ImGui::BeginDragDropTarget()) {
+			ImGui::Button("Drop texture here##NormalMap", ImVec2(80, 80));
 
-					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("IMAGE_FILE")) {
+			if (ImGui::BeginDragDropTarget()) {
 
-						const char* file = (const char*)payload->Data;
+				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("IMAGE_FILE")) {
 
-						objects[selectedObject].normalTexture = TextureManager::Get(file);
+					obj->undoStack.push_back(CaptureState(*obj));
+					obj->redoStack.clear();
 
-						objects[selectedObject].norm_map = file;
-						objects[selectedObject].has_normal_map = true;
-					}
+					const char* file = (const char*)payload->Data;
 
-					ImGui::EndDragDropTarget();
+					objects[selectedObject].normalTexture = TextureManager::Get(file);
+
+					objects[selectedObject].norm_map = file;
+					objects[selectedObject].has_normal_map = true;
 				}
 
+				ImGui::EndDragDropTarget();
 			}
 
-			if (ImGui::CollapsingHeader("Mesh")) {
+		}
 
-				ImGui::TextWrapped("%s", obj->mesh.c_str());
+		if (ImGui::CollapsingHeader("Mesh")) {
 
-				ImGui::Text("Mesh:");
+			ImGui::TextWrapped("%s", obj->mesh.c_str());
 
-				ImGui::Button("Drop .obj here##Mesh", ImVec2(200, 80));
+			ImGui::Text("Mesh:");
 
-				if (ImGui::BeginDragDropTarget()) {
+			ImGui::Button("Drop .obj here##Mesh", ImVec2(200, 80));
 
-					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("OBJ_FILE")) {
+			if (ImGui::BeginDragDropTarget()) {
 
-						DestroyBuffers(*obj);
+				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("OBJ_FILE")) {
 
-						obj->vertices.clear();
-						obj->indices.clear();
+					obj->undoStack.push_back(CaptureState(*obj));
+					obj->redoStack.clear();
 
-						obj->normalLines.clear();
+					DestroyBuffers(*obj);
 
-						obj->tangentLines.clear();
-						obj->bitangentLines.clear();
-						obj->normalLinesTBN.clear();
+					obj->vertices.clear();
+					obj->indices.clear();
 
-						obj->original_vertices.clear();
-						obj->original_indices.clear();
+					obj->normalLines.clear();
 
-						ReplaceMesh(objects[selectedObject], (const char*)payload->Data);
-					}
+					obj->tangentLines.clear();
+					obj->bitangentLines.clear();
+					obj->normalLinesTBN.clear();
 
-					ImGui::EndDragDropTarget();
+					obj->original_vertices.clear();
+					obj->original_indices.clear();
+
+					ReplaceMesh(objects[selectedObject], (const char*)payload->Data);
 				}
 
-				ImGui::TextWrapped("%s", obj->mesh.c_str());
-
-				ImGui::Text("Vertices: %d", (int)obj->vertices.size());
-				ImGui::Text("Triangles: %d", (int)obj->indices.size() / 3);
+				ImGui::EndDragDropTarget();
 			}
 
-			if (ImGui::CollapsingHeader("Bounds")) {
+			ImGui::TextWrapped("%s", obj->mesh.c_str());
 
-				ImGui::DragFloat3("Min", &obj->min.x, 0.1f);
-				ImGui::DragFloat3("Max", &obj->max.x, 0.1f);
-			}
+			ImGui::Text("Vertices: %d", (int)obj->vertices.size());
+			ImGui::Text("Triangles: %d", (int)obj->indices.size() / 3);
+		}
 
-			ImGui::Separator();
+		if (ImGui::CollapsingHeader("Bounds")) {
 
-			int current = (int)obj->mapping;
+			ImGui::DragFloat3("Min", &obj->min.x, 0.1f);
+			HandleInspectorUndo(*obj);
 
-			if (ImGui::Combo("Mapping", &current, mappings, IM_ARRAYSIZE(mappings))) {
+			ImGui::DragFloat3("Max", &obj->max.x, 0.1f);
+			HandleInspectorUndo(*obj);
+		}
 
-				obj->mapping = (TextureMapping)current;
+		ImGui::Separator();
+
+		int current = (int)obj->mapping;
+
+		if (ImGui::Combo("Mapping", &current, mappings, IM_ARRAYSIZE(mappings))) {
+
+			obj->undoStack.push_back(CaptureState(*obj));
+			obj->redoStack.clear();
+
+			obj->mapping = (TextureMapping)current;
+			UpdateMapping(*obj);
+		}
+
+		//------------------------------------------------------------
+		// Planar
+
+		if (obj->mapping == TextureMapping::Planar) {
+
+			int coord = (int)obj->coordType;
+
+			if (ImGui::Combo("Plane", &coord, planarCoords, IM_ARRAYSIZE(planarCoords))) {
+
+				obj->undoStack.push_back(CaptureState(*obj));
+				obj->redoStack.clear();
+
+				obj->coordType = (coord_types)coord;
 				UpdateMapping(*obj);
 			}
-
-			//------------------------------------------------------------
-			// Planar
-
-			if (obj->mapping == TextureMapping::Planar)
-			{
-				int coord = (int)obj->coordType;
-
-				if (ImGui::Combo("Plane", &coord, planarCoords, IM_ARRAYSIZE(planarCoords)))
-				{
-					obj->coordType = (coord_types)coord;
-					UpdateMapping(*obj);
-				}
-			}
-
-			//------------------------------------------------------------
-			// Cubic
-
-			if (obj->mapping == TextureMapping::Cubic)
-			{
-				if (ImGui::Button("Regenerate Cube UV"))
-				{
-					UpdateMapping(*obj);
-				}
-			}
-
-			//------------------------------------------------------------
-			// Cylindrical
-
-			if (obj->mapping == TextureMapping::Cylindrical)
-			{
-				int axis = (int)obj->cyaxisType;
-
-				if (ImGui::Combo("Axis", &axis, cylinderAxes, IM_ARRAYSIZE(cylinderAxes)))
-				{
-					obj->cyaxisType = (cylinder_axis)axis;
-					UpdateMapping(*obj);
-				}
-			}
-
-			//------------------------------------------------------------
-			// Spherical
-
-			if (obj->mapping == TextureMapping::Spherical)
-			{
-				if (ImGui::Button("Regenerate Sphere UV"))
-				{
-					UpdateMapping(*obj);
-				}
-			}
-
-			//------------------------------------------------------------
-			// UV
-
-			if (obj->mapping == TextureMapping::UV)
-			{
-				if (ImGui::Button("Restore Original UV"))
-				{
-					UpdateMapping(*obj);
-				}
-			}
-			
 		}
-		else {
+		
 
-			Light* light = GetSelectedLight();
-			Object* obj = GetSelectedObject();
+		//------------------------------------------------------------
+		// Cubic
 
-			if (light) {
+		if (obj->mapping == TextureMapping::Cubic) {
 
-				ImGui::Begin("Inspector");
+			if (ImGui::Button("Regenerate Cube UV")) {
 
-				ImGui::SeparatorText("General");
+				obj->undoStack.push_back(CaptureState(*obj));
+				obj->redoStack.clear();
 
-				//ImGui::InputText("Name", &lightObjects[selectedObject - objects.size()].name);
+				UpdateMapping(*obj);
+			}
+		}
+
+		//------------------------------------------------------------
+		// Cylindrical
+
+		if (obj->mapping == TextureMapping::Cylindrical) {
+
+			int axis = (int)obj->cyaxisType;
+
+			if (ImGui::Combo("Axis", &axis, cylinderAxes, IM_ARRAYSIZE(cylinderAxes))) {
+
+				obj->undoStack.push_back(CaptureState(*obj));
+				obj->redoStack.clear();
+
+				obj->cyaxisType = (cylinder_axis)axis;
+				UpdateMapping(*obj);
+			}
+		}
+
+		//------------------------------------------------------------
+		// Spherical
+
+		if (obj->mapping == TextureMapping::Spherical) {
+
+			if (ImGui::Button("Regenerate Sphere UV")) {
+
+				obj->undoStack.push_back(CaptureState(*obj));
+				obj->redoStack.clear();
+
+				UpdateMapping(*obj);
+			}
+		}
+
+		//------------------------------------------------------------
+		// UV
+
+		if (obj->mapping == TextureMapping::UV) {
+
+			if (ImGui::Button("Restore Original UV")) {
+
+				obj->undoStack.push_back(CaptureState(*obj));
+				obj->redoStack.clear();
+
+				UpdateMapping(*obj);
+			}
+		}
+
+		ImGui::Separator();
+
+		if (ImGui::Button("Delete Object")) {
+
+			DestroyBuffers(objects[selectedObject]);
+
+			objects[selectedObject].vertices.clear();
+			objects[selectedObject].indices.clear();
+
+			objects[selectedObject].normalLines.clear();
+
+			objects[selectedObject].tangentLines.clear();
+			objects[selectedObject].bitangentLines.clear();
+			objects[selectedObject].normalLinesTBN.clear();
+
+			objects[selectedObject].original_vertices.clear();
+			objects[selectedObject].original_indices.clear();
+
+			objects.erase(objects.begin() + selectedObject);
+
+			selectedObject = -1;
+		}
+
+	} else {
+
+
+		Light* light = GetSelectedLight();
+		Object* obj = GetSelectedObject();
+
+		if (light) {
+
+			if(ImGui::CollapsingHeader("General", ImGuiTreeNodeFlags_DefaultOpen)) {
+
+				static char name[256];
+				strncpy_s(name, lightObjects[selectedObject - objects.size()].name.c_str(), sizeof(name));
+				name[255] = '\0';
+
+				if (ImGui::InputText("Name", name, sizeof(name))) {
+
+					lightObjects[selectedObject - objects.size()].name = name;
+				}
 
 				ImGui::ColorEdit3("Color", &light->col.x);
+				HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
 
 				ImGui::DragFloat3("Position", &light->pos.x, 0.1f);
+				HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
 
 				glm::vec3 euler = glm::degrees(glm::eulerAngles(obj->rotation));
 
@@ -890,39 +976,53 @@ void update_imgui_guizmo() {
 
 					obj->rotation = glm::quat(glm::radians(euler));
 				}
+				HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
 
 				ImGui::DragFloat3("Direction", &light->dir.x, 0.01f);
+				HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
 
 				ImGui::DragFloat("Ambient", &light->ambient, 0.01f, 0.f, 1.f);
+				HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
 
 				lightObjects[selectedObject - objects.size()].position = light->pos;
+			}
 
-				ImGui::SeparatorText("Attenuation");
+			if (ImGui::CollapsingHeader("Attenuation", ImGuiTreeNodeFlags_DefaultOpen)) {
 
 				ImGui::DragFloat("Constant", &light->att.x, 0.001f, 0.f, 10.f);
+				HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
 
 				ImGui::DragFloat("Linear", &light->att.y, 0.0001f, 0.f, 1.f);
+				HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
 
 				ImGui::DragFloat("Quadratic", &light->att.z, 0.00001f, 0.f, 1.f);
+				HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
 
 				if (light->type == "SPOT") {
 
 					ImGui::SeparatorText("Spot");
 
 					ImGui::DragFloat("Inner", &light->inner, 0.25f, 0.f, 90.f);
+					HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
 
 					ImGui::DragFloat("Outer", &light->outer, 0.25f, 0.f, 90.f);
+					HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
 
 					ImGui::DragFloat("Falloff", &light->falloff, 0.05f, 0.f, 16.f);
+					HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
 				}
+			}
 
-				ImGui::SeparatorText("Shadow");
+			if (ImGui::CollapsingHeader("Shadow", ImGuiTreeNodeFlags_DefaultOpen)) {
 
 				ImGui::DragFloat("Bias", &light->bias, 0.000001f, 0.f, 0.01f, "%.6f");
+				HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
 
 				ImGui::DragFloat("PCF", &light->pcf, 0.1f, 1.f, 16.f);
+				HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
+			}
 
-				ImGui::SeparatorText("Type");
+			if (ImGui::CollapsingHeader("Type", ImGuiTreeNodeFlags_DefaultOpen)) {
 
 				static const char* types[] = {
 					"Point",
@@ -930,7 +1030,7 @@ void update_imgui_guizmo() {
 					"Spot"
 				};
 
-				static int current = light->typeID;
+				int current = light->typeID;
 
 				if (ImGui::Combo("Light Type", &current, types, IM_ARRAYSIZE(types))) {
 
@@ -943,24 +1043,37 @@ void update_imgui_guizmo() {
 					case 2: light->type = "SPOT"; break;
 					}
 				}
-
-				ImGui::Separator();
-
-				if (ImGui::Button("Delete Light")) {
-
-					int index = selectedObject - objects.size();
-
-					lights.erase(lights.begin() + index);
-					lightObjects.erase(lightObjects.begin() + index);
-
-					selectedObject = -1;
-				}
 			}
+
+			if (ImGui::Button("Delete Light")) {
+
+				int index = selectedObject - objects.size();
+
+				DestroyBuffers(objects[selectedObject]);
+
+				lightObjects[index].vertices.clear();
+				lightObjects[index].indices.clear();
+							 
+				lightObjects[index].normalLines.clear();
+							 
+				lightObjects[index].tangentLines.clear();
+				lightObjects[index].bitangentLines.clear();
+				lightObjects[index].normalLinesTBN.clear();
+							 
+				lightObjects[index].original_vertices.clear();
+				lightObjects[index].original_indices.clear();
+
+				lights.erase(lights.begin() + index);
+				lightObjects.erase(lightObjects.begin() + index);
+
+				selectedObject = -1;
+			}
+
 		}
 
-		ImGui::End();
-
 	}
+
+	ImGui::End();
 
 	switch (currentTool) {
 

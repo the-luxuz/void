@@ -35,6 +35,10 @@ uniform sampler2D depthData[8];
 
 uniform bool hasNormalMap;
 
+uniform bool light_active;
+uniform bool normal_map_active;
+uniform bool shadow_active;
+
 uniform float shininess;
 
 uniform mat4 aView;
@@ -157,7 +161,7 @@ void main() {
 
     vec3 finalNormal;
 
-    if(hasNormalMap) {
+    if(hasNormalMap && normal_map_active) {
 
         vec3 normalTS = texture(normalMap, uv).xyz;
         normalTS = normalTS * 2.0 - 1.0;
@@ -172,34 +176,43 @@ void main() {
 
     vec3 result = vec3(0.0);
 
+    if(!light_active){
+        
+        outputColor = vec4(baseColor, 1.0);
+        return;
+    }
+
     for (int i = 0; i < numLights; i++) {
 
-        shadow = 0.0;
+        if(shadow_active){
+        
+            shadow = 0.0;
 
-        vec3 proj = fragPosLight[i].xyz / fragPosLight[i].w;
-        vec3 norm_proj = proj * 0.5 + 0.5;
+            vec3 proj = fragPosLight[i].xyz / fragPosLight[i].w;
+            vec3 norm_proj = proj * 0.5 + 0.5;
 
-        if(norm_proj.x >= 0.0 && norm_proj.x <= 1.0 && norm_proj.y >= 0.0 && norm_proj.y <= 1.0 && norm_proj.z <= 1.0) {
+            if(norm_proj.x >= 0.0 && norm_proj.x <= 1.0 && norm_proj.y >= 0.0 && norm_proj.y <= 1.0 && norm_proj.z <= 1.0) {
 
-            float currentDepth = norm_proj.z;
+                float currentDepth = norm_proj.z;
 
-            vec2 texelSize = 1.0 / textureSize(depthData[i], 0);
+                vec2 texelSize = 1.0 / textureSize(depthData[i], 0);
 
-            int radius = int(lights[i].pcf);
+                int radius = int(lights[i].pcf);
 
-            for(int x = -radius; x <= radius; x++) { // like doing the blur
+                for(int x = -radius; x <= radius; x++) { // like doing the blur
 
-                for(int y = -radius; y <= radius; y++) {
+                    for(int y = -radius; y <= radius; y++) {
 
-                    float depth = texture(depthData[i], norm_proj.xy + vec2(x,y) * texelSize).r;
+                        float depth = texture(depthData[i], norm_proj.xy + vec2(x,y) * texelSize).r;
 
-                    if(currentDepth - lights[i].bias > depth)
-                        shadow += 1.0;
+                        if(currentDepth - lights[i].bias > depth)
+                            shadow += 1.0;
+                    }
                 }
-            }
 
-            float samples = float(pow((2 * radius + 1), 2));
-            shadow /= samples;
+                float samples = float(pow((2 * radius + 1), 2));
+                shadow /= samples;
+            }
         }
 
         if (lights[i].type == 0)

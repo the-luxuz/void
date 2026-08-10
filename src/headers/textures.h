@@ -1,37 +1,57 @@
 #pragma once
 
-#include "stb_image.h"
-
-#include "tinyexr.h"
-
 #include "local.h"
+#include "tinyexr.h"
 #include "classes.h"
+#include "stb_image.h"
 
 #include <filesystem>
 #include <iostream>
 
+//--------------------------------------------------------------------------
+// global variables
+
+// hdr check flag
 extern bool is_hdr;
+
+// viewport
+extern GLuint viewport_texture;
 
 extern int viewport_width;
 extern int viewport_height;
 
-extern GLuint viewport_texture;
+// depth map
 extern GLuint depth_texture[8];
 
+// skybox
 extern GLuint skybox_texture;
+
+//--------------------------------------------------------------------------
+// EXR and HDR texture
 
 GLuint LoadEXRTexture(const std::string& path);
 
 GLuint LoadHDRTexture(const std::string& path);
 
+//--------------------------------------------------------------------------
+// Skybox
+
 void Load_Skybox(const std::string& path);
+
+//--------------------------------------------------------------------------
+// OBJ texture
 
 GLuint LoadObjTexture(const std::string& path);
 
+//--------------------------------------------------------------------------
+// Viewport and viewport depth texture
+
 void Create_viewport_tex(int width, int height);
+void CreateViewportDepthTexture(int width, int height);
 
 void Create_depth_tex(int width, int height, int i);
 
-void CreateViewportDepthTexture(int width, int height);
+//--------------------------------------------------------------------------
+// Normal map
 
 void LoadNormalMap(Object& obj);

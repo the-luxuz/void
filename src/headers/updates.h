@@ -6,28 +6,39 @@
 #include "inits.h"
 #include "buffers.h"
 
+//--------------------------------------------------------------------------
+// global variables
+
+// current mesh, texture and operation for ImGuizmo
 extern int currentMesh;
-
 extern GLuint currentTexture;
+extern ImGuizmo::OPERATION currentOperation;
 
+// snap imguizmo
 extern bool useSnap;
-
 extern float* snap;
 
-extern glm::mat4 m;
-
-extern const float cellSize;
-
-extern ObjectState prevState;
-
-extern ImGuizmo::OPERATION currentOperation;
+//--------------------------------------------------------------------------
+// Update Grid
 
 void update_grid(glm::vec3 cameraPos);
 
+//--------------------------------------------------------------------------
+// Update Depth Map
+
 void update_depthmap();
+
+//--------------------------------------------------------------------------
+// Update Objects
 
 void update_objects();
 
+//--------------------------------------------------------------------------
+// Update Skybox
+
 void update_skybox();
+
+//--------------------------------------------------------------------------
+// Update Imgui and guizmo
 
 void update_imgui_guizmo();

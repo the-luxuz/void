@@ -19,18 +19,44 @@ void Parser::ReadString(std::ifstream& in, std::string& str) {
     in.read(str.data(), len);
 }
 
-void Parser::save(const char* fname, Settings& st, camera& cam, const std::vector<Object>& scene, const std::vector<Object>& scene_lgh_obj, const std::vector<::Light>& scene_lgh) {
+void Parser::save(const char* settings_name, const char* scene_name, Settings& st, camera& cam, const std::vector<Object>& scene, const std::vector<Object>& scene_lgh_obj, const std::vector<::Light>& scene_lgh) {
 
-    std::ofstream out(fname, std::ios::binary);
+    std::ofstream out(settings_name, std::ios::binary);
+    std::ofstream out_scene(scene_name, std::ios::binary);
 
     if (!out)
         return;
 
-    /*Write(out, st.w);
-    Write(out, st.h);*/
+    save_settings(out, st, cam);
+
+	save_scene(out_scene, scene, scene_lgh_obj, scene_lgh);
+
+}
+
+bool Parser::load(const char* settings_name, const char* scene_name, Settings& st, camera& cam, std::vector<Object>& scene, std::vector<Object>& scene_lgh_obj) {
+
+    std::ifstream in(settings_name, std::ios::binary);
+    std::ifstream in_scene(scene_name, std::ios::binary);
+
+    if (!in)
+        return false;
+
+    load_settings(in, st, cam);
+
+    load_scene(in_scene, scene_lgh_obj);
+
+    return true;
+}
+
+void Parser::save_settings(std::ofstream& out, Settings& st, camera& cam) {
+
     Write(out, st.VSync);
     Write(out, st.fov);
     Write(out, st.win_mode);
+
+    Write(out, st.light_active);
+    Write(out, st.normal_map_active);
+    Write(out, st.shadow_active);
 
     WriteString(out, st.win_name);
     WriteString(out, st.skybox);
@@ -43,6 +69,34 @@ void Parser::save(const char* fname, Settings& st, camera& cam, const std::vecto
     Write(out, cam.beta);
     Write(out, cam.radius);
 
+}
+
+void Parser::load_settings(std::ifstream& in, Settings& st, camera& cam) {
+
+    Read(in, st.VSync);
+    Read(in, st.fov);
+    Read(in, st.win_mode);
+
+    Read(in, st.light_active);
+    Read(in, st.normal_map_active);
+    Read(in, st.shadow_active);
+
+    ReadString(in, st.win_name);
+    ReadString(in, st.skybox);
+
+    st.last_win_mode = st.win_mode;
+
+    Read(in, cam.cam_position);
+    Read(in, cam.cam_target);
+    Read(in, cam.cam_up);
+
+    Read(in, cam.alpha);
+    Read(in, cam.beta);
+    Read(in, cam.radius);
+}
+
+void Parser::save_scene(std::ofstream& out, const std::vector<Object>& scene, const std::vector<Object>& scene_lgh_obj, const std::vector<::Light>& scene_lgh) {
+    
     uint32_t count = scene.size();
     uint32_t lightObjCount = scene_lgh_obj.size();
     uint32_t lightCount = scene_lgh.size();
@@ -52,7 +106,7 @@ void Parser::save(const char* fname, Settings& st, camera& cam, const std::vecto
     Write(out, lightCount);
 
     for (auto& obj : scene) {
-    
+
         WriteString(out, obj.name);
         WriteString(out, obj.mesh);
         WriteString(out, obj.tex);
@@ -66,7 +120,7 @@ void Parser::save(const char* fname, Settings& st, camera& cam, const std::vecto
 
         Write(out, obj.position);
         Write(out, obj.scale);
-       
+
         glm::vec3 euler = glm::degrees(glm::eulerAngles(obj.rotation));
 
         Write(out, euler);
@@ -135,36 +189,10 @@ void Parser::save(const char* fname, Settings& st, camera& cam, const std::vecto
 
         WriteString(out, scene_lgh[i].type);
     }
-
 }
 
-bool Parser::load(const char* fname, Settings& st, camera& cam, std::vector<Object>& scene_lgh_obj) {
-
-    std::ifstream in(fname, std::ios::binary);
-
-    if (!in)
-        return false;
-
-    /*Read(in, st.w);
-    Read(in, st.h);*/
-    Read(in, st.VSync);
-    Read(in, st.fov);
-    Read(in, st.win_mode);
-
-    ReadString(in, st.win_name);
-
-    ReadString(in, st.skybox);
-
-    st.last_win_mode = st.win_mode;
-
-    Read(in, cam.cam_position);
-    Read(in, cam.cam_target);
-    Read(in, cam.cam_up);
-
-    Read(in, cam.alpha);
-    Read(in, cam.beta);
-    Read(in, cam.radius);
-
+bool Parser::load_scene(std::ifstream& in, std::vector<Object>& scene_lgh_obj) {
+    
     uint32_t count;
     uint32_t lightObjCount;
     uint32_t lightCount;
@@ -182,7 +210,7 @@ bool Parser::load(const char* fname, Settings& st, camera& cam, std::vector<Obje
     lights.resize(lightCount);
 
     for (auto& obj : objects) {
-    
+
         ReadString(in, obj.obj_name);
         ReadString(in, obj.mesh);
         ReadString(in, obj.tex);
@@ -229,7 +257,7 @@ bool Parser::load(const char* fname, Settings& st, camera& cam, std::vector<Obje
 
         Read(in, obj.position);
         Read(in, obj.scale);
-      
+
         glm::vec3 euler;
 
         Read(in, euler);
@@ -247,7 +275,7 @@ bool Parser::load(const char* fname, Settings& st, camera& cam, std::vector<Obje
     }
 
     for (auto& lgh : lights) {
-        
+
         ReadString(in, lgh.name);
 
         Read(in, lgh.pos);

@@ -1,6 +1,10 @@
 #include "headers/programs.h"
 #include "headers/textures.h"
 
+//--------------------------------------------------------------------------
+// global variables
+
+// programs
 GLuint program;
 GLuint program_line;
 GLuint program_grid;
@@ -8,7 +12,11 @@ GLuint program_depth;
 GLuint program_skybox;
 GLuint program_hdrToCubemap;
 
+//depth framebuffer
 GLuint depthFBO[8];
+
+//--------------------------------------------------------------------------
+// Helper create shader
 
 GLuint create_shaders(GLuint pro, const char* vertexShaderPath, const char* fragmentShaderPath) {
 	
@@ -59,6 +67,9 @@ GLuint create_shaders(GLuint pro, const char* vertexShaderPath, const char* frag
 	return pro;
 
 }
+
+//--------------------------------------------------------------------------
+// init programs
 
 void create_programs() {
 
