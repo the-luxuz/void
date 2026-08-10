@@ -503,7 +503,27 @@ void Docking() {
 
 					if (hasLightCopy) {
 
-						lightObjects.push_back(objCopy);
+						Object nuevo = objCopy;
+
+						nuevo.vao = 0;
+						nuevo.vbo = 0;
+						nuevo.ebo = 0;
+
+						nuevo.normalVAO = 0;
+						nuevo.normalVBO = 0;
+
+						nuevo.normalTBVAO = 0;
+						nuevo.normalTBVBO = 0;
+
+						nuevo.tangentVAO = 0;
+						nuevo.tangentVBO = 0;
+
+						nuevo.bitangentVAO = 0;
+						nuevo.bitangentVBO = 0;
+
+						buffer(nuevo);
+
+						lightObjects.push_back(nuevo);
 						lights.push_back(lightCopy);
 
 						selectedObject = (int)(objects.size() + lightObjects.size() - 1);
@@ -511,7 +531,27 @@ void Docking() {
 					}
 					else {
 
-						objects.push_back(objCopy);
+						Object nuevo = objCopy;
+
+						nuevo.vao = 0;
+						nuevo.vbo = 0;
+						nuevo.ebo = 0;
+						
+						nuevo.normalVAO = 0;
+						nuevo.normalVBO = 0;
+						
+						nuevo.normalTBVAO = 0;
+						nuevo.normalTBVBO = 0;
+						
+						nuevo.tangentVAO = 0;
+						nuevo.tangentVBO = 0;
+						
+						nuevo.bitangentVAO = 0;
+						nuevo.bitangentVBO = 0;
+
+						buffer(nuevo);
+
+						objects.push_back(nuevo);
 						selectedObject = (int)objects.size() - 1;
 					}
 				}
@@ -706,6 +746,11 @@ void ResizeViewport(int width, int height) {
 
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	for (int i = 0; i < 8; i++) {
+
+		glDeleteFramebuffers(1, &depthFBO[i]);
+	}
 
 	for (int i = 0; i < 8; i++) {
 
@@ -1865,15 +1910,62 @@ void clean() {
 	glDeleteProgram(program_skybox);
 	glDeleteProgram(program_hdrToCubemap);
 
+	glDeleteTextures(1, &viewport_texture);
+
+	for (int i = 0; i < 8; i++)
+		glDeleteTextures(1, &depth_texture[i]);
+
+	glDeleteTextures(1, &skybox_texture);
+
 	for (auto& obj : objects) {
 
 		DestroyBuffers(obj);
+
+		obj.vertices.clear();
+		obj.indices.clear();
+
+		obj.original_vertices.clear();
+		obj.original_indices.clear();
+
+		obj.normalLines.clear();
+		obj.bitangentLines.clear();
+		obj.tangentLines.clear();
+
+		obj.normalLinesTBN.clear();
+
+		obj.undoStack.clear();
+		obj.redoStack.clear();
 	}
 
 	for (auto& obj : lightObjects) {
 
 		DestroyBuffers(obj);
+
+		obj.vertices.clear();
+		obj.indices.clear();
+
+		obj.original_vertices.clear();
+		obj.original_indices.clear();
+
+		obj.normalLines.clear();
+		obj.bitangentLines.clear();
+		obj.tangentLines.clear();
+
+		obj.normalLinesTBN.clear();
+
+		obj.undoStack.clear();
+		obj.redoStack.clear();
 	}
+
+	objects.clear();
+	lightObjects.clear();
+	lights.clear();
+
+	objectNameCounters.clear();
+
+	pathTextures.clear();
+
+	folderEntries.clear();
 
 	TextureManager::Clear();
 }
@@ -1913,6 +2005,9 @@ void DestroyBuffers(Object& obj) {
 
 	if (obj.bitangentVBO)
 		glDeleteBuffers(1, &obj.bitangentVBO);
+
+	if (obj.normalTexture != 0)
+		glDeleteTextures(1, &obj.normalTexture);
 
 	obj.vao = 0;
 	obj.vbo = 0;
@@ -1957,6 +2052,8 @@ void ReplaceMesh(Object& obj, const std::string& path) {
 
 	mesh.name = obj.name;
 	mesh.mesh = path;
+
+	DestroyBuffers(obj);
 
 	obj = std::move(mesh);
 }

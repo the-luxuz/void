@@ -1,11 +1,5 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 
-#ifdef _DEBUG
-#define _CRTDBG_MAP_ALLOC
-#include <crtdbg.h>
-#include <cstdlib>
-#endif
-
 #include "local.h"
 #include "classes.h"
 #include "Parser.h"
@@ -215,15 +209,6 @@ void Rebuild() {
 }
 
 int main(int argc, char* args[]) {
-
-	#ifdef _DEBUG
-		_CrtSetDbgFlag(
-			_CRTDBG_ALLOC_MEM_DF |
-			_CRTDBG_LEAK_CHECK_DF
-		);
-	#endif
-
-	_CrtSetBreakAlloc(165);
 
 	init_("../data/settings.bin", "../data/scene/scene.bin");
 
@@ -479,14 +464,55 @@ int main(int argc, char* args[]) {
 
 							if (hasLightCopy) {
 
-								lightObjects.push_back(objCopy);
+								Object nuevo = objCopy;
+
+								nuevo.vao = 0;
+								nuevo.vbo = 0;
+								nuevo.ebo = 0;
+
+								nuevo.normalVAO = 0;
+								nuevo.normalVBO = 0;
+
+								nuevo.normalTBVAO = 0;
+								nuevo.normalTBVBO = 0;
+
+								nuevo.tangentVAO = 0;
+								nuevo.tangentVBO = 0;
+
+								nuevo.bitangentVAO = 0;
+								nuevo.bitangentVBO = 0;
+
+								buffer(nuevo);
+
+								lightObjects.push_back(nuevo);
 								lights.push_back(lightCopy);
 
 								selectedObject = (int)(objects.size() + lightObjects.size() - 1);
 
-							} else {
+							}
+							else {
 
-								objects.push_back(objCopy);
+								Object nuevo = objCopy;
+
+								nuevo.vao = 0;
+								nuevo.vbo = 0;
+								nuevo.ebo = 0;
+
+								nuevo.normalVAO = 0;
+								nuevo.normalVBO = 0;
+
+								nuevo.normalTBVAO = 0;
+								nuevo.normalTBVBO = 0;
+
+								nuevo.tangentVAO = 0;
+								nuevo.tangentVBO = 0;
+
+								nuevo.bitangentVAO = 0;
+								nuevo.bitangentVBO = 0;
+
+								buffer(nuevo);
+
+								objects.push_back(nuevo);
 								selectedObject = (int)objects.size() - 1;
 							}
 						}
@@ -715,10 +741,6 @@ int main(int argc, char* args[]) {
 	SDL_DestroyWindow(window);
 
 	SDL_Quit();
-
-	#ifdef _DEBUG
-		_CrtDumpMemoryLeaks();
-	#endif
 
 	return 0;
 }

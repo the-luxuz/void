@@ -270,6 +270,7 @@ void update_objects() {
 
 		glDrawElements(GL_TRIANGLES, (GLsizei)lightObjects[i].indices.size(), GL_UNSIGNED_INT, 0);
 	}
+
 }
 
 //--------------------------------------------------------------------------
@@ -516,7 +517,6 @@ void update_imgui_guizmo() {
 						ImGui::Text("%s", entry.path().filename().string().c_str());
 
 						ImGui::EndDragDropSource();
-
 					}
 
 					ImGui::TextWrapped("%s", entry.path().stem().string().c_str());

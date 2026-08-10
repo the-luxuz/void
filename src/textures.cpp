@@ -342,6 +342,10 @@ void LoadNormalMap(Object& obj) {
         return;
     }
 
+	if (obj.normalTexture != 0) {
+		glDeleteTextures(1, &obj.normalTexture);
+	}
+
     glGenTextures(1, &obj.normalTexture);
 
     glBindTexture(GL_TEXTURE_2D, obj.normalTexture);
