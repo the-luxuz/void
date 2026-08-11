@@ -74,6 +74,9 @@ struct Parser {
 		cylinder_axis cyaxisType = cylinder_axis::Y;
 
 		float shininess;
+
+		Physics physics;
+		bool hasPhysics = false;
 	};
 
 	std::vector<Transform> objects;

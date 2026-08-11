@@ -313,10 +313,13 @@ void PhysicsUpdate(float dt) {
 
 		Physics& p = obj.physics;
 
-		if (p.useGravity)
-			p.force += glm::vec3(0.0f, -9.81f * p.mass, 0.0f);
+		if (p.inverseMass > 0.0f && p.useGravity) {
 
-		p.acceleration = p.force / p.mass;
+			float mass = 1.0f / p.inverseMass;
+			p.force += glm::vec3(0.0f, -9.81f, 0.0f) * mass;
+		}
+
+		p.acceleration = p.force * p.inverseMass;
 
 		p.velocity += p.acceleration * dt;
 
@@ -803,6 +806,53 @@ void update_imgui_guizmo() {
 				}
 
 				ImGui::EndDragDropTarget();
+			}
+
+			//------------------------------------------------------------
+			
+			if (ImGui::CollapsingHeader("Physics", ImGuiTreeNodeFlags_DefaultOpen)) {
+
+				Physics& p = obj->physics;
+
+				ImGui::Checkbox("Has Physics", &obj->hasPhysics);
+				HandleInspectorUndo(*obj);
+
+				ImGui::DragFloat3("Velocity", &obj->physics.velocity.x, 0.1f);
+				HandleInspectorUndo(*obj);
+
+				ImGui::DragFloat3("Acceleration", &obj->physics.acceleration.x, 0.1f);
+				HandleInspectorUndo(*obj);
+
+				ImGui::DragFloat("Drag", &obj->physics.drag, 0.1f);
+				HandleInspectorUndo(*obj);
+
+				ImGui::DragFloat3("Force", &obj->physics.force.x, 0.1f);
+				HandleInspectorUndo(*obj);
+
+				float mass = (p.inverseMass == 0.0f) ? 0.0f : 1.0f / p.inverseMass;
+
+				if (ImGui::DragFloat("Mass", &mass, 0.1f, 0.0f, 1000.0f)) {
+
+					if (mass == 0.0f)
+						p.inverseMass = 0.0f;
+					else
+						p.inverseMass = 1.0f / mass;
+				}
+
+				HandleInspectorUndo(*obj);
+
+				ImGui::Checkbox("Use Gravity", &obj->physics.useGravity);
+				HandleInspectorUndo(*obj);
+
+				ImGui::Checkbox("Is Static", &obj->physics.isStatic);
+				HandleInspectorUndo(*obj);
+
+				if (ImGui::Button("Reset Velocities")) {
+
+					obj->physics.velocity = glm::vec3(0.0f);
+					obj->physics.acceleration = glm::vec3(0.0f);
+				}
+
 			}
 
 			//------------------------------------------------------------

@@ -690,7 +690,7 @@ void Docking() {
 
 		ImGui::Checkbox("Show Wireframe", &st.wireframe_active);
 
-		ImGui::Checkbox("Show Physics", &st.physics_active);
+		ImGui::Checkbox("Active global Physics", &st.physics_active);
 
 		if (ImGui::SliderFloat("FOV", &st.fov, 30.0f, 120.0f, "%.1f°")) {
 
@@ -2075,6 +2075,9 @@ void ReplaceMesh(Object& obj, const std::string& path) {
 	mesh.has_normal_map = obj.has_normal_map;
 
 	mesh.shininess = obj.shininess;
+
+	mesh.physics = obj.physics;
+	mesh.hasPhysics = obj.hasPhysics;
 
 	mesh.name = obj.name;
 	mesh.mesh = path;

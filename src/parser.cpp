@@ -57,6 +57,8 @@ void Parser::save_settings(std::ofstream& out, Settings& st, camera& cam) {
     Write(out, st.light_active);
     Write(out, st.normal_map_active);
     Write(out, st.shadow_active);
+    Write(out, st.wireframe_active);
+    Write(out, st.physics_active);
 
     WriteString(out, st.win_name);
     WriteString(out, st.skybox);
@@ -80,6 +82,8 @@ void Parser::load_settings(std::ifstream& in, Settings& st, camera& cam) {
     Read(in, st.light_active);
     Read(in, st.normal_map_active);
     Read(in, st.shadow_active);
+    Read(in, st.wireframe_active);
+    Read(in, st.physics_active);
 
     ReadString(in, st.win_name);
     ReadString(in, st.skybox);
@@ -136,6 +140,10 @@ void Parser::save_scene(std::ofstream& out, const std::vector<Object>& scene, co
         Write(out, obj.mapping);
         Write(out, obj.coordType);
         Write(out, obj.cyaxisType);
+
+        Write(out, obj.physics);
+        Write(out, obj.hasPhysics);
+
     }
 
     for (int i = 0; i < lightObjCount; ++i) {
@@ -242,6 +250,9 @@ bool Parser::load_scene(std::ifstream& in, std::vector<Object>& scene_lgh_obj) {
         Read(in, obj.mapping);
         Read(in, obj.coordType);
         Read(in, obj.cyaxisType);
+
+        Read(in, obj.physics);
+        Read(in, obj.hasPhysics);
     }
 
     for (auto& obj : scene_lgh_obj) {

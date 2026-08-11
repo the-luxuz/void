@@ -279,6 +279,9 @@ void init() {
 
 		obj.norm_map = p.normal_map;
 
+		obj.physics = p.physics;
+		obj.hasPhysics = p.hasPhysics;
+
 		obj.model = GetModelMatrix(obj);
 
 		UpdateMapping(obj);

@@ -61,6 +61,21 @@ struct Vertex {
 
 };
 
+struct Physics {
+
+    glm::vec3 velocity = glm::vec3(0.0f);
+    glm::vec3 acceleration = glm::vec3(0.0f);
+
+    glm::vec3 force = glm::vec3(0.0f);
+
+    float inverseMass = 1.0f;
+
+    float drag = 0.1f;
+
+    bool useGravity = true;
+    bool isStatic = false;
+};
+
 struct ObjectState {
 
     glm::vec3 position;
@@ -85,6 +100,9 @@ struct ObjectState {
     bool has_normal_map;
 
     float shininess;
+
+	Physics physics;
+	bool hasPhysics;
 
 };
 
@@ -155,20 +173,6 @@ struct camera {
 
 };
 
-struct Physics {
-
-    glm::vec3 velocity = glm::vec3(0.0f);
-    glm::vec3 acceleration = glm::vec3(0.0f);
-
-    glm::vec3 force = glm::vec3(0.0f);
-
-    float mass = 1.0f;
-    float drag = 0.1f;
-
-    bool useGravity = true;
-    bool isStatic = false;
-};
-
 struct Object {
 
     GLuint vao = 0;
@@ -233,7 +237,7 @@ struct Object {
     float shininess = 20;
 
     Physics physics;
-    bool hasPhysics = true;
+    bool hasPhysics = false;
 
 };
 
@@ -294,7 +298,7 @@ inline void ApplyLightState(Light& l, const LightState& s) {
 
 inline ObjectState CaptureState(const Object& o) {
 
-    return { o.position, o.rotation, o.scale, o.name, o.mesh, o.obj_texture, o.tex, o.min, o.max, o.mapping, o.coordType, o.cyaxisType, o.normalTexture, o.norm_map, o.has_normal_map, o.shininess };
+    return { o.position, o.rotation, o.scale, o.name, o.mesh, o.obj_texture, o.tex, o.min, o.max, o.mapping, o.coordType, o.cyaxisType, o.normalTexture, o.norm_map, o.has_normal_map, o.shininess, o.physics, o.hasPhysics };
 }
 
 inline void ApplyState(Object& o, const ObjectState& s) {
@@ -321,6 +325,9 @@ inline void ApplyState(Object& o, const ObjectState& s) {
 	o.has_normal_map = s.has_normal_map;
 
 	o.shininess = s.shininess;
+
+	o.physics = s.physics;
+	o.hasPhysics = s.hasPhysics;
 }
 
 struct Shader_Uniform {
