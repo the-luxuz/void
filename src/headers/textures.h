@@ -21,7 +21,7 @@ extern int viewport_width;
 extern int viewport_height;
 
 // depth map
-extern GLuint depth_texture[8];
+extern GLuint depth_texture[MAX_LIGHTS];
 
 // skybox
 extern GLuint skybox_texture;

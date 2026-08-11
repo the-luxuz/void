@@ -3,6 +3,15 @@
 
 void buffer(Object& objects) {
 
+	if (objects.vao)
+		glDeleteVertexArrays(1, &objects.vao);
+
+	if (objects.vbo)
+		glDeleteBuffers(1, &objects.vbo);
+
+	if (objects.ebo)
+		glDeleteBuffers(1, &objects.ebo);
+
 	glGenVertexArrays(1, &objects.vao);
 	glGenBuffers(1, &objects.vbo);
 	glGenBuffers(1, &objects.ebo);
@@ -83,6 +92,12 @@ void UpdateLineBuffers(Object& obj) {
 }
 
 void UpdateMeshBuffers(Object& obj) {
+
+	if (obj.vbo)
+		glDeleteBuffers(1, &obj.vbo);
+
+	if (obj.ebo)
+		glDeleteBuffers(1, &obj.ebo);
 
 	glBindBuffer(GL_ARRAY_BUFFER, obj.vbo);
 	glBufferData(

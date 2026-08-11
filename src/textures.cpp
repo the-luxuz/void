@@ -16,7 +16,7 @@ int viewport_width = 512;
 int viewport_height = 512;
 
 // depth map
-GLuint depth_texture[8];
+GLuint depth_texture[MAX_LIGHTS];
 
 // skybox
 GLuint skybox_texture;

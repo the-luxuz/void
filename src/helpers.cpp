@@ -36,7 +36,7 @@ std::vector<Light> lights;
 std::vector<Object> lightObjects;
 
 // light view-proj matrices
-glm::mat4 lightVP[8];
+glm::mat4 lightVP[MAX_LIGHTS];
 
 glm::mat4 view;
 glm::mat4 projection;
@@ -128,6 +128,8 @@ Tools currentTool = Tools::TRANSLATE;
 
 //docking
 static bool showGraphicsSettings = false;
+
+bool camera_update = true;
 
 //--------------------------------------------------------------------------
 // Load scene in the good way
@@ -503,27 +505,27 @@ void Docking() {
 
 					if (hasLightCopy) {
 
-						Object nuevo = objCopy;
+						Object copy = objCopy;
 
-						nuevo.vao = 0;
-						nuevo.vbo = 0;
-						nuevo.ebo = 0;
+						copy.vao = 0;
+						copy.vbo = 0;
+						copy.ebo = 0;
 
-						nuevo.normalVAO = 0;
-						nuevo.normalVBO = 0;
+						copy.normalVAO = 0;
+						copy.normalVBO = 0;
 
-						nuevo.normalTBVAO = 0;
-						nuevo.normalTBVBO = 0;
+						copy.normalTBVAO = 0;
+						copy.normalTBVBO = 0;
 
-						nuevo.tangentVAO = 0;
-						nuevo.tangentVBO = 0;
+						copy.tangentVAO = 0;
+						copy.tangentVBO = 0;
 
-						nuevo.bitangentVAO = 0;
-						nuevo.bitangentVBO = 0;
+						copy.bitangentVAO = 0;
+						copy.bitangentVBO = 0;
 
-						buffer(nuevo);
+						buffer(copy);
 
-						lightObjects.push_back(nuevo);
+						lightObjects.push_back(copy);
 						lights.push_back(lightCopy);
 
 						selectedObject = (int)(objects.size() + lightObjects.size() - 1);
@@ -531,27 +533,27 @@ void Docking() {
 					}
 					else {
 
-						Object nuevo = objCopy;
+						Object copy = objCopy;
 
-						nuevo.vao = 0;
-						nuevo.vbo = 0;
-						nuevo.ebo = 0;
-						
-						nuevo.normalVAO = 0;
-						nuevo.normalVBO = 0;
-						
-						nuevo.normalTBVAO = 0;
-						nuevo.normalTBVBO = 0;
-						
-						nuevo.tangentVAO = 0;
-						nuevo.tangentVBO = 0;
-						
-						nuevo.bitangentVAO = 0;
-						nuevo.bitangentVBO = 0;
+						copy.vao = 0;
+						copy.vbo = 0;
+						copy.ebo = 0;
 
-						buffer(nuevo);
+						copy.normalVAO = 0;
+						copy.normalVBO = 0;
 
-						objects.push_back(nuevo);
+						copy.normalTBVAO = 0;
+						copy.normalTBVBO = 0;
+
+						copy.tangentVAO = 0;
+						copy.tangentVBO = 0;
+
+						copy.bitangentVAO = 0;
+						copy.bitangentVBO = 0;
+
+						buffer(copy);
+
+						objects.push_back(copy);
 						selectedObject = (int)objects.size() - 1;
 					}
 				}
@@ -709,6 +711,8 @@ void Docking() {
 
 void ResizeViewport(int width, int height) {
 
+	camera_update = true;
+
 	if (width <= 0 || height <= 0)
 		return;
 
@@ -747,12 +751,12 @@ void ResizeViewport(int width, int height) {
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	for (int i = 0; i < 8; i++) {
+	for (int i = 0; i < MAX_LIGHTS; i++) {
 
 		glDeleteFramebuffers(1, &depthFBO[i]);
 	}
 
-	for (int i = 0; i < 8; i++) {
+	for (int i = 0; i < MAX_LIGHTS; i++) {
 
 		glGenFramebuffers(1, &depthFBO[i]);
 		glBindFramebuffer(GL_FRAMEBUFFER, depthFBO[i]);
@@ -1910,9 +1914,23 @@ void clean() {
 	glDeleteProgram(program_skybox);
 	glDeleteProgram(program_hdrToCubemap);
 
+	glDeleteVertexArrays(1, &gridVAO);
+	glDeleteVertexArrays(1, &skyVAO);
+	glDeleteVertexArrays(1, &skyboxVAO);
+
+	glDeleteBuffers(1, &gridVBO);
+	glDeleteBuffers(1, &skyVBO);
+	glDeleteBuffers(1, &skyboxVBO);
+
+	glDeleteTextures(1, &envCubemap);
+	glDeleteTextures(1, &dynamic_cubemap);
 	glDeleteTextures(1, &viewport_texture);
 
-	for (int i = 0; i < 8; i++)
+	glDeleteFramebuffers(1, &viewportFBO);
+	glDeleteFramebuffers(1, &captureFBO);
+	glDeleteFramebuffers(1, &captureRBO);
+
+	for (int i = 0; i < MAX_LIGHTS; i++)
 		glDeleteTextures(1, &depth_texture[i]);
 
 	glDeleteTextures(1, &skybox_texture);
@@ -1920,6 +1938,9 @@ void clean() {
 	for (auto& obj : objects) {
 
 		DestroyBuffers(obj);
+
+		if (obj.normalTexture != 0)
+			glDeleteTextures(1, &obj.normalTexture);
 
 		obj.vertices.clear();
 		obj.indices.clear();
@@ -1940,6 +1961,9 @@ void clean() {
 	for (auto& obj : lightObjects) {
 
 		DestroyBuffers(obj);
+
+		if (obj.normalTexture != 0)
+			glDeleteTextures(1, &obj.normalTexture);
 
 		obj.vertices.clear();
 		obj.indices.clear();
@@ -2006,9 +2030,6 @@ void DestroyBuffers(Object& obj) {
 	if (obj.bitangentVBO)
 		glDeleteBuffers(1, &obj.bitangentVBO);
 
-	if (obj.normalTexture != 0)
-		glDeleteTextures(1, &obj.normalTexture);
-
 	obj.vao = 0;
 	obj.vbo = 0;
 	obj.ebo = 0;
@@ -2045,9 +2066,12 @@ void ReplaceMesh(Object& obj, const std::string& path) {
 
 	mesh.obj_texture = obj.obj_texture;
 	mesh.tex = obj.tex;
+
 	mesh.normalTexture = obj.normalTexture;
 	mesh.norm_map = obj.norm_map;
+
 	mesh.has_normal_map = obj.has_normal_map;
+
 	mesh.shininess = obj.shininess;
 
 	mesh.name = obj.name;

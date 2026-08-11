@@ -7,12 +7,83 @@
 SDL_Window* window;
 SDL_GLContext context;
 
+Shader_Uniform shader_uniform;
+
 //--------------------------------------------------------------------------
 // init functions
 
+void init_uniforms() {
+	
+	// grid shader uniforms
+
+	shader_uniform.grid_MVP = glGetUniformLocation(program_grid, "uMVP");
+
+	// main shader uniforms
+
+	shader_uniform.program_texture = glGetUniformLocation(program, "tex");
+
+	shader_uniform.lightVP = glGetUniformLocation(program, "lightVP");
+
+	shader_uniform.normalMap = glGetUniformLocation(program, "normalMap");
+
+	shader_uniform.numLights = glGetUniformLocation(program, "numLights");
+
+	shader_uniform.tex_appear = glGetUniformLocation(program, "tex_appear");
+	shader_uniform.normal_apper = glGetUniformLocation(program, "normal_apper");
+	shader_uniform.tangent_apper = glGetUniformLocation(program, "tangent_apper");
+	shader_uniform.bitangent_apper = glGetUniformLocation(program, "bitangent_apper");
+
+	shader_uniform.light_active = glGetUniformLocation(program, "light_active");
+	shader_uniform.normal_map_active = glGetUniformLocation(program, "normal_map_active");
+	shader_uniform.shadow_active = glGetUniformLocation(program, "shadow_active");
+
+	shader_uniform.cameraPos = glGetUniformLocation(program, "cameraPos");
+
+	shader_uniform.shininess = glGetUniformLocation(program, "shininess");
+
+	shader_uniform.has_normal_map = glGetUniformLocation(program, "hasNormalMap");
+
+	// line shader uniforms
+
+	shader_uniform.program_line_color = glGetUniformLocation(program_line, "color");
+
+	//skybox uniforms
+
+	shader_uniform.skybox_view = glGetUniformLocation(program_skybox, "view");
+
+	shader_uniform.skybox_projection = glGetUniformLocation(program_skybox, "projection");
+
+	shader_uniform.is_hdr = glGetUniformLocation(program_skybox, "is_hdr");
+
+	shader_uniform.program_skybox_skybox = glGetUniformLocation(program_skybox, "skybox");
+
+}
+
+void init_class_uniforms() {
+
+	for (int i = 0; i < MAX_LIGHTS; i++) {
+
+		std::string idx = std::to_string(i);
+
+		shader_uniform.depthdata[i] = glGetUniformLocation(program, ("depthData[" + idx + "]").c_str());
+
+		shader_uniform.light_type[i] = glGetUniformLocation(program, ("lights[" + idx + "].type").c_str());
+		shader_uniform.light_pos[i] = glGetUniformLocation(program, ("lights[" + idx + "].position").c_str());
+		shader_uniform.light_dir[i] = glGetUniformLocation(program, ("lights[" + idx + "].direction").c_str());
+		shader_uniform.light_col[i] = glGetUniformLocation(program, ("lights[" + idx + "].color").c_str());
+		shader_uniform.light_att[i] = glGetUniformLocation(program, ("lights[" + idx + "].attenuation").c_str());
+		shader_uniform.light_ambient[i] = glGetUniformLocation(program, ("lights[" + idx + "].ambient").c_str());
+		shader_uniform.light_bias[i] = glGetUniformLocation(program, ("lights[" + idx + "].bias").c_str());
+		shader_uniform.light_pcf[i] = glGetUniformLocation(program, ("lights[" + idx + "].pcf").c_str());
+		shader_uniform.light_inner[i] = glGetUniformLocation(program, ("lights[" + idx + "].inner").c_str());
+		shader_uniform.light_outer[i] = glGetUniformLocation(program, ("lights[" + idx + "].outer").c_str());
+		shader_uniform.light_falloff[i] = glGetUniformLocation(program, ("lights[" + idx + "].falloff").c_str());
+	}
+}
+
 void init_viewport() {
 
-	for (int i = 0; i < 8; i++) {
+	for (int i = 0; i < MAX_LIGHTS; i++) {
 
 		glGenFramebuffers(1, &depthFBO[i]);
 		glBindFramebuffer(GL_FRAMEBUFFER, depthFBO[i]);
@@ -147,8 +218,10 @@ void init() {
 	glCullFace(GL_BACK);
 	glFrontFace(GL_CCW);
 
-	if(!dont_reload_cam)
+	//if(!dont_reload_cam)
 		//init_camera();
+
+	init_uniforms();
 
 	init_grid();
 
@@ -214,7 +287,7 @@ void init() {
 		objects.push_back(std::move(obj));
 	}
 
-	for (int i = 0; i < par.lights.size() && i < 8; i++) { // up to 8 lights
+	for (int i = 0; i < par.lights.size() && i < MAX_LIGHTS; i++) { // up to 8 lights
 
 		Light light;
 

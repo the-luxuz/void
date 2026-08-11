@@ -1,5 +1,11 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 
+#ifdef _DEBUG
+#define _CRTDBG_MAP_ALLOC
+#include <crtdbg.h>
+#include <cstdlib>
+#endif
+
 #include "local.h"
 #include "classes.h"
 #include "Parser.h"
@@ -32,7 +38,28 @@ view_Mode currentViewMode = view_Mode::EDITOR;
 
 void update(SDL_Window* window) {
 
-	update_depthmap();
+	if (st.light_active)
+		update_depthmap();
+
+	cameraPos = get_cam_pos();
+
+	view = glm::lookAt(
+		cameraPos,
+		cam.cam_target,
+		cam.cam_up
+	);
+
+	if (camera_update) {
+	
+		projection = glm::perspective(
+			glm::radians(st.fov),
+			(float)viewport_width / viewport_height,
+			cam.nearPlane,
+			cam.farPlane
+		); 
+		
+		camera_update = false;
+	}
 
 	if (currentViewMode == view_Mode::EDITOR) {
 	
@@ -47,20 +74,7 @@ void update(SDL_Window* window) {
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		cameraPos = get_cam_pos();
-
-		view = glm::lookAt(
-			cameraPos,
-			cam.cam_target,
-			cam.cam_up
-		);
-
-		projection = glm::perspective(
-			glm::radians(st.fov),
-			(float)viewport_width / viewport_height,
-			cam.nearPlane,
-			cam.farPlane
-		);
+		
 
 		if (currentViewMode == view_Mode::EDITOR) {
 		
@@ -103,21 +117,6 @@ void update(SDL_Window* window) {
 	if (currentViewMode == view_Mode::PLAY) {
 
 		io.ConfigFlags &= ~ImGuiConfigFlags_ViewportsEnable;
-
-		cameraPos = get_cam_pos();
-
-		view = glm::lookAt(
-			cameraPos,
-			cam.cam_target,
-			cam.cam_up
-		);
-
-		projection = glm::perspective(
-			glm::radians(st.fov),
-			(float)st.w / st.h,
-			cam.nearPlane,
-			cam.farPlane
-		);
 
 		//----------------------------------------------------
 		// obj
@@ -209,6 +208,15 @@ void Rebuild() {
 }
 
 int main(int argc, char* args[]) {
+
+	#ifdef _DEBUG
+		_CrtSetDbgFlag(
+			_CRTDBG_ALLOC_MEM_DF |
+			_CRTDBG_LEAK_CHECK_DF
+		);
+
+		_CrtSetBreakAlloc(165);   // <-- aquí
+	#endif
 
 	init_("../data/settings.bin", "../data/scene/scene.bin");
 
@@ -464,27 +472,27 @@ int main(int argc, char* args[]) {
 
 							if (hasLightCopy) {
 
-								Object nuevo = objCopy;
+								Object copy = objCopy;
 
-								nuevo.vao = 0;
-								nuevo.vbo = 0;
-								nuevo.ebo = 0;
+								copy.vao = 0;
+								copy.vbo = 0;
+								copy.ebo = 0;
 
-								nuevo.normalVAO = 0;
-								nuevo.normalVBO = 0;
+								copy.normalVAO = 0;
+								copy.normalVBO = 0;
 
-								nuevo.normalTBVAO = 0;
-								nuevo.normalTBVBO = 0;
+								copy.normalTBVAO = 0;
+								copy.normalTBVBO = 0;
 
-								nuevo.tangentVAO = 0;
-								nuevo.tangentVBO = 0;
+								copy.tangentVAO = 0;
+								copy.tangentVBO = 0;
 
-								nuevo.bitangentVAO = 0;
-								nuevo.bitangentVBO = 0;
+								copy.bitangentVAO = 0;
+								copy.bitangentVBO = 0;
 
-								buffer(nuevo);
+								buffer(copy);
 
-								lightObjects.push_back(nuevo);
+								lightObjects.push_back(copy);
 								lights.push_back(lightCopy);
 
 								selectedObject = (int)(objects.size() + lightObjects.size() - 1);
@@ -492,27 +500,27 @@ int main(int argc, char* args[]) {
 							}
 							else {
 
-								Object nuevo = objCopy;
+								Object copy = objCopy;
 
-								nuevo.vao = 0;
-								nuevo.vbo = 0;
-								nuevo.ebo = 0;
+								copy.vao = 0;
+								copy.vbo = 0;
+								copy.ebo = 0;
 
-								nuevo.normalVAO = 0;
-								nuevo.normalVBO = 0;
+								copy.normalVAO = 0;
+								copy.normalVBO = 0;
 
-								nuevo.normalTBVAO = 0;
-								nuevo.normalTBVBO = 0;
+								copy.normalTBVAO = 0;
+								copy.normalTBVBO = 0;
 
-								nuevo.tangentVAO = 0;
-								nuevo.tangentVBO = 0;
+								copy.tangentVAO = 0;
+								copy.tangentVBO = 0;
 
-								nuevo.bitangentVAO = 0;
-								nuevo.bitangentVBO = 0;
+								copy.bitangentVAO = 0;
+								copy.bitangentVBO = 0;
 
-								buffer(nuevo);
+								buffer(copy);
 
-								objects.push_back(nuevo);
+								objects.push_back(copy);
 								selectedObject = (int)objects.size() - 1;
 							}
 						}
@@ -741,6 +749,8 @@ int main(int argc, char* args[]) {
 	SDL_DestroyWindow(window);
 
 	SDL_Quit();
+
+	_CrtDumpMemoryLeaks();
 
 	return 0;
 }

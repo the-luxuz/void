@@ -302,3 +302,58 @@ inline void ApplyState(Object& o, const ObjectState& s) {
 
 	o.shininess = s.shininess;
 }
+
+struct Shader_Uniform {
+
+    GLint grid_MVP;
+
+	GLint program_texture;
+
+    GLint depthdata[MAX_LIGHTS];
+
+    GLint light_type[MAX_LIGHTS];
+    GLint light_pos[MAX_LIGHTS];
+    GLint light_dir[MAX_LIGHTS];
+    GLint light_col[MAX_LIGHTS];
+    GLint light_att[MAX_LIGHTS];
+    GLint light_ambient[MAX_LIGHTS];
+    GLint light_bias[MAX_LIGHTS];
+    GLint light_pcf[MAX_LIGHTS];
+    GLint light_inner[MAX_LIGHTS];
+    GLint light_outer[MAX_LIGHTS];
+    GLint light_falloff[MAX_LIGHTS];
+
+	GLint lightVP;
+
+	GLint normalMap;
+
+	GLint numLights;
+
+	GLint tex_appear;
+	GLint normal_apper;
+	GLint tangent_apper;
+	GLint bitangent_apper;
+
+	GLint light_active;
+	GLint normal_map_active;
+	GLint shadow_active;
+
+	GLint cameraPos;
+
+	GLint shininess;
+
+	GLint has_normal_map;
+
+    GLint program_line_color;
+
+    GLint skybox_view;
+
+	GLint skybox_projection;
+
+	GLint is_hdr;
+
+	GLint program_skybox_skybox;
+
+	bool class_uniforms_initialized = false;
+
+};

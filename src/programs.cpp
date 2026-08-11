@@ -13,7 +13,7 @@ GLuint program_skybox;
 GLuint program_hdrToCubemap;
 
 //depth framebuffer
-GLuint depthFBO[8];
+GLuint depthFBO[MAX_LIGHTS];
 
 //--------------------------------------------------------------------------
 // Helper create shader

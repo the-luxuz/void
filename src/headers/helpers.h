@@ -43,7 +43,7 @@ extern std::vector<Light> lights;
 extern std::vector<Object> lightObjects;
 
 // light view-proj matrices
-extern glm::mat4 lightVP[8];
+extern glm::mat4 lightVP[MAX_LIGHTS];
 
 extern glm::mat4 view;
 extern glm::mat4 projection;
@@ -130,6 +130,8 @@ enum class Tools {
 };
 
 extern Tools currentTool;
+
+extern bool camera_update;
 
 //--------------------------------------------------------------------------
 // Load scene in the good way

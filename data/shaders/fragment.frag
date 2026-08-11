@@ -1,5 +1,7 @@
 #version 430
 
+const int MAX_LIGHTS = 8;
+
 struct Light {
 
     int type; // 0 = POINT, 1 = DIR, 2 = SPOT
@@ -21,7 +23,7 @@ struct Light {
 };
 
 uniform int numLights;
-uniform Light lights[8];
+uniform Light lights[MAX_LIGHTS];
 
 uniform sampler2D tex;
 
@@ -31,7 +33,7 @@ uniform bool tangent_apper;
 uniform bool bitangent_apper;
 
 uniform sampler2D normalMap;
-uniform sampler2D depthData[8];
+uniform sampler2D depthData[MAX_LIGHTS];
 
 uniform bool hasNormalMap;
 
@@ -53,7 +55,7 @@ in vec3 bitangent;
 out vec4 outputColor;
 
 // light
-in vec4 fragPosLight[8];
+in vec4 fragPosLight[MAX_LIGHTS];
 float shadow = 0.0;
 
 vec3 ShadePointLight(Light light, vec3 N, vec3 V, vec3 baseColor) {

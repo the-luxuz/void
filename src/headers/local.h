@@ -24,3 +24,5 @@
 #include <nfd.h>
 
 #include <glm/gtx/quaternion.hpp>
+
+const int MAX_LIGHTS = 8;

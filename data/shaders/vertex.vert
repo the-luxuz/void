@@ -1,5 +1,7 @@
 #version 430
 
+const int MAX_LIGHTS = 8;
+
 layout(location = 0) in vec3 aPosition;
 layout(location = 1) in vec2 aUV;
 layout(location = 2) in vec3 aNormal;
@@ -8,7 +10,7 @@ layout(location = 4) uniform mat4 model;
 layout(location = 5) in vec3 aTangent;
 layout(location = 6) in vec3 aBitangent;
 layout(location = 7) uniform mat4 aView;
-layout(location = 8) uniform mat4 lightVP[8];
+layout(location = 8) uniform mat4 lightVP[MAX_LIGHTS];
 
 out vec2 uv;
 out vec3 normal;
@@ -19,7 +21,7 @@ uniform int numLights;
 out vec3 tangent;
 out vec3 bitangent;
 
-out vec4 fragPosLight[8];
+out vec4 fragPosLight[MAX_LIGHTS];
 
 void main() {
 

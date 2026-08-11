@@ -13,8 +13,14 @@
 extern SDL_Window* window;
 extern SDL_GLContext context;
 
+extern Shader_Uniform shader_uniform;
+
 //--------------------------------------------------------------------------
 // init functions
+
+void init_uniforms();
+
+void init_class_uniforms();
 
 void init_viewport();
 
