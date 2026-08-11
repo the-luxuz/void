@@ -36,7 +36,7 @@ enum class view_Mode {
 view_Mode currentViewMode = view_Mode::EDITOR;
 
 
-void update(SDL_Window* window) {
+void update(SDL_Window* window, float dt) {
 
 	if (st.light_active)
 		update_depthmap();
@@ -186,6 +186,24 @@ void update(SDL_Window* window) {
 		init_viewport();
 	}
 
+	//----------------------------------------------------
+	// physics
+
+	const float fixedDt = 1.0f / 60.0f;
+
+	static float accumulator = 0.0f;
+
+	if (st.physics_active) {
+
+		accumulator += dt;
+
+		while (accumulator >= fixedDt) {
+
+			PhysicsUpdate(fixedDt);
+			accumulator -= fixedDt;
+		}
+	}
+
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glBindVertexArray(0);
 	glUseProgram(0);
@@ -215,12 +233,22 @@ int main(int argc, char* args[]) {
 			_CRTDBG_LEAK_CHECK_DF
 		);
 
-		_CrtSetBreakAlloc(165);   // <-- aquí
+		_CrtSetBreakAlloc(165);
 	#endif
 
 	init_("../data/settings.bin", "../data/scene/scene.bin");
 
+	Uint64 lastCounter = SDL_GetPerformanceCounter();
+
 	while (!quit) {
+
+		Uint64 currentCounter = SDL_GetPerformanceCounter();
+
+		float dt = float(currentCounter - lastCounter) / float(SDL_GetPerformanceFrequency());
+
+		lastCounter = currentCounter;
+
+		dt = glm::min(dt, 0.1f);
 
 		while (SDL_PollEvent(&event)) {
 
@@ -732,11 +760,11 @@ int main(int argc, char* args[]) {
 		ImGuiIO& io = ImGui::GetIO();
 
 		if(!io.WantCaptureKeyboard)
-			controls(keyboard, angle_speed, radius_speed, 1 / fps);
+			controls(keyboard, angle_speed, radius_speed, dt);
 
 		totalTime += 1.0f / fps;
 
-		update(window);
+		update(window, dt);
 	}
 
 	clean();

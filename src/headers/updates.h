@@ -39,6 +39,11 @@ void update_objects();
 void update_skybox();
 
 //--------------------------------------------------------------------------
+// Update Physics
+
+void PhysicsUpdate(float dt);
+
+//--------------------------------------------------------------------------
 // Update Imgui and guizmo
 
 void update_imgui_guizmo();

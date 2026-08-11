@@ -177,20 +177,12 @@ void update_objects() {
 	glUniform1i(shader_uniform.normal_map_active, st.normal_map_active);
 	glUniform1i(shader_uniform.shadow_active, st.shadow_active);
 
-	if (st.wireframe_active) {
+	if (st.wireframe_active)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	}
-	else {
+	else
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	}
 
 	for (Object& obj : objects) {
-
-		if(st.normal_map_active) {
-
-			glActiveTexture(GL_TEXTURE1);
-			glBindTexture(GL_TEXTURE_2D, obj.normalTexture);
-		}
 
 		glUniform1f(shader_uniform.shininess, obj.shininess);
 
@@ -210,8 +202,13 @@ void update_objects() {
 			currentTexture = obj.obj_texture;
 		}
 
-		glUniform1i(shader_uniform.has_normal_map, obj.has_normal_map);
+		if (st.normal_map_active) {
 
+			glActiveTexture(GL_TEXTURE1);
+			glBindTexture(GL_TEXTURE_2D, obj.normalTexture);
+		}
+
+		glUniform1i(shader_uniform.has_normal_map, obj.has_normal_map);
 
 		glBindVertexArray(obj.vao);
 
@@ -299,6 +296,36 @@ void update_skybox() {
 
 	glEnable(GL_CULL_FACE);
 	glDepthFunc(GL_LESS);
+}
+
+//--------------------------------------------------------------------------
+// Update Physics
+
+void PhysicsUpdate(float dt) {
+
+	for (Object& obj : objects) {
+
+		if (!obj.hasPhysics)
+			continue;
+
+		if (obj.physics.isStatic)
+			continue;
+
+		Physics& p = obj.physics;
+
+		if (p.useGravity)
+			p.force += glm::vec3(0.0f, -9.81f * p.mass, 0.0f);
+
+		p.acceleration = p.force / p.mass;
+
+		p.velocity += p.acceleration * dt;
+
+		p.velocity *= (1.0f - p.drag * dt);
+
+		obj.position += p.velocity * dt;
+
+		p.force = glm::vec3(0.0f);
+	}
 }
 
 //--------------------------------------------------------------------------

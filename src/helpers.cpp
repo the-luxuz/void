@@ -690,6 +690,8 @@ void Docking() {
 
 		ImGui::Checkbox("Show Wireframe", &st.wireframe_active);
 
+		ImGui::Checkbox("Show Physics", &st.physics_active);
+
 		if (ImGui::SliderFloat("FOV", &st.fov, 30.0f, 120.0f, "%.1f°")) {
 
 			projection = glm::perspective(
@@ -2113,4 +2115,12 @@ void HandleInspectorUndo(Light& light, Object& lightObj) {
 		lightObj.undoStack.push_back(prevState);
 		lightObj.redoStack.clear();
 	}
+}
+
+//--------------------------------------------------------------------------
+// Physics
+
+void AddForce(Object& obj, const glm::vec3& force) {
+
+	obj.physics.force += force;
 }

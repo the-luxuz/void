@@ -274,3 +274,8 @@ void ReplaceMesh(Object& obj, const std::string& path);
 void HandleInspectorUndo(Object& obj);
 
 void HandleInspectorUndo(Light& light, Object& lightObj);
+
+//--------------------------------------------------------------------------
+// Physics
+
+void AddForce(Object& obj, const glm::vec3& force);

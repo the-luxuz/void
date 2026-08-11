@@ -134,6 +134,8 @@ struct Settings {
     bool normal_map_active = true;
     bool shadow_active = true;
     bool wireframe_active = false;
+
+    bool physics_active = true;
 };
 
 struct camera {
@@ -151,6 +153,20 @@ struct camera {
     glm::vec3 cam_target;
     glm::vec3 cam_up;
 
+};
+
+struct Physics {
+
+    glm::vec3 velocity = glm::vec3(0.0f);
+    glm::vec3 acceleration = glm::vec3(0.0f);
+
+    glm::vec3 force = glm::vec3(0.0f);
+
+    float mass = 1.0f;
+    float drag = 0.1f;
+
+    bool useGravity = true;
+    bool isStatic = false;
 };
 
 struct Object {
@@ -215,6 +231,10 @@ struct Object {
     bool has_normal_map = false;
 
     float shininess = 20;
+
+    Physics physics;
+    bool hasPhysics = true;
+
 };
 
 struct Light {
