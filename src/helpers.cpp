@@ -35,6 +35,10 @@ std::vector<Object> objects;
 std::vector<Light> lights;
 std::vector<Object> lightObjects;
 
+std::vector<Object> saved_objects;
+std::vector<Object> saved_light_objects;
+std::vector<Light> saved_lights;
+
 // light view-proj matrices
 glm::mat4 lightVP[MAX_LIGHTS];
 
@@ -2000,55 +2004,71 @@ void clean() {
 
 void DestroyBuffers(Object& obj) {
 
-
-	if (obj.vao)
+	if (obj.vao) {
+	
 		glDeleteVertexArrays(1, &obj.vao);
+		obj.vao = 0;
+	}
 
-	if (obj.vbo)
+	if (obj.vbo) {
+	
 		glDeleteBuffers(1, &obj.vbo);
+		obj.vbo = 0;
+	}
 
-	if (obj.ebo)
+	if (obj.ebo) {
+	
 		glDeleteBuffers(1, &obj.ebo);
+		obj.ebo = 0;
+	}
 
-	if (obj.normalVAO)
+	if (obj.normalVAO) {
+	
 		glDeleteVertexArrays(1, &obj.normalVAO);
+		obj.normalVAO = 0;
+	}
 
-	if (obj.normalVBO)
+	if (obj.normalVBO) {
+	
 		glDeleteBuffers(1, &obj.normalVBO);
+		obj.normalVBO = 0;
+	}
 
-	if (obj.normalTBVAO)
+	if (obj.normalTBVAO) {
+	
 		glDeleteVertexArrays(1, &obj.normalTBVAO);
+		obj.normalTBVAO = 0;
+	}
 
-	if (obj.normalTBVBO)
+	if (obj.normalTBVBO) {
+	
 		glDeleteBuffers(1, &obj.normalTBVBO);
+		obj.normalTBVBO = 0;
+	}
 
-	if (obj.tangentVAO)
+	if (obj.tangentVAO) {
+	
 		glDeleteVertexArrays(1, &obj.tangentVAO);
+		obj.tangentVAO = 0;
+	}
 
-	if (obj.tangentVBO)
+	if (obj.tangentVBO) {
+	
 		glDeleteBuffers(1, &obj.tangentVBO);
+		obj.tangentVBO = 0;
+	}
 
-	if (obj.bitangentVAO)
+	if (obj.bitangentVAO) {
+	
 		glDeleteVertexArrays(1, &obj.bitangentVAO);
+		obj.bitangentVAO = 0;
+	}
 
-	if (obj.bitangentVBO)
+	if (obj.bitangentVBO) {
+	
 		glDeleteBuffers(1, &obj.bitangentVBO);
-
-	obj.vao = 0;
-	obj.vbo = 0;
-	obj.ebo = 0;
-
-	obj.normalVAO = 0;
-	obj.normalVBO = 0;
-
-	obj.normalTBVAO = 0;
-	obj.normalTBVBO = 0;
-
-	obj.tangentVAO = 0;
-	obj.tangentVBO = 0;
-
-	obj.bitangentVAO = 0;
-	obj.bitangentVBO = 0;
+		obj.bitangentVBO = 0;
+	}
 }
 
 //--------------------------------------------------------------------------
@@ -2240,4 +2260,82 @@ float GetWorldRadius(const Object& obj) {
 
 	float s = glm::compMax(glm::abs(obj.scale));
 	return obj.collider.radius * s;
+}
+
+//--------------------------------------------------------------------------
+
+void save_scene_state() {
+
+	for (auto& obj : saved_objects)
+		DestroyBuffers(obj);
+
+	for (auto& obj : saved_light_objects)
+		DestroyBuffers(obj);
+
+	saved_objects.clear();
+	saved_light_objects.clear();
+	saved_lights.clear();
+
+	saved_objects = objects;
+
+	for (auto& obj : saved_objects) {
+
+		obj.vao = 0;
+		obj.vbo = 0;
+		obj.ebo = 0;
+
+		obj.normalVAO = 0;
+		obj.normalVBO = 0;
+
+		obj.normalTBVAO = 0;
+		obj.normalTBVBO = 0;
+
+		obj.tangentVAO = 0;
+		obj.tangentVBO = 0;
+
+		obj.bitangentVAO = 0;
+		obj.bitangentVBO = 0;
+	}
+
+	saved_light_objects = lightObjects;
+
+	for (auto& obj : saved_light_objects) {
+
+		obj.vao = 0;
+		obj.vbo = 0;
+		obj.ebo = 0;
+
+		obj.normalVAO = 0;
+		obj.normalVBO = 0;
+
+		obj.normalTBVAO = 0;
+		obj.normalTBVBO = 0;
+
+		obj.tangentVAO = 0;
+		obj.tangentVBO = 0;
+
+		obj.bitangentVAO = 0;
+		obj.bitangentVBO = 0;
+	}
+
+	saved_lights = lights;
+}
+
+void load_scene_state() {
+
+	for (auto& obj : objects)
+		DestroyBuffers(obj);
+
+	for (auto& obj : lightObjects)
+		DestroyBuffers(obj);
+
+	objects = saved_objects;
+	lightObjects = saved_light_objects;
+	lights = saved_lights;
+
+	for (auto& obj : objects)
+		buffer(obj);
+
+	for (auto& obj : lightObjects)
+		buffer(obj);
 }

@@ -42,6 +42,10 @@ extern std::vector<Object> objects;
 extern std::vector<Light> lights;
 extern std::vector<Object> lightObjects;
 
+extern std::vector<Object> saved_objects;
+extern std::vector<Object> saved_light_objects;
+extern std::vector<Light> saved_lights;
+
 // light view-proj matrices
 extern glm::mat4 lightVP[MAX_LIGHTS];
 
@@ -292,3 +296,9 @@ Contact AABB_vs_AABB(const Object& a, const Object& b);
 void ResolveCollision(Object& a, Object& b, const Contact& contact);
 
 float GetWorldRadius(const Object& obj);
+
+//--------------------------------------------------------------------------
+
+void save_scene_state();
+
+void load_scene_state();

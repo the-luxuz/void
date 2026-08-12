@@ -64,6 +64,8 @@ void buffer(Object& objects) {
 		(void*)offsetof(Vertex, bitangent)
 	);
 
+	CreateNormalBuffers(objects);
+
 	glBindVertexArray(0);
 }
 

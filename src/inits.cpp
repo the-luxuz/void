@@ -205,8 +205,6 @@ void init_obj(const char* objFile, Object& obj) {
 	glm::vec3 size = max - min;
 
 	obj.collider.radius = std::max(size.x, std::max(size.y, size.z)) * 0.5f;
-
-	std::cout << "Vertices: " << obj.collider.radius << '\n';
 }
 
 bool init_lights(Object& obj) {

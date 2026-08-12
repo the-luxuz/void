@@ -109,7 +109,7 @@ struct Physics {
 
     float inverseMass = 1.0f;
 
-    float restitution = 1.0f;
+    float restitution = 0.5f;
     float friction = 0.5f;
     float drag = 0.1f;
 
@@ -145,6 +145,8 @@ struct ObjectState {
 	Physics physics;
 	bool hasPhysics;
 
+    Collider collider;
+    bool hasCollider = false;
 };
 
 struct LightState {
@@ -317,6 +319,7 @@ struct Light {
     std::vector<LightState> redoStack;
 };
 
+
 inline LightState CaptureLightState(const Light& l) {
 
     return { l.col, l.att, l.ambient, l.inner, l.outer, l.falloff, l.bias, l.pcf, l.type, l.typeID };
@@ -343,7 +346,7 @@ inline void ApplyLightState(Light& l, const LightState& s) {
 
 inline ObjectState CaptureState(const Object& o) {
 
-    return { o.position, o.rotation, o.scale, o.name, o.mesh, o.obj_texture, o.tex, o.min, o.max, o.mapping, o.coordType, o.cyaxisType, o.normalTexture, o.norm_map, o.has_normal_map, o.shininess, o.physics, o.hasPhysics };
+    return { o.position, o.rotation, o.scale, o.name, o.mesh, o.obj_texture, o.tex, o.min, o.max, o.mapping, o.coordType, o.cyaxisType, o.normalTexture, o.norm_map, o.has_normal_map, o.shininess, o.physics, o.hasPhysics, o.collider, o.hasCollider };
 }
 
 inline void ApplyState(Object& o, const ObjectState& s) {
@@ -373,6 +376,9 @@ inline void ApplyState(Object& o, const ObjectState& s) {
 
 	o.physics = s.physics;
 	o.hasPhysics = s.hasPhysics;
+
+    o.collider = s.collider;
+    o.hasCollider = s.hasCollider;
 }
 
 struct Shader_Uniform {

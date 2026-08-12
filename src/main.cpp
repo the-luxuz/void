@@ -37,6 +37,7 @@ enum class view_Mode {
 
 view_Mode currentViewMode = view_Mode::EDITOR;
 
+view_Mode prevViewMode = currentViewMode;
 
 void update(SDL_Window* window, float dt) {
 
@@ -50,6 +51,17 @@ void update(SDL_Window* window, float dt) {
 		cam.cam_target,
 		cam.cam_up
 	);
+
+	if (currentViewMode != prevViewMode && currentViewMode == view_Mode::PLAY) {
+	
+		save_scene_state();
+		prevViewMode = currentViewMode;
+
+	} else if (currentViewMode != prevViewMode && currentViewMode == view_Mode::EDITOR) {
+		
+		load_scene_state();
+		prevViewMode = currentViewMode;
+	}
 
 	if (camera_update) {
 	
@@ -273,7 +285,6 @@ int main(int argc, char* args[]) {
 
 				if (event.key.scancode == SDL_SCANCODE_ESCAPE)
 					quit = true;
-
 
 				if (currentViewMode == view_Mode::EDITOR && !io.WantCaptureKeyboard) {
 
@@ -640,7 +651,7 @@ int main(int argc, char* args[]) {
 
 				}
 
-				if (event.key.scancode == SDL_SCANCODE_T && !io.WantCaptureKeyboard) {
+				if (event.key.scancode == SDL_SCANCODE_SPACE && !io.WantCaptureKeyboard) {
 
 					if(currentViewMode == view_Mode::EDITOR) {
 						currentViewMode = view_Mode::PLAY;

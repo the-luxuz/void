@@ -348,8 +348,8 @@ void CollisionUpdate() {
 			if (&a == &b)
 				continue;
 
-			/*if (!CanCollide(a, b))
-				continue;*/
+			if (!CanCollide(a, b))
+				continue;
 
 			if (!a.hasCollider)
 				continue;
