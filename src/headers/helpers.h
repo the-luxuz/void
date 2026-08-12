@@ -279,3 +279,16 @@ void HandleInspectorUndo(Light& light, Object& lightObj);
 // Physics
 
 void AddForce(Object& obj, const glm::vec3& force);
+
+//--------------------------------------------------------------------------
+// Collisions
+
+bool CanCollide(const Object& a, const Object& b);
+
+Contact Sphere_vs_Sphere(const Object& a, const Object& b);
+Contact Sphere_vs_AABB(const Object& a, const Object& b);
+Contact AABB_vs_AABB(const Object& a, const Object& b);
+
+void ResolveCollision(Object& a, Object& b, const Contact& contact);
+
+float GetWorldRadius(const Object& obj);

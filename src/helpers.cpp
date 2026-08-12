@@ -692,6 +692,8 @@ void Docking() {
 
 		ImGui::Checkbox("Active global Physics", &st.physics_active);
 
+		ImGui::Checkbox("Active global Collisions", &st.collision_active);
+
 		if (ImGui::SliderFloat("FOV", &st.fov, 30.0f, 120.0f, "%.1f°")) {
 
 			projection = glm::perspective(
@@ -2079,6 +2081,9 @@ void ReplaceMesh(Object& obj, const std::string& path) {
 	mesh.physics = obj.physics;
 	mesh.hasPhysics = obj.hasPhysics;
 
+	mesh.collider = obj.collider;
+	mesh.hasCollider = obj.hasCollider;
+
 	mesh.name = obj.name;
 	mesh.mesh = path;
 
@@ -2126,4 +2131,113 @@ void HandleInspectorUndo(Light& light, Object& lightObj) {
 void AddForce(Object& obj, const glm::vec3& force) {
 
 	obj.physics.force += force;
+}
+
+//--------------------------------------------------------------------------
+// Collisions
+
+bool CanCollide(const Object& a, const Object& b) {
+
+	return (a.collider.mask & b.collider.layer) &&
+		(b.collider.mask & a.collider.layer);
+}
+
+Contact Sphere_vs_Sphere(const Object& a, const Object& b) {
+
+	Contact contact{};
+
+	glm::vec3 delta = b.position - a.position;
+
+	float dist2 = glm::dot(delta, delta);
+
+	float radiusA = GetWorldRadius(a);
+	float radiusB = GetWorldRadius(b);
+
+	float radiusSum = radiusA + radiusB;
+
+	if (dist2 >= radiusSum * radiusSum)
+		return contact;
+
+	contact.hit = true;
+
+	float dist = sqrt(dist2);
+
+	if (dist < 1e-6f) {
+
+		contact.normal = glm::vec3(1, 0, 0);
+		contact.penetration = radiusSum;
+		contact.point = a.position;
+
+	} else {
+
+		contact.normal = delta / dist;
+		contact.penetration = radiusSum - dist;
+		contact.point = a.position + contact.normal * radiusA;
+	}
+
+	return contact;
+}
+Contact Sphere_vs_AABB(const Object& a, const Object& b) {
+
+	return Contact{};
+
+}
+
+Contact AABB_vs_AABB(const Object& a, const Object& b) {
+
+	return Contact{};
+}
+
+void ResolveCollision(Object& a, Object& b, const Contact& c) {
+
+	Physics& pa = a.physics;
+	Physics& pb = b.physics;
+
+	if (pa.isStatic && pb.isStatic)
+		return;
+
+	float invMassA = pa.inverseMass;
+	float invMassB = pb.inverseMass;
+
+	float totalInvMass = invMassA + invMassB;
+
+	if (totalInvMass == 0.0f)
+		return;
+
+	static const float percent = 0.8f;
+	static const float slop = 0.001f;
+
+	glm::vec3 correction = c.normal * percent * std::max(c.penetration - slop, 0.0f) / totalInvMass;
+
+	if (!pa.isStatic)
+		a.position -= correction * invMassA;
+
+	if (!pb.isStatic)
+		b.position += correction * invMassB;
+
+	glm::vec3 relativeVelocity = pb.velocity - pa.velocity;
+
+	float velAlongNormal = glm::dot(relativeVelocity, c.normal);
+
+	if (velAlongNormal > 0.0f)
+		return;
+
+	float e = std::min(pa.restitution, pb.restitution);
+
+	float j = -(1.0f + e) * velAlongNormal;
+	j /= totalInvMass;
+
+	glm::vec3 impulse = j * c.normal;
+
+	if (!pa.isStatic)
+		pa.velocity -= impulse * invMassA;
+
+	if (!pb.isStatic)
+		pb.velocity += impulse * invMassB;
+}
+
+float GetWorldRadius(const Object& obj) {
+
+	float s = glm::compMax(glm::abs(obj.scale));
+	return obj.collider.radius * s;
 }

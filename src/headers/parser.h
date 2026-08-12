@@ -77,6 +77,9 @@ struct Parser {
 
 		Physics physics;
 		bool hasPhysics = false;
+
+		Collider collider;
+		bool hasCollider = false;
 	};
 
 	std::vector<Transform> objects;

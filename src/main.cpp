@@ -20,6 +20,8 @@ float totalTime = 0.0f;
 
 static float fps = 0.0f;
 
+const float fixedDt = 1.0f / 60.0f;
+
 SDL_DisplayID display;
 SDL_Rect rect;
 
@@ -124,6 +126,29 @@ void update(SDL_Window* window, float dt) {
 		update_objects();
 
 		//----------------------------------------------------
+		// physics
+
+		static float accumulator = 0.0f;
+
+		if (st.physics_active) {
+
+			accumulator += dt;
+
+			while (accumulator >= fixedDt) {
+
+				PhysicsUpdate(fixedDt);
+				accumulator -= fixedDt;
+			}
+		}
+
+		//----------------------------------------------------
+		// col
+
+		if (st.collision_active)
+			for (int i = 0; i < 8; i++)
+				CollisionUpdate();
+
+		//----------------------------------------------------
 		// skybox
 
 		update_skybox();
@@ -184,24 +209,6 @@ void update(SDL_Window* window, float dt) {
 	
 		ApplyWindowMode(window);
 		init_viewport();
-	}
-
-	//----------------------------------------------------
-	// physics
-
-	const float fixedDt = 1.0f / 60.0f;
-
-	static float accumulator = 0.0f;
-
-	if (st.physics_active) {
-
-		accumulator += dt;
-
-		while (accumulator >= fixedDt) {
-
-			PhysicsUpdate(fixedDt);
-			accumulator -= fixedDt;
-		}
 	}
 
 	glBindTexture(GL_TEXTURE_2D, 0);

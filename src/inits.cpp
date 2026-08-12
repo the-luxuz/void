@@ -201,6 +201,12 @@ void init_obj(const char* objFile, Object& obj) {
 
 	obj.min = min;
 	obj.max = max;
+
+	glm::vec3 size = max - min;
+
+	obj.collider.radius = std::max(size.x, std::max(size.y, size.z)) * 0.5f;
+
+	std::cout << "Vertices: " << obj.collider.radius << '\n';
 }
 
 bool init_lights(Object& obj) {
@@ -281,6 +287,9 @@ void init() {
 
 		obj.physics = p.physics;
 		obj.hasPhysics = p.hasPhysics;
+
+		obj.collider = p.collider;
+		obj.hasCollider = p.hasCollider;
 
 		obj.model = GetModelMatrix(obj);
 
@@ -424,7 +433,7 @@ void init_(const char* settings, const char* scene) {
 	//st.w = 1280;
 	//st.h = 720;
 	//st.VSync = 0;
-	//st.fov = 90;
+	//st.fov = 120;
 	//
 	//par.save(settings, scene, st, cam, objects, lightObjects, lights);
 

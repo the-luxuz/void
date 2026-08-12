@@ -59,6 +59,7 @@ void Parser::save_settings(std::ofstream& out, Settings& st, camera& cam) {
     Write(out, st.shadow_active);
     Write(out, st.wireframe_active);
     Write(out, st.physics_active);
+    Write(out, st.collision_active);
 
     WriteString(out, st.win_name);
     WriteString(out, st.skybox);
@@ -84,6 +85,7 @@ void Parser::load_settings(std::ifstream& in, Settings& st, camera& cam) {
     Read(in, st.shadow_active);
     Read(in, st.wireframe_active);
     Read(in, st.physics_active);
+    Read(in, st.collision_active);
 
     ReadString(in, st.win_name);
     ReadString(in, st.skybox);
@@ -143,6 +145,9 @@ void Parser::save_scene(std::ofstream& out, const std::vector<Object>& scene, co
 
         Write(out, obj.physics);
         Write(out, obj.hasPhysics);
+
+        Write(out, obj.collider);
+        Write(out, obj.hasCollider);
 
     }
 
@@ -253,6 +258,9 @@ bool Parser::load_scene(std::ifstream& in, std::vector<Object>& scene_lgh_obj) {
 
         Read(in, obj.physics);
         Read(in, obj.hasPhysics);
+
+        Read(in, obj.collider);
+        Read(in, obj.hasCollider);
     }
 
     for (auto& obj : scene_lgh_obj) {

@@ -44,6 +44,11 @@ void update_skybox();
 void PhysicsUpdate(float dt);
 
 //--------------------------------------------------------------------------
+// Update Collisions
+
+void CollisionUpdate();
+
+//--------------------------------------------------------------------------
 // Update Imgui and guizmo
 
 void update_imgui_guizmo();

@@ -48,6 +48,45 @@ enum  class window_mode {
     FULLSCREEN
 };
 
+enum class ColliderType {
+    None,
+    Sphere,
+    AABB,
+    OBB,
+    Capsule,
+    Mesh
+};
+
+struct Contact {
+
+    bool hit;
+
+    glm::vec3 normal;
+
+    float penetration;
+
+    glm::vec3 point;
+};
+
+struct Collider {
+
+    ColliderType type = ColliderType::AABB;
+
+	uint32_t layer = 1 << 0;        // layer of the object, used for collision filtering
+	uint32_t mask = 0xFFFFFFFF;    // with which layers it can collide
+
+    bool isTrigger = false;
+
+    // Sphere
+    float radius;
+
+    // Capsule
+    float height = 2.0f;
+
+    // AABB/OBB
+    glm::vec3 halfExtents = glm::vec3(0.5f);
+};
+
 struct Vertex {
 
     glm::vec3 position;
@@ -70,6 +109,8 @@ struct Physics {
 
     float inverseMass = 1.0f;
 
+    float restitution = 1.0f;
+    float friction = 0.5f;
     float drag = 0.1f;
 
     bool useGravity = true;
@@ -154,6 +195,8 @@ struct Settings {
     bool wireframe_active = false;
 
     bool physics_active = true;
+
+	bool collision_active = true;
 };
 
 struct camera {
@@ -239,6 +282,8 @@ struct Object {
     Physics physics;
     bool hasPhysics = false;
 
+    Collider collider;
+	bool hasCollider = false;
 };
 
 struct Light {

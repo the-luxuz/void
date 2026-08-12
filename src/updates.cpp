@@ -316,7 +316,7 @@ void PhysicsUpdate(float dt) {
 		if (p.inverseMass > 0.0f && p.useGravity) {
 
 			float mass = 1.0f / p.inverseMass;
-			p.force += glm::vec3(0.0f, -9.81f, 0.0f) * mass;
+			p.force += glm::vec3(0.0f, -100.f, 0.0f) * mass;
 		}
 
 		p.acceleration = p.force * p.inverseMass;
@@ -329,6 +329,73 @@ void PhysicsUpdate(float dt) {
 
 		p.force = glm::vec3(0.0f);
 	}
+}
+
+//--------------------------------------------------------------------------
+// Update Collisions
+
+void CollisionUpdate() {
+
+	for (size_t i = 0; i < objects.size(); i++) {
+
+		for (size_t j = i + 1; j < objects.size(); j++) {
+
+			Contact contact{};
+
+			Object& a = objects[i];
+			Object& b = objects[j];
+
+			if (&a == &b)
+				continue;
+
+			/*if (!CanCollide(a, b))
+				continue;*/
+
+			if (!a.hasCollider)
+				continue;
+
+			if (!b.hasCollider)
+				continue;
+
+			switch (a.collider.type) {
+
+			case ColliderType::Sphere:
+
+				switch (b.collider.type) {
+
+				case ColliderType::Sphere:
+					contact = Sphere_vs_Sphere(a, b);
+					break;
+
+				case ColliderType::AABB:
+					contact = Sphere_vs_AABB(a, b);
+					break;
+				}
+
+				break;
+
+			case ColliderType::AABB:
+
+				switch (b.collider.type) {
+
+				case ColliderType::AABB:
+					contact = AABB_vs_AABB(a, b);
+					break;
+
+				case ColliderType::Sphere:
+					contact = Sphere_vs_AABB(b, a);
+					break;
+				}
+
+				break;
+			}
+
+			if (contact.hit)
+				ResolveCollision(a, b, contact);
+
+		}
+	}
+	
 }
 
 //--------------------------------------------------------------------------
@@ -778,6 +845,174 @@ void update_imgui_guizmo() {
 			HandleInspectorUndo(*obj);
 		}
 
+		//------------------------------------------------------------
+
+		if (ImGui::CollapsingHeader("Physics", ImGuiTreeNodeFlags_DefaultOpen)) {
+
+			Physics& p = obj->physics;
+
+			ImGui::Checkbox("Has Physics", &obj->hasPhysics);
+			HandleInspectorUndo(*obj);
+
+			ImGui::DragFloat3("Velocity", &obj->physics.velocity.x, 0.1f);
+			HandleInspectorUndo(*obj);
+
+			ImGui::DragFloat3("Acceleration", &obj->physics.acceleration.x, 0.1f);
+			HandleInspectorUndo(*obj);
+
+			ImGui::DragFloat("Drag", &obj->physics.drag, 0.1f);
+			HandleInspectorUndo(*obj);
+
+			ImGui::DragFloat3("Force", &obj->physics.force.x, 0.1f);
+			HandleInspectorUndo(*obj);
+
+			float mass = (p.inverseMass == 0.0f) ? 0.0f : 1.0f / p.inverseMass;
+
+			if (ImGui::DragFloat("Mass", &mass, 0.1f, 0.0f, 1000.0f)) {
+
+				if (mass == 0.0f)
+					p.inverseMass = 0.0f;
+				else
+					p.inverseMass = 1.0f / mass;
+			}
+
+			HandleInspectorUndo(*obj);
+
+			ImGui::Checkbox("Use Gravity", &obj->physics.useGravity);
+			HandleInspectorUndo(*obj);
+
+			ImGui::Checkbox("Is Static", &obj->physics.isStatic);
+			HandleInspectorUndo(*obj);
+
+			if (ImGui::Button("Reset Velocities")) {
+
+				obj->physics.velocity = glm::vec3(0.0f);
+				obj->physics.acceleration = glm::vec3(0.0f);
+			}
+
+		}
+
+		//------------------------------------------------------------
+
+		static const char* colliderTypes[] = {
+			"None",
+			"Sphere",
+			"AABB",
+			"OBB",
+			"Capsule",
+			"Mesh"
+		};
+
+		if (ImGui::CollapsingHeader("Collision", ImGuiTreeNodeFlags_DefaultOpen)) {
+
+			ImGui::Checkbox("Has Collision", &obj->hasCollider);
+
+			ImGui::Separator();
+
+			int currentType = (int)obj->collider.type;
+
+			if (ImGui::Combo("Type", &currentType, colliderTypes, IM_ARRAYSIZE(colliderTypes))) {
+
+				obj->undoStack.push_back(CaptureState(*obj));
+				obj->redoStack.clear();
+
+				obj->collider.type = (ColliderType)currentType;
+			}
+
+			ImGui::Separator();
+
+			switch (obj->collider.type) {
+
+			case ColliderType::None: {
+
+					ImGui::TextDisabled("No collider.");
+					break;
+				}
+
+				case ColliderType::Sphere: {
+
+					ImGui::Text("Sphere Collider");
+
+					ImGui::Separator();
+
+					ImGui::DragFloat("Radius", &obj->collider.radius, 0.01f, 0.0f);
+
+					ImGui::Separator();
+
+					ImGui::Checkbox("Trigger", &obj->collider.isTrigger);
+					ImGui::InputScalar("Layer", ImGuiDataType_U32, &obj->collider.layer);
+					ImGui::InputScalar("Mask", ImGuiDataType_U32, &obj->collider.mask);
+
+					break;
+				}
+
+				case ColliderType::AABB: {
+
+					ImGui::Text("AABB Collider");
+
+					ImGui::Separator();
+
+					ImGui::DragFloat3("Half Extents", &obj->collider.halfExtents.x, 0.01f);
+
+					ImGui::Separator();
+
+					ImGui::Checkbox("Trigger", &obj->collider.isTrigger);
+					ImGui::InputScalar("Layer", ImGuiDataType_U32, &obj->collider.layer);
+					ImGui::InputScalar("Mask", ImGuiDataType_U32, &obj->collider.mask);
+
+					break;
+				}
+
+				case ColliderType::OBB: {
+
+					ImGui::Text("OBB Collider");
+
+					ImGui::Separator();
+
+					ImGui::DragFloat3("Half Extents", &obj->collider.halfExtents.x, 0.01f);
+
+					ImGui::Separator();
+
+					ImGui::Checkbox("Trigger", &obj->collider.isTrigger);
+					ImGui::InputScalar("Layer", ImGuiDataType_U32, &obj->collider.layer);
+					ImGui::InputScalar("Mask", ImGuiDataType_U32, &obj->collider.mask);
+
+					break;
+				}
+
+				case ColliderType::Capsule: {
+
+					ImGui::Text("Capsule Collider");
+
+					ImGui::Separator();
+
+					ImGui::DragFloat("Radius", &obj->collider.radius, 0.01f, 0.0f);
+					ImGui::DragFloat("Height", &obj->collider.height, 0.01f, 0.0f);
+
+					ImGui::Separator();
+
+					ImGui::Checkbox("Trigger", &obj->collider.isTrigger);
+					ImGui::InputScalar("Layer", ImGuiDataType_U32, &obj->collider.layer);
+					ImGui::InputScalar("Mask", ImGuiDataType_U32, &obj->collider.mask);
+
+					break;
+				}
+
+				case ColliderType::Mesh: {
+
+					ImGui::Text("Mesh Collider");
+
+					ImGui::Separator();
+
+					ImGui::Checkbox("Trigger", &obj->collider.isTrigger);
+					ImGui::InputScalar("Layer", ImGuiDataType_U32, &obj->collider.layer);
+					ImGui::InputScalar("Mask", ImGuiDataType_U32, &obj->collider.mask);
+
+					break;
+				}
+			}
+		}
+
 		if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen)) {
 
 			ImGui::DragFloat("Shininess", &obj->shininess, 1.0f, 1.0f, 256.0f);
@@ -806,53 +1041,6 @@ void update_imgui_guizmo() {
 				}
 
 				ImGui::EndDragDropTarget();
-			}
-
-			//------------------------------------------------------------
-			
-			if (ImGui::CollapsingHeader("Physics", ImGuiTreeNodeFlags_DefaultOpen)) {
-
-				Physics& p = obj->physics;
-
-				ImGui::Checkbox("Has Physics", &obj->hasPhysics);
-				HandleInspectorUndo(*obj);
-
-				ImGui::DragFloat3("Velocity", &obj->physics.velocity.x, 0.1f);
-				HandleInspectorUndo(*obj);
-
-				ImGui::DragFloat3("Acceleration", &obj->physics.acceleration.x, 0.1f);
-				HandleInspectorUndo(*obj);
-
-				ImGui::DragFloat("Drag", &obj->physics.drag, 0.1f);
-				HandleInspectorUndo(*obj);
-
-				ImGui::DragFloat3("Force", &obj->physics.force.x, 0.1f);
-				HandleInspectorUndo(*obj);
-
-				float mass = (p.inverseMass == 0.0f) ? 0.0f : 1.0f / p.inverseMass;
-
-				if (ImGui::DragFloat("Mass", &mass, 0.1f, 0.0f, 1000.0f)) {
-
-					if (mass == 0.0f)
-						p.inverseMass = 0.0f;
-					else
-						p.inverseMass = 1.0f / mass;
-				}
-
-				HandleInspectorUndo(*obj);
-
-				ImGui::Checkbox("Use Gravity", &obj->physics.useGravity);
-				HandleInspectorUndo(*obj);
-
-				ImGui::Checkbox("Is Static", &obj->physics.isStatic);
-				HandleInspectorUndo(*obj);
-
-				if (ImGui::Button("Reset Velocities")) {
-
-					obj->physics.velocity = glm::vec3(0.0f);
-					obj->physics.acceleration = glm::vec3(0.0f);
-				}
-
 			}
 
 			//------------------------------------------------------------
