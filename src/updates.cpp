@@ -316,7 +316,7 @@ void PhysicsUpdate(float dt) {
 		if (p.inverseMass > 0.0f && p.useGravity) {
 
 			float mass = 1.0f / p.inverseMass;
-			p.force += glm::vec3(0.0f, -100.f, 0.0f) * mass;
+			p.force += glm::vec3(0.0f, -150.f, 0.0f) * mass;
 		}
 
 		p.acceleration = p.force * p.inverseMass;
@@ -359,39 +359,105 @@ void CollisionUpdate() {
 
 			switch (a.collider.type) {
 
-			case ColliderType::Sphere:
+				case ColliderType::Plane:
 
-				switch (b.collider.type) {
+					switch (b.collider.type) {
 
-				case ColliderType::Sphere:
-					contact = Sphere_vs_Sphere(a, b);
-					break;
+					case ColliderType::Sphere:
+						contact = Sphere_vs_Plane(b, a);
+						contact.normal *= -1.0f;
+						break;
 
-				case ColliderType::AABB:
-					contact = Sphere_vs_AABB(a, b);
-					break;
-				}
+					case ColliderType::AABB:
+						contact = AABB_vs_Plane(b, a);
+						break;
 
-				break;
+					case ColliderType::OBB:
+						contact = OBB_vs_Plane(b, a);
+						break;
+					}
 
-			case ColliderType::AABB:
-
-				switch (b.collider.type) {
-
-				case ColliderType::AABB:
-					contact = AABB_vs_AABB(a, b);
 					break;
 
 				case ColliderType::Sphere:
-					contact = Sphere_vs_AABB(b, a);
-					break;
-				}
 
-				break;
+					switch (b.collider.type) {
+
+					case ColliderType::Plane:
+						contact = Sphere_vs_Plane(a, b);
+						break;
+
+					case ColliderType::Sphere:
+						contact = Sphere_vs_Sphere(a, b);
+						break;
+
+					case ColliderType::AABB:
+						contact = Sphere_vs_AABB(a, b);
+						break;
+
+					case ColliderType::OBB:
+						contact = Sphere_vs_OBB(a, b);
+						break;
+					}
+
+					break;
+
+				case ColliderType::AABB:
+
+					switch (b.collider.type) {
+
+					case ColliderType::Plane:
+						contact = AABB_vs_Plane(a, b);
+						break;
+
+					case ColliderType::Sphere:
+						contact = Sphere_vs_AABB(b, a);
+						break;
+
+					case ColliderType::AABB:
+						contact = AABB_vs_AABB(a, b);
+						break;
+
+					case ColliderType::OBB:
+						contact = AABB_vs_OBB(a, b);
+						break;
+					}
+
+					break;
+
+				case ColliderType::OBB:
+
+					switch (b.collider.type) {
+
+					case ColliderType::Plane:
+						contact = OBB_vs_Plane(a, b);
+						break;
+
+					case ColliderType::Sphere:
+						contact = Sphere_vs_OBB(b, a);
+						break;
+
+					case ColliderType::AABB:
+						contact = AABB_vs_OBB(b, a);
+						break;
+
+					case ColliderType::OBB:
+						contact = OBB_vs_OBB(a, b);
+						break;
+					}
+
+					break;
+
+				default:
+					break;
+
 			}
 
 			if (contact.hit)
-				ResolveCollision(a, b, contact);
+			{
+				PositionalCorrection(a, b, contact);
+				ResolveVelocity(a, b, contact);
+			}
 
 		}
 	}
@@ -863,6 +929,12 @@ void update_imgui_guizmo() {
 			ImGui::DragFloat("Drag", &obj->physics.drag, 0.1f);
 			HandleInspectorUndo(*obj);
 
+			ImGui::DragFloat("Restitution", &obj->physics.restitution, 0.1f);
+			HandleInspectorUndo(*obj);
+
+			ImGui::DragFloat("Friction", &obj->physics.friction, 0.1f);
+			HandleInspectorUndo(*obj);
+
 			ImGui::DragFloat3("Force", &obj->physics.force.x, 0.1f);
 			HandleInspectorUndo(*obj);
 
@@ -896,11 +968,10 @@ void update_imgui_guizmo() {
 
 		static const char* colliderTypes[] = {
 			"None",
+			"Plane",
 			"Sphere",
 			"AABB",
-			"OBB",
-			"Capsule",
-			"Mesh"
+			"OBB"
 		};
 
 		if (ImGui::CollapsingHeader("Collision", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -923,9 +994,22 @@ void update_imgui_guizmo() {
 
 			switch (obj->collider.type) {
 
-			case ColliderType::None: {
+				case ColliderType::None: {
 
 					ImGui::TextDisabled("No collider.");
+					break;
+				}
+
+				case ColliderType::Plane: {
+
+					ImGui::Text("Plane Collider");
+
+					ImGui::Separator();
+
+					ImGui::Checkbox("Trigger", &obj->collider.isTrigger);
+					ImGui::InputScalar("Layer", ImGuiDataType_U32, &obj->collider.layer);
+					ImGui::InputScalar("Mask", ImGuiDataType_U32, &obj->collider.mask);
+
 					break;
 				}
 
@@ -970,37 +1054,6 @@ void update_imgui_guizmo() {
 					ImGui::Separator();
 
 					ImGui::DragFloat3("Half Extents", &obj->collider.halfExtents.x, 0.01f);
-
-					ImGui::Separator();
-
-					ImGui::Checkbox("Trigger", &obj->collider.isTrigger);
-					ImGui::InputScalar("Layer", ImGuiDataType_U32, &obj->collider.layer);
-					ImGui::InputScalar("Mask", ImGuiDataType_U32, &obj->collider.mask);
-
-					break;
-				}
-
-				case ColliderType::Capsule: {
-
-					ImGui::Text("Capsule Collider");
-
-					ImGui::Separator();
-
-					ImGui::DragFloat("Radius", &obj->collider.radius, 0.01f, 0.0f);
-					ImGui::DragFloat("Height", &obj->collider.height, 0.01f, 0.0f);
-
-					ImGui::Separator();
-
-					ImGui::Checkbox("Trigger", &obj->collider.isTrigger);
-					ImGui::InputScalar("Layer", ImGuiDataType_U32, &obj->collider.layer);
-					ImGui::InputScalar("Mask", ImGuiDataType_U32, &obj->collider.mask);
-
-					break;
-				}
-
-				case ColliderType::Mesh: {
-
-					ImGui::Text("Mesh Collider");
 
 					ImGui::Separator();
 

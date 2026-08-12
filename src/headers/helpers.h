@@ -290,10 +290,18 @@ void AddForce(Object& obj, const glm::vec3& force);
 bool CanCollide(const Object& a, const Object& b);
 
 Contact Sphere_vs_Sphere(const Object& a, const Object& b);
+Contact Sphere_vs_Plane(const Object& a, const Object& b);
 Contact Sphere_vs_AABB(const Object& a, const Object& b);
+Contact Sphere_vs_OBB(const Object& a, const Object& b);
 Contact AABB_vs_AABB(const Object& a, const Object& b);
+Contact AABB_vs_Plane(const Object& a, const Object& b);
+Contact AABB_vs_OBB(const Object& a, const Object& b);
+Contact OBB_vs_OBB(const Object& a, const Object& b);
+Contact OBB_vs_Plane(const Object& a, const Object& b);
 
-void ResolveCollision(Object& a, Object& b, const Contact& contact);
+void PositionalCorrection(Object& a, Object& b, Contact& c);
+
+void ResolveVelocity(Object& a, Object& b, Contact& contact);
 
 float GetWorldRadius(const Object& obj);
 

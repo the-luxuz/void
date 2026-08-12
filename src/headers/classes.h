@@ -50,11 +50,10 @@ enum  class window_mode {
 
 enum class ColliderType {
     None,
+    Plane,
     Sphere,
     AABB,
-    OBB,
-    Capsule,
-    Mesh
+    OBB
 };
 
 struct Contact {

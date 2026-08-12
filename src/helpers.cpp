@@ -2158,8 +2158,7 @@ void AddForce(Object& obj, const glm::vec3& force) {
 
 bool CanCollide(const Object& a, const Object& b) {
 
-	return (a.collider.mask & b.collider.layer) &&
-		(b.collider.mask & a.collider.layer);
+	return (a.collider.mask & b.collider.layer) && (b.collider.mask & a.collider.layer);
 }
 
 Contact Sphere_vs_Sphere(const Object& a, const Object& b) {
@@ -2197,10 +2196,76 @@ Contact Sphere_vs_Sphere(const Object& a, const Object& b) {
 
 	return contact;
 }
+
+Contact Sphere_vs_Plane(const Object& sphere, const Object& plane) {
+
+	Contact contact{};
+
+	glm::quat invRotation = glm::inverse(plane.rotation);
+
+	glm::vec3 localCenter = invRotation * (sphere.position - plane.position);
+
+	float radius = GetWorldRadius(sphere);
+
+	float halfWidth = std::abs(plane.scale.x);
+	float halfDepth = std::abs(plane.scale.z);
+
+	float distance = localCenter.y;
+
+	if (std::abs(distance) > radius)
+		return contact;
+
+	// this clamps is to check if local center is into de xz bounds of the plane
+	float closestX = glm::clamp(localCenter.x, -halfWidth, halfWidth);
+
+	float closestZ = glm::clamp(localCenter.z, -halfDepth, halfDepth);
+
+	// calc the distance between sphere center and closest point to the plane
+	glm::vec3 closestPointLocal(closestX, 0.0f, closestZ);
+
+	glm::vec3 deltaLocal = localCenter - closestPointLocal;
+
+	float distance2 = glm::dot(deltaLocal, deltaLocal);
+
+	if (distance2 > radius * radius)
+		return contact;
+
+	float distanceToSurface = std::sqrt(distance2);
+
+	glm::vec3 normalLocal;
+
+	if (distanceToSurface > 1e-6f) {
+
+		normalLocal = deltaLocal / distanceToSurface;
+
+	} else
+		normalLocal = glm::vec3(0, 1, 0);
+
+	glm::vec3 worldNormal = plane.rotation * normalLocal;
+
+	worldNormal = glm::normalize(worldNormal);
+
+	contact.hit = true;
+
+	contact.normal = (distance >= 0.0f) ? -worldNormal : worldNormal;
+
+	contact.penetration =
+		radius - distanceToSurface;
+
+	contact.point =
+		sphere.position + contact.normal * radius;
+
+	return contact;
+}
+
 Contact Sphere_vs_AABB(const Object& a, const Object& b) {
 
 	return Contact{};
+}
 
+Contact Sphere_vs_OBB(const Object& a, const Object& b) {
+
+	return Contact{};
 }
 
 Contact AABB_vs_AABB(const Object& a, const Object& b) {
@@ -2208,7 +2273,27 @@ Contact AABB_vs_AABB(const Object& a, const Object& b) {
 	return Contact{};
 }
 
-void ResolveCollision(Object& a, Object& b, const Contact& c) {
+Contact AABB_vs_Plane(const Object& a, const Object& b) {
+
+	return Contact{};
+}
+
+Contact AABB_vs_OBB(const Object& a, const Object& b) {
+
+	return Contact{};
+}
+
+Contact OBB_vs_OBB(const Object& a, const Object& b) {
+
+	return Contact{};
+}
+
+Contact OBB_vs_Plane(const Object& a, const Object& b) {
+
+	return Contact{};
+}
+
+void PositionalCorrection(Object& a, Object& b, Contact& c) {
 
 	Physics& pa = a.physics;
 	Physics& pb = b.physics;
@@ -2234,6 +2319,23 @@ void ResolveCollision(Object& a, Object& b, const Contact& c) {
 
 	if (!pb.isStatic)
 		b.position += correction * invMassB;
+}
+
+void ResolveVelocity(Object& a, Object& b, Contact& c) {
+
+	Physics& pa = a.physics;
+	Physics& pb = b.physics;
+
+	if (pa.isStatic && pb.isStatic)
+		return;
+
+	float invMassA = pa.inverseMass;
+	float invMassB = pb.inverseMass;
+
+	float totalInvMass = invMassA + invMassB;
+
+	if (totalInvMass == 0.0f)
+		return;
 
 	glm::vec3 relativeVelocity = pb.velocity - pa.velocity;
 

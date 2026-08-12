@@ -157,8 +157,7 @@ void update(SDL_Window* window, float dt) {
 		// col
 
 		if (st.collision_active)
-			for (int i = 0; i < 8; i++)
-				CollisionUpdate();
+			CollisionUpdate();
 
 		//----------------------------------------------------
 		// skybox
