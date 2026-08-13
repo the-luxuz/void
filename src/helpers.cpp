@@ -2273,7 +2273,7 @@ Contact Sphere_vs_AABB(const Object& sphere, const Object& box) {
 
 	glm::vec3 closest = glm::clamp(sphere.position, min, max);
 
-	glm::vec3 delta = sphere.position - closest;
+	glm::vec3 delta = closest - sphere.position;
 
 	float dist2 = glm::dot(delta, delta);
 

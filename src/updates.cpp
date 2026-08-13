@@ -340,7 +340,12 @@ void PhysicsUpdate(float dt) {
 
 		p.velocity += p.acceleration * dt;
 
-		p.velocity *= (1.0f - p.drag * dt);
+		p.velocity += p.acceleration * dt;
+
+		float damping = 1.0f - p.drag * dt;
+
+		p.velocity.x *= damping;
+		p.velocity.z *= damping;
 
 		obj.position += p.velocity * dt;
 
@@ -392,6 +397,7 @@ void CollisionUpdate() {
 
 					case ColliderType::OBB:
 						contact = OBB_vs_Plane(b, a);
+						contact.normal *= -1.0f;
 						break;
 					}
 
@@ -430,6 +436,7 @@ void CollisionUpdate() {
 
 					case ColliderType::Sphere:
 						contact = Sphere_vs_AABB(b, a);
+						contact.normal *= -1.0f;
 						break;
 
 					case ColliderType::AABB:
@@ -453,10 +460,12 @@ void CollisionUpdate() {
 
 					case ColliderType::Sphere:
 						contact = Sphere_vs_OBB(b, a);
+						contact.normal *= -1.0f;
 						break;
 
 					case ColliderType::AABB:
 						contact = AABB_vs_OBB(b, a);
+						contact.normal *= -1.0f;
 						break;
 
 					case ColliderType::OBB:
