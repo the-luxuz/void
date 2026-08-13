@@ -35,7 +35,12 @@ void update(SDL_Window* window, float dt) {
 	if (st.light_active)
 		update_depthmap();
 
-	cameraPos = get_cam_pos();
+	Object* player = search_obj_by_name("Player");
+
+	if (currentViewMode == view_Mode::PLAY && player)
+		cameraPos = cam.cam_position;
+	else
+		cameraPos = get_cam_pos();
 
 	view = glm::lookAt(
 		cameraPos,
@@ -124,8 +129,6 @@ void update(SDL_Window* window, float dt) {
 		io.ConfigFlags &= ~ImGuiConfigFlags_ViewportsEnable;
 
 		const bool* keyboard = SDL_GetKeyboardState(nullptr);
-
-		Object* player = search_obj_by_name("Player");
 
 		if (currentViewMode == view_Mode::PLAY && player)
 			if (!io.WantCaptureKeyboard)
@@ -303,7 +306,7 @@ int main(int argc, char* args[]) {
 
 					if (event.key.scancode == SDL_SCANCODE_F) {
 						face_normal = !face_normal;
-						Rebuild();
+						//Rebuild();
 					}
 				
 					if (event.key.scancode == SDL_SCANCODE_BACKSPACE) {
@@ -635,7 +638,7 @@ int main(int argc, char* args[]) {
 
 					cam.beta = glm::clamp(cam.beta, glm::radians(-89.0f), glm::radians(89.0f));
 				}
-				else {
+				else if(!SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_LCTRL]){
 					SDL_ShowCursor();
 					SDL_SetWindowRelativeMouseMode(window, false);
 				}

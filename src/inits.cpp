@@ -426,14 +426,14 @@ bool open_init(const char* settings, const char* scene, Settings& st) {
 
 void init_(const char* settings, const char* scene) {
 
-	st.win_name = "void";
-	st.win_mode = window_mode::WINDOWED;
-	st.w = 1280;
-	st.h = 720;
-	st.VSync = 0;
-	st.fov = 95;
-	
-	par.save(settings, scene, st, cam, objects, lightObjects, lights);
+	//st.win_name = "void";
+	//st.win_mode = window_mode::WINDOWED;
+	//st.w = 1280;
+	//st.h = 720;
+	//st.VSync = 0;
+	//st.fov = 95;
+	//
+	//par.save(settings, scene, st, cam, objects, lightObjects, lights);
 
 	if (par.load(settings, scene,  st, cam, objects, lightObjects)) {
 

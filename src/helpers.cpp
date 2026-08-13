@@ -1355,9 +1355,6 @@ void GenSkybox() {
 
 glm::vec3 get_cam_pos() {
 
-	if (currentViewMode == view_Mode::PLAY)
-		return cam.cam_position;
-
 	glm::vec3 pos;
 
 	pos.x = cam.radius * sin(cam.beta) * cos(cam.alpha);
@@ -2265,9 +2262,44 @@ Contact Sphere_vs_Plane(const Object& sphere, const Object& plane) {
 	return contact;
 }
 
-Contact Sphere_vs_AABB(const Object& a, const Object& b) {
+Contact Sphere_vs_AABB(const Object& sphere, const Object& box) {
 
-	return Contact{};
+	Contact contact{};
+
+	glm::vec3 half = glm::abs(box.scale);
+
+	glm::vec3 min = box.position - half;
+	glm::vec3 max = box.position + half;
+
+	glm::vec3 closest = glm::clamp(sphere.position, min, max);
+
+	glm::vec3 delta = sphere.position - closest;
+
+	float dist2 = glm::dot(delta, delta);
+
+	float radius = GetWorldRadius(sphere);
+
+	if (dist2 > radius * radius)
+		return contact;
+
+	contact.hit = true;
+
+	float dist = sqrt(dist2);
+
+	if (dist > 1e-6f) {
+
+		contact.normal = glm::normalize(delta);
+		contact.penetration = radius - dist;
+		contact.point = closest;
+
+	} else {
+
+		contact.normal = glm::vec3(1, 0, 0);
+		contact.penetration = radius;
+		contact.point = sphere.position;
+	}
+
+	return contact;
 }
 
 Contact Sphere_vs_OBB(const Object& a, const Object& b) {
@@ -2277,12 +2309,97 @@ Contact Sphere_vs_OBB(const Object& a, const Object& b) {
 
 Contact AABB_vs_AABB(const Object& a, const Object& b) {
 
-	return Contact{};
+	Contact contact{};
+
+	glm::vec3 halfA = glm::abs(a.scale);
+	glm::vec3 halfB = glm::abs(b.scale);
+
+	glm::vec3 delta = b.position - a.position;
+
+	float overlapX = halfA.x + halfB.x - std::abs(delta.x);
+	if (overlapX <= 0.0f)
+		return contact;
+
+	float overlapY = halfA.y + halfB.y - std::abs(delta.y);
+	if (overlapY <= 0.0f)
+		return contact;
+
+	float overlapZ = halfA.z + halfB.z - std::abs(delta.z);
+	if (overlapZ <= 0.0f)
+		return contact;
+
+	contact.hit = true;
+
+	if (overlapX < overlapY && overlapX < overlapZ) {
+
+		contact.penetration = overlapX;
+		contact.normal = glm::vec3(delta.x > 0 ? 1.f : -1.f, 0, 0);
+
+	} else if (overlapY < overlapZ) {
+
+		contact.penetration = overlapY;
+		contact.normal = glm::vec3(0, delta.y > 0 ? 1.f : -1.f, 0);
+
+	} else {
+
+		contact.penetration = overlapZ;
+		contact.normal = glm::vec3(0, 0, delta.z > 0 ? 1.f : -1.f);
+	}
+
+	contact.point = (a.position + b.position) * 0.5f;
+
+	return contact;
 }
 
-Contact AABB_vs_Plane(const Object& a, const Object& b) {
+Contact AABB_vs_Plane(const Object& box, const Object& plane) {
 
-	return Contact{};
+	Contact contact{};
+
+	glm::quat invRotation = glm::inverse(plane.rotation);
+
+	glm::vec3 localCenter = invRotation * (box.position - plane.position);
+
+	glm::vec3 half = glm::abs(box.scale);
+
+	float halfWidth = std::abs(plane.scale.x);
+	float halfDepth = std::abs(plane.scale.z);
+
+	glm::vec3 closestPointLocal = localCenter;
+
+	closestPointLocal.x = glm::clamp(localCenter.x, -halfWidth, halfWidth);
+	closestPointLocal.z = glm::clamp(localCenter.z, -halfDepth, halfDepth);
+
+	if (std::abs(localCenter.x) > halfWidth + half.x)
+		return contact;
+
+	if (std::abs(localCenter.z) > halfDepth + half.z)
+		return contact;
+
+	float distance = localCenter.y;
+
+	float minY = localCenter.y - half.y;
+	float maxY = localCenter.y + half.y;
+
+	if (minY > 0.0f || maxY < 0.0f)
+		return contact;
+
+	glm::vec3 normalLocal = (distance >= 0.0f) ? glm::vec3(0, -1, 0) : glm::vec3(0, 1, 0);
+
+	glm::vec3 worldNormal = glm::normalize(plane.rotation * normalLocal);
+
+	contact.hit = true;
+	contact.normal = worldNormal;
+	
+	if (localCenter.y >= 0.0f)
+		contact.penetration = half.y - localCenter.y;
+	else
+		contact.penetration = half.y + localCenter.y;
+
+	glm::vec3 worldPoint = plane.position + plane.rotation * closestPointLocal;
+
+	contact.point = worldPoint;
+
+	return contact;
 }
 
 Contact AABB_vs_OBB(const Object& a, const Object& b) {

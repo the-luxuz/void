@@ -387,6 +387,7 @@ void CollisionUpdate() {
 
 					case ColliderType::AABB:
 						contact = AABB_vs_Plane(b, a);
+						contact.normal *= -1.0f;
 						break;
 
 					case ColliderType::OBB:
@@ -470,8 +471,8 @@ void CollisionUpdate() {
 
 			}
 
-			if (contact.hit)
-			{
+			if (contact.hit) {
+
 				PositionalCorrection(a, b, contact);
 				ResolveVelocity(a, b, contact);
 			}
