@@ -110,15 +110,7 @@ bool dont_reload_cam = false;
 
 bool face_normal = false;
 
-bool normals_appear = false;
-bool tangent_appear = false;
-bool bitangent_appear = false;
-
-bool normal_apper = false;
-bool tangent_apper = false;
-bool bitangent_apper = false;
-
-bool tex_appear = true;
+bool normals_appear;
 
 bool shadow_map_render = true;
 
@@ -126,6 +118,10 @@ bool quit = false;
 
 // render modes
 int render_modes = 0;
+
+view_Mode currentViewMode = view_Mode::EDITOR;
+
+view_Mode prevViewMode = currentViewMode;
 
 // tools
 Tools currentTool = Tools::TRANSLATE;
@@ -1359,6 +1355,9 @@ void GenSkybox() {
 
 glm::vec3 get_cam_pos() {
 
+	if (currentViewMode == view_Mode::PLAY)
+		return cam.cam_position;
+
 	glm::vec3 pos;
 
 	pos.x = cam.radius * sin(cam.beta) * cos(cam.alpha);
@@ -1367,7 +1366,6 @@ glm::vec3 get_cam_pos() {
 
 	return cam.cam_target + pos;
 }
-
 
 Object* GetSelectedObject() {
 
@@ -1544,32 +1542,39 @@ void select_object(glm::vec3& rayOrigin, glm::vec3& rayDir) {
 
 void controls(const bool* keyboard, float angle_step, float radius_step, float dt) {
 
-	glm::vec3 cameraPos = get_cam_pos();
+	if (currentViewMode == view_Mode::EDITOR) {
 
-	glm::vec3 forward = glm::normalize(cam.cam_target - cameraPos);
-	forward.y = 0.0f;
-	forward = glm::normalize(forward);
+		glm::vec3 cameraPos = get_cam_pos();
 
-	glm::vec3 right = glm::normalize(glm::cross(forward, glm::vec3(0, 1, 0)));
+		glm::vec3 forward = glm::normalize(cam.cam_target - cameraPos);
 
-	float speed = moveSpeed * (cam.radius * 0.09f);
+		forward.y = 0.0f;
 
-	if (keyboard[SDL_SCANCODE_W])
-		cam.cam_target += forward * speed * dt;
+		if (glm::length2(forward) > 0.0001f)
+			forward = glm::normalize(forward);
 
-	if (keyboard[SDL_SCANCODE_S])
-		cam.cam_target -= forward * speed * dt;
+		glm::vec3 right = glm::normalize(glm::cross(forward, glm::vec3(0, 1, 0)));
 
-	if (keyboard[SDL_SCANCODE_A])
-		cam.cam_target -= right * speed * dt;
+		float speed = moveSpeed * (cam.radius * 0.09f);
 
-	if (keyboard[SDL_SCANCODE_D])
-		cam.cam_target += right * speed * dt;
+		if (keyboard[SDL_SCANCODE_W])
+			cam.cam_target += forward * speed * dt;
 
-	cam.beta = glm::clamp(cam.beta, 0.01f, glm::pi<float>() - 0.01f);
+		if (keyboard[SDL_SCANCODE_S])
+			cam.cam_target -= forward * speed * dt;
 
-	cam.radius = std::max(cam.radius, 0.5f);
+		if (keyboard[SDL_SCANCODE_A])
+			cam.cam_target -= right * speed * dt;
 
+		if (keyboard[SDL_SCANCODE_D])
+			cam.cam_target += right * speed * dt;
+
+		cam.beta = glm::clamp(cam.beta, 0.01f, glm::pi<float>() - 0.01f);
+
+		cam.radius = std::max(cam.radius, 0.5f);
+
+		return;
+	}
 }
 
 //--------------------------------------------------------------------------
@@ -2104,6 +2109,8 @@ void ReplaceMesh(Object& obj, const std::string& path) {
 	mesh.collider = obj.collider;
 	mesh.hasCollider = obj.hasCollider;
 
+	mesh.visible = obj.visible;
+
 	mesh.name = obj.name;
 	mesh.mesh = path;
 
@@ -2366,6 +2373,8 @@ float GetWorldRadius(const Object& obj) {
 
 //--------------------------------------------------------------------------
 
+camera c;
+
 void save_scene_state() {
 
 	for (auto& obj : saved_objects)
@@ -2421,6 +2430,8 @@ void save_scene_state() {
 	}
 
 	saved_lights = lights;
+
+	c = cam;
 }
 
 void load_scene_state() {
@@ -2440,4 +2451,74 @@ void load_scene_state() {
 
 	for (auto& obj : lightObjects)
 		buffer(obj);
+
+	cam = c;
+}
+
+Object* search_obj_by_name(const char* name) {
+
+	for (auto& obj : objects) {
+		
+		if (obj.name == name) {
+		
+			return &obj;
+		}
+	}
+
+	return nullptr;
+}
+
+void PlayerControl(const bool* keyboard, float dt, Object& player) {
+
+	// PLAY
+	// ---------------------------------------------------------
+
+	glm::vec3 forward(cos(cam.alpha), 0.0f, sin(cam.alpha));
+
+	forward = glm::normalize(forward);
+
+	glm::vec3 right = glm::normalize(glm::cross(forward, glm::vec3(0, 1, 0)));
+
+	glm::vec3 moveDirection(0.0f);
+
+	if (keyboard[SDL_SCANCODE_W])
+		moveDirection += forward;
+
+	if (keyboard[SDL_SCANCODE_S])
+		moveDirection -= forward;
+
+	if (keyboard[SDL_SCANCODE_A])
+		moveDirection -= right;
+
+	if (keyboard[SDL_SCANCODE_D])
+		moveDirection += right;
+
+	if (glm::length2(moveDirection) > 0.0001f)
+		moveDirection = glm::normalize(moveDirection);
+
+	float moveForce = 100.0f;
+
+	player.physics.force += moveDirection * moveForce;
+}
+
+void UpdatePlayerCamera(Object& player) {
+
+	// camera
+	// ---------------------------------------------------------
+
+	const float eyeHeight = 1.7f;
+
+	cam.cam_position = player.position + glm::vec3(0.0f, eyeHeight, 0.0f);
+
+	glm::vec3 lookDir;
+
+	lookDir.x = cos(cam.alpha) * cos(cam.beta);
+	lookDir.y = sin(cam.beta);
+	lookDir.z = sin(cam.alpha) * cos(cam.beta);
+
+	lookDir = glm::normalize(lookDir);
+
+	cam.cam_target = cam.cam_position + lookDir;
+
+	cam.cam_up = glm::vec3(0, 1, 0);
 }

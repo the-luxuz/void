@@ -27,10 +27,8 @@ uniform Light lights[MAX_LIGHTS];
 
 uniform sampler2D tex;
 
-uniform bool tex_appear;
-uniform bool normal_apper;
-uniform bool tangent_apper;
-uniform bool bitangent_apper;
+uniform bool useTexture;
+uniform vec3 color;
 
 uniform sampler2D normalMap;
 uniform sampler2D depthData[MAX_LIGHTS];
@@ -147,10 +145,16 @@ void main() {
 
     vec3 baseColor;
 
-    if(tex_appear)
+    if(useTexture)
         baseColor = texture(tex, uv).rgb;
     else
-        baseColor = vec3(uv, 0.0);
+        baseColor = color;
+
+    if(!useTexture){
+    
+        outputColor = vec4(baseColor, 1.0);
+        return;
+    }
 
     vec3 T = normalize(tangent);
     vec3 N = normalize(normal);
@@ -225,14 +229,5 @@ void main() {
             result += ShadeSpotLight(lights[i], finalNormal, V, baseColor);
     }
 
-    if (tex_appear)
-        outputColor = vec4(result, 1.0);
-    else if (normal_apper)
-        outputColor = vec4(normalize(normal), 1.0);
-    else if (tangent_apper)
-        outputColor = vec4(normalize(tangent), 1.0);
-    else if (bitangent_apper)
-        outputColor = vec4(normalize(bitangent), 1.0);
-    else
-        outputColor = vec4(result, 1.0);
+    outputColor = vec4(result, 1.0);
 }

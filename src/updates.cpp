@@ -168,11 +168,6 @@ void update_objects() {
 	glUniform1i(shader_uniform.numLights, numLights);
 	glUniform3fv(shader_uniform.cameraPos, 1, glm::value_ptr(cameraPos));
 
-	glUniform1i(shader_uniform.tex_appear, tex_appear);
-	glUniform1i(shader_uniform.normal_apper, normal_apper);
-	glUniform1i(shader_uniform.tangent_apper, tangent_apper);
-	glUniform1i(shader_uniform.bitangent_apper, bitangent_apper);
-
 	glUniform1i(shader_uniform.light_active, st.light_active);
 	glUniform1i(shader_uniform.normal_map_active, st.normal_map_active);
 	glUniform1i(shader_uniform.shadow_active, st.shadow_active);
@@ -184,6 +179,34 @@ void update_objects() {
 
 	for (Object& obj : objects) {
 
+		if (currentViewMode == view_Mode::PLAY && !obj.visible)
+			continue;
+
+		glActiveTexture(GL_TEXTURE0);
+
+		if (!obj.visible) {
+
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+			glBindTexture(GL_TEXTURE_2D, 0);
+			currentTexture = 0;
+
+			glUniform3f(shader_uniform.color, 0.2f, 0.8f, 1.0f);
+			glUniform1i(shader_uniform.useTexture, false);
+
+		} else {
+
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+			glUniform1i(shader_uniform.useTexture, true);
+
+			if (currentTexture != obj.obj_texture) {
+
+				glBindTexture(GL_TEXTURE_2D, obj.obj_texture);
+				currentTexture = obj.obj_texture;
+			}
+		}
+
 		glUniform1f(shader_uniform.shininess, obj.shininess);
 
 		glm::mat4 model = GetModelMatrix(obj);
@@ -193,14 +216,6 @@ void update_objects() {
 
 		glUniformMatrix4fv(3, 1, GL_FALSE, glm::value_ptr(obj.mvp));
 		glUniformMatrix4fv(4, 1, GL_FALSE, glm::value_ptr(obj.model));
-
-		glActiveTexture(GL_TEXTURE0);
-
-		if (currentTexture != obj.obj_texture) {
-			
-			glBindTexture(GL_TEXTURE_2D, obj.obj_texture);
-			currentTexture = obj.obj_texture;
-		}
 
 		if (st.normal_map_active) {
 
@@ -219,6 +234,8 @@ void update_objects() {
 			nullptr
 		);
 	}
+
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	//-----------------------------------------------------------------------------------------------
 	// draw the lights and the normals, tangents and bitangents
@@ -908,6 +925,9 @@ void update_imgui_guizmo() {
 			HandleInspectorUndo(*obj);
 
 			ImGui::DragFloat3("Scale", &obj->scale.x, 0.1f);
+			HandleInspectorUndo(*obj);
+
+			ImGui::Checkbox("Visible", &obj->visible);
 			HandleInspectorUndo(*obj);
 		}
 

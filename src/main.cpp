@@ -30,15 +30,6 @@ SDL_Event event;
 constexpr float angle_speed = glm::radians(90.0f);
 float radius_speed = 20.0f;
 
-enum class view_Mode {
-	EDITOR,
-	PLAY
-};
-
-view_Mode currentViewMode = view_Mode::EDITOR;
-
-view_Mode prevViewMode = currentViewMode;
-
 void update(SDL_Window* window, float dt) {
 
 	if (st.light_active)
@@ -132,10 +123,13 @@ void update(SDL_Window* window, float dt) {
 
 		io.ConfigFlags &= ~ImGuiConfigFlags_ViewportsEnable;
 
-		//----------------------------------------------------
-		// obj
+		const bool* keyboard = SDL_GetKeyboardState(nullptr);
 
-		update_objects();
+		Object* player = search_obj_by_name("Player");
+
+		if (currentViewMode == view_Mode::PLAY && player)
+			if (!io.WantCaptureKeyboard)
+				PlayerControl(keyboard, dt, *player);
 
 		//----------------------------------------------------
 		// physics
@@ -158,6 +152,14 @@ void update(SDL_Window* window, float dt) {
 
 		if (st.collision_active)
 			CollisionUpdate();
+
+		if (currentViewMode == view_Mode::PLAY && player)
+			UpdatePlayerCamera(*player);
+
+		//----------------------------------------------------
+		// obj
+
+		update_objects();
 
 		//----------------------------------------------------
 		// skybox
@@ -286,47 +288,6 @@ int main(int argc, char* args[]) {
 					quit = true;
 
 				if (currentViewMode == view_Mode::EDITOR && !io.WantCaptureKeyboard) {
-
-					if (event.key.scancode == SDL_SCANCODE_M) {
-
-						render_modes++;
-
-						if (render_modes > 3)
-							render_modes = 0;
-
-						switch (render_modes) {
-
-						case 0:
-							tex_appear = true;
-							normal_apper = false;
-							tangent_apper = false;
-							bitangent_apper = false;
-							break;
-
-						case 1:
-							normal_apper = true;
-							tex_appear = false;
-							tangent_apper = false;
-							bitangent_apper = false;
-							break;
-
-						case 2:
-							tangent_apper = true;
-							tex_appear = false;
-							normal_apper = false;
-							bitangent_apper = false;
-							break;
-
-						case 3:
-							bitangent_apper = true;
-							tex_appear = false;
-							normal_apper = false;
-							tangent_apper = false;
-							break;
-						}
-
-
-					}
 
 					if (event.key.scancode == SDL_SCANCODE_Y) {
 
@@ -664,7 +625,22 @@ int main(int argc, char* args[]) {
 
 			case SDL_EVENT_MOUSE_MOTION:
 
-				if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_LCTRL]) {
+				if (currentViewMode == view_Mode::PLAY) {
+
+					SDL_HideCursor();
+					SDL_SetWindowRelativeMouseMode(window, true);
+
+					cam.alpha -= -(event.motion.xrel * mouseSensitivity);
+					cam.beta -= event.motion.yrel * mouseSensitivity;
+
+					cam.beta = glm::clamp(cam.beta, glm::radians(-89.0f), glm::radians(89.0f));
+				}
+				else {
+					SDL_ShowCursor();
+					SDL_SetWindowRelativeMouseMode(window, false);
+				}
+
+				if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_LCTRL] && currentViewMode == view_Mode::EDITOR) {
 
 					SDL_HideCursor();
 					SDL_SetWindowRelativeMouseMode(window, true);
@@ -672,12 +648,7 @@ int main(int argc, char* args[]) {
 					cam.alpha -= -(event.motion.xrel * mouseSensitivity); 
 					cam.beta -= event.motion.yrel * mouseSensitivity;
 
-					cam.beta = glm::clamp(cam.beta, 0.05f,
-						glm::pi<float>() - 0.05f);
-				}
-				else {
-					SDL_ShowCursor();
-					SDL_SetWindowRelativeMouseMode(window, false);
+					cam.beta = glm::clamp(cam.beta, 0.05f, glm::pi<float>() - 0.05f);
 				}
 
 				break;

@@ -110,14 +110,6 @@ extern bool dont_reload_cam;
 extern bool face_normal;
 
 extern bool normals_appear;
-extern bool tangent_appear;
-extern bool bitangent_appear;
-
-extern bool normal_apper;
-extern bool tangent_apper;
-extern bool bitangent_apper;
-
-extern bool tex_appear;
 
 extern bool shadow_map_render;
 
@@ -132,6 +124,15 @@ enum class Tools {
 	ROTATE,
 	SCALE
 };
+
+enum class view_Mode {
+	EDITOR,
+	PLAY
+};
+
+extern view_Mode currentViewMode;
+
+extern view_Mode prevViewMode;
 
 extern Tools currentTool;
 
@@ -310,3 +311,9 @@ float GetWorldRadius(const Object& obj);
 void save_scene_state();
 
 void load_scene_state();
+
+Object* search_obj_by_name(const char* name);
+
+void PlayerControl(const bool* keyboard, float dt, Object& player);
+
+void UpdatePlayerCamera(Object& player);

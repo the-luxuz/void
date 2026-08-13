@@ -22,16 +22,14 @@ void init_uniforms() {
 
 	shader_uniform.program_texture = glGetUniformLocation(program, "tex");
 
+	shader_uniform.color = glGetUniformLocation(program, "color");
+	shader_uniform.useTexture = glGetUniformLocation(program, "useTexture");
+
 	shader_uniform.lightVP = glGetUniformLocation(program, "lightVP");
 
 	shader_uniform.normalMap = glGetUniformLocation(program, "normalMap");
 
 	shader_uniform.numLights = glGetUniformLocation(program, "numLights");
-
-	shader_uniform.tex_appear = glGetUniformLocation(program, "tex_appear");
-	shader_uniform.normal_apper = glGetUniformLocation(program, "normal_apper");
-	shader_uniform.tangent_apper = glGetUniformLocation(program, "tangent_apper");
-	shader_uniform.bitangent_apper = glGetUniformLocation(program, "bitangent_apper");
 
 	shader_uniform.light_active = glGetUniformLocation(program, "light_active");
 	shader_uniform.normal_map_active = glGetUniformLocation(program, "normal_map_active");
@@ -289,6 +287,8 @@ void init() {
 		obj.collider = p.collider;
 		obj.hasCollider = p.hasCollider;
 
+		obj.visible = p.visible;
+
 		obj.model = GetModelMatrix(obj);
 
 		UpdateMapping(obj);
@@ -426,14 +426,14 @@ bool open_init(const char* settings, const char* scene, Settings& st) {
 
 void init_(const char* settings, const char* scene) {
 
-	//st.win_name = "void";
-	//st.win_mode = window_mode::WINDOWED;
-	//st.w = 1280;
-	//st.h = 720;
-	//st.VSync = 0;
-	//st.fov = 120;
-	//
-	//par.save(settings, scene, st, cam, objects, lightObjects, lights);
+	st.win_name = "void";
+	st.win_mode = window_mode::WINDOWED;
+	st.w = 1280;
+	st.h = 720;
+	st.VSync = 0;
+	st.fov = 95;
+	
+	par.save(settings, scene, st, cam, objects, lightObjects, lights);
 
 	if (par.load(settings, scene,  st, cam, objects, lightObjects)) {
 

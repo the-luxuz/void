@@ -80,6 +80,8 @@ struct Parser {
 
 		Collider collider;
 		bool hasCollider = false;
+
+		bool visible = true;
 	};
 
 	std::vector<Transform> objects;

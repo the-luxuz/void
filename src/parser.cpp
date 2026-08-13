@@ -149,6 +149,8 @@ void Parser::save_scene(std::ofstream& out, const std::vector<Object>& scene, co
         Write(out, obj.collider);
         Write(out, obj.hasCollider);
 
+        Write(out, obj.visible);
+
     }
 
     for (int i = 0; i < lightObjCount; ++i) {
@@ -172,11 +174,22 @@ void Parser::save_scene(std::ofstream& out, const std::vector<Object>& scene, co
         Write(out, scene_lgh_obj[i].min);
         Write(out, scene_lgh_obj[i].max);
 
+        Write(out, scene_lgh_obj[i].model);
+        Write(out, scene_lgh_obj[i].mvp);
+
         Write(out, scene_lgh_obj[i].shininess);
 
         Write(out, scene_lgh_obj[i].mapping);
         Write(out, scene_lgh_obj[i].coordType);
         Write(out, scene_lgh_obj[i].cyaxisType);
+
+        Write(out, scene_lgh_obj[i].physics);
+        Write(out, scene_lgh_obj[i].hasPhysics);
+
+        Write(out, scene_lgh_obj[i].collider);
+        Write(out, scene_lgh_obj[i].hasCollider);
+
+        Write(out, scene_lgh_obj[i].visible);
     }
 
     for (int i = 0; i < lightCount; ++i) {
@@ -261,6 +274,8 @@ bool Parser::load_scene(std::ifstream& in, std::vector<Object>& scene_lgh_obj) {
 
         Read(in, obj.collider);
         Read(in, obj.hasCollider);
+
+        Read(in, obj.visible);
     }
 
     for (auto& obj : scene_lgh_obj) {
@@ -286,11 +301,22 @@ bool Parser::load_scene(std::ifstream& in, std::vector<Object>& scene_lgh_obj) {
         Read(in, obj.min);
         Read(in, obj.max);
 
+        Read(in, obj.model);
+        Read(in, obj.mvp);
+
         Read(in, obj.shininess);
 
         Read(in, obj.mapping);
         Read(in, obj.coordType);
         Read(in, obj.cyaxisType);
+
+        Read(in, obj.physics);
+        Read(in, obj.hasPhysics);
+
+        Read(in, obj.collider);
+        Read(in, obj.hasCollider);
+
+        Read(in, obj.visible);
     }
 
     for (auto& lgh : lights) {

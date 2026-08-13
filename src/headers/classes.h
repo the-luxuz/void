@@ -146,6 +146,8 @@ struct ObjectState {
 
     Collider collider;
     bool hasCollider = false;
+
+    bool visible = true;
 };
 
 struct LightState {
@@ -285,6 +287,8 @@ struct Object {
 
     Collider collider;
 	bool hasCollider = false;
+
+    bool visible = true;
 };
 
 struct Light {
@@ -345,7 +349,7 @@ inline void ApplyLightState(Light& l, const LightState& s) {
 
 inline ObjectState CaptureState(const Object& o) {
 
-    return { o.position, o.rotation, o.scale, o.name, o.mesh, o.obj_texture, o.tex, o.min, o.max, o.mapping, o.coordType, o.cyaxisType, o.normalTexture, o.norm_map, o.has_normal_map, o.shininess, o.physics, o.hasPhysics, o.collider, o.hasCollider };
+    return { o.position, o.rotation, o.scale, o.name, o.mesh, o.obj_texture, o.tex, o.min, o.max, o.mapping, o.coordType, o.cyaxisType, o.normalTexture, o.norm_map, o.has_normal_map, o.shininess, o.physics, o.hasPhysics, o.collider, o.hasCollider, o.visible };
 }
 
 inline void ApplyState(Object& o, const ObjectState& s) {
@@ -378,6 +382,8 @@ inline void ApplyState(Object& o, const ObjectState& s) {
 
     o.collider = s.collider;
     o.hasCollider = s.hasCollider;
+
+    o.visible = s.visible;
 }
 
 struct Shader_Uniform {
@@ -406,11 +412,6 @@ struct Shader_Uniform {
 
 	GLint numLights;
 
-	GLint tex_appear;
-	GLint normal_apper;
-	GLint tangent_apper;
-	GLint bitangent_apper;
-
 	GLint light_active;
 	GLint normal_map_active;
 	GLint shadow_active;
@@ -430,6 +431,10 @@ struct Shader_Uniform {
 	GLint is_hdr;
 
 	GLint program_skybox_skybox;
+
+	GLint color;
+
+	GLint useTexture;
 
 	bool class_uniforms_initialized = false;
 

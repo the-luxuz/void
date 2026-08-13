@@ -71,17 +71,26 @@ void buffer(Object& objects) {
 
 void CreateNormalBuffers(Object& obj) {
 
-	glGenVertexArrays(1, &obj.normalTBVAO);
-	glGenVertexArrays(1, &obj.tangentVAO);
-	glGenVertexArrays(1, &obj.bitangentVAO);
+	if (obj.normalTBVAO) {
+	
+		glGenVertexArrays(1, &obj.normalTBVAO);
+		glGenBuffers(1, &obj.normalTBVBO);
+		CreateLineBuffer(obj.normalTBVAO, obj.normalTBVBO, obj.normalLinesTBN);
+	}
 
-	glGenBuffers(1, &obj.normalTBVBO);
-	glGenBuffers(1, &obj.tangentVBO);
-	glGenBuffers(1, &obj.bitangentVBO);
+	if (obj.tangentVAO) {
 
-	CreateLineBuffer(obj.normalTBVAO, obj.normalTBVBO, obj.normalLinesTBN);
-	CreateLineBuffer(obj.tangentVAO, obj.tangentVBO, obj.tangentLines);
-	CreateLineBuffer(obj.bitangentVAO, obj.bitangentVBO, obj.bitangentLines);
+		glGenVertexArrays(1, &obj.tangentVAO);
+		glGenBuffers(1, &obj.tangentVBO);
+		CreateLineBuffer(obj.tangentVAO, obj.tangentVBO, obj.tangentLines);
+	}
+
+	if (obj.bitangentVAO) {
+
+		glGenVertexArrays(1, &obj.bitangentVAO);
+		glGenBuffers(1, &obj.bitangentVBO);
+		CreateLineBuffer(obj.bitangentVAO, obj.bitangentVBO, obj.bitangentLines);
+	}
 }
 
 void UpdateLineBuffers(Object& obj) {
