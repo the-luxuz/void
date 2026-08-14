@@ -293,12 +293,8 @@ bool CanCollide(const Object& a, const Object& b);
 Contact Sphere_vs_Sphere(const Object& a, const Object& b);
 Contact Sphere_vs_Plane(const Object& a, const Object& b);
 Contact Sphere_vs_AABB(const Object& a, const Object& b);
-Contact Sphere_vs_OBB(const Object& a, const Object& b);
 Contact AABB_vs_AABB(const Object& a, const Object& b);
 Contact AABB_vs_Plane(const Object& a, const Object& b);
-Contact AABB_vs_OBB(const Object& a, const Object& b);
-Contact OBB_vs_OBB(const Object& a, const Object& b);
-Contact OBB_vs_Plane(const Object& a, const Object& b);
 
 void PositionalCorrection(Object& a, Object& b, Contact& c);
 

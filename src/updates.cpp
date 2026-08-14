@@ -340,12 +340,9 @@ void PhysicsUpdate(float dt) {
 
 		p.velocity += p.acceleration * dt;
 
-		p.velocity += p.acceleration * dt;
+		p.velocity.x *= (1.0f - p.drag * dt);
 
-		float damping = 1.0f - p.drag * dt;
-
-		p.velocity.x *= damping;
-		p.velocity.z *= damping;
+		p.velocity.z *= (1.0f - p.drag * dt);
 
 		obj.position += p.velocity * dt;
 
@@ -394,11 +391,6 @@ void CollisionUpdate() {
 						contact = AABB_vs_Plane(b, a);
 						contact.normal *= -1.0f;
 						break;
-
-					case ColliderType::OBB:
-						contact = OBB_vs_Plane(b, a);
-						contact.normal *= -1.0f;
-						break;
 					}
 
 					break;
@@ -417,10 +409,6 @@ void CollisionUpdate() {
 
 					case ColliderType::AABB:
 						contact = Sphere_vs_AABB(a, b);
-						break;
-
-					case ColliderType::OBB:
-						contact = Sphere_vs_OBB(a, b);
 						break;
 					}
 
@@ -441,35 +429,6 @@ void CollisionUpdate() {
 
 					case ColliderType::AABB:
 						contact = AABB_vs_AABB(a, b);
-						break;
-
-					case ColliderType::OBB:
-						contact = AABB_vs_OBB(a, b);
-						break;
-					}
-
-					break;
-
-				case ColliderType::OBB:
-
-					switch (b.collider.type) {
-
-					case ColliderType::Plane:
-						contact = OBB_vs_Plane(a, b);
-						break;
-
-					case ColliderType::Sphere:
-						contact = Sphere_vs_OBB(b, a);
-						contact.normal *= -1.0f;
-						break;
-
-					case ColliderType::AABB:
-						contact = AABB_vs_OBB(b, a);
-						contact.normal *= -1.0f;
-						break;
-
-					case ColliderType::OBB:
-						contact = OBB_vs_OBB(a, b);
 						break;
 					}
 
@@ -1063,23 +1022,6 @@ void update_imgui_guizmo() {
 				case ColliderType::AABB: {
 
 					ImGui::Text("AABB Collider");
-
-					ImGui::Separator();
-
-					ImGui::DragFloat3("Half Extents", &obj->collider.halfExtents.x, 0.01f);
-
-					ImGui::Separator();
-
-					ImGui::Checkbox("Trigger", &obj->collider.isTrigger);
-					ImGui::InputScalar("Layer", ImGuiDataType_U32, &obj->collider.layer);
-					ImGui::InputScalar("Mask", ImGuiDataType_U32, &obj->collider.mask);
-
-					break;
-				}
-
-				case ColliderType::OBB: {
-
-					ImGui::Text("OBB Collider");
 
 					ImGui::Separator();
 

@@ -2302,11 +2302,6 @@ Contact Sphere_vs_AABB(const Object& sphere, const Object& box) {
 	return contact;
 }
 
-Contact Sphere_vs_OBB(const Object& a, const Object& b) {
-
-	return Contact{};
-}
-
 Contact AABB_vs_AABB(const Object& a, const Object& b) {
 
 	Contact contact{};
@@ -2400,21 +2395,6 @@ Contact AABB_vs_Plane(const Object& box, const Object& plane) {
 	contact.point = worldPoint;
 
 	return contact;
-}
-
-Contact AABB_vs_OBB(const Object& a, const Object& b) {
-
-	return Contact{};
-}
-
-Contact OBB_vs_OBB(const Object& a, const Object& b) {
-
-	return Contact{};
-}
-
-Contact OBB_vs_Plane(const Object& a, const Object& b) {
-
-	return Contact{};
 }
 
 void PositionalCorrection(Object& a, Object& b, Contact& c) {

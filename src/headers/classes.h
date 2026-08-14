@@ -52,8 +52,7 @@ enum class ColliderType {
     None,
     Plane,
     Sphere,
-    AABB,
-    OBB
+    AABB
 };
 
 struct Contact {
