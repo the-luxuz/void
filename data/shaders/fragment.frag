@@ -43,9 +43,23 @@ uniform float shininess;
 
 uniform mat4 aView;
 
+uniform vec2 textureTiling;
+
+uniform int mapping;
+
+uniform vec3 objMin;
+uniform vec3 objMax;
+
+uniform vec3 worldSize;
+
+uniform bool tiling;
+
 in vec2 uv;
 in vec3 normal;
 in vec3 fragPos;
+
+in vec3 localPos;
+in vec3 localNormal;
 
 in vec3 tangent;
 in vec3 bitangent;
@@ -143,12 +157,71 @@ vec3 ShadeSpotLight(Light light, vec3 N, vec3 V, vec3 baseColor) {
 
 void main() {
 
+    vec4 texColor;
     vec3 baseColor;
 
-    if(useTexture)
-        baseColor = texture(tex, uv).rgb;
-    else
+    vec2 tiledUV;
+
+    if(tiling) {
+    
+        vec2 mappedUV;
+        vec2 tiling;
+
+        vec3 p = localPos;
+        vec3 Na = normalize(localNormal);
+
+        vec3 normalizedPos = (p - objMin) / (objMax - objMin);
+
+        vec3 absN = abs(Na);
+
+        if (mapping == 2) {
+
+            if (absN.x >= absN.y && absN.x >= absN.z) {
+
+                // YZ
+                mappedUV = normalizedPos.zy;
+                tiling = worldSize.zy;
+
+            }
+            else if (absN.y >= absN.x && absN.y >= absN.z) {
+
+                // XZ
+                mappedUV = normalizedPos.xz;
+                tiling = worldSize.xz;
+
+            }
+            else {
+
+                // XY
+                mappedUV = normalizedPos.xy;
+                tiling = worldSize.xy;
+            }
+
+        }
+        else {
+
+            mappedUV = uv;
+            tiling = textureTiling;
+        }
+
+        tiledUV = mappedUV * tiling;
+
+    }else{
+        tiledUV = uv;
+    }
+
+    if (useTexture) {
+
+        texColor = texture(tex, tiledUV);
+
+        if (texColor.a < 0.1)
+            discard;
+
+        baseColor = texColor.rgb;
+
+    } else {
         baseColor = color;
+    }
 
     if(!useTexture){
     
@@ -169,7 +242,7 @@ void main() {
 
     if(hasNormalMap && normal_map_active) {
 
-        vec3 normalTS = texture(normalMap, uv).xyz;
+        vec3 normalTS = texture(normalMap, tiledUV).xyz;
         normalTS = normalTS * 2.0 - 1.0;
         finalNormal = normalize(TBN * normalTS);
     }

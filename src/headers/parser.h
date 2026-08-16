@@ -49,6 +49,8 @@ struct Parser {
 
 	struct Transform {
 
+		EntityID id;
+
 		std::string obj_name;
 
 		std::string mesh;
@@ -58,7 +60,7 @@ struct Parser {
 
 		GLuint normalTexture;
 		std::string normal_map = "data/textures/brick_normal_map.png";
-		bool has_normal_map = false;
+		bool hasNormalMap = false;
 		
 		glm::vec3 position;
 		glm::quat rotation;
@@ -81,12 +83,20 @@ struct Parser {
 		Collider collider;
 		bool hasCollider = false;
 
+		bool hasMaterial = true;
+
+		bool hasMapping = true;
+
+		bool tiling = false;
+
 		bool visible = true;
 	};
 
 	std::vector<Transform> objects;
 
 	struct Light {
+
+		EntityID id;
 
 		std::string name;
 

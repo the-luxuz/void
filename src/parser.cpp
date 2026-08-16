@@ -113,6 +113,8 @@ void Parser::save_scene(std::ofstream& out, const std::vector<Object>& scene, co
 
     for (auto& obj : scene) {
 
+        Write(out, obj.id);
+
         WriteString(out, obj.name);
         WriteString(out, obj.mesh);
         WriteString(out, obj.tex);
@@ -122,7 +124,7 @@ void Parser::save_scene(std::ofstream& out, const std::vector<Object>& scene, co
         Write(out, obj.obj_texture);
         Write(out, obj.normalTexture);
 
-        Write(out, obj.has_normal_map);
+        Write(out, obj.hasNormalMap);
 
         Write(out, obj.position);
         Write(out, obj.scale);
@@ -149,11 +151,18 @@ void Parser::save_scene(std::ofstream& out, const std::vector<Object>& scene, co
         Write(out, obj.collider);
         Write(out, obj.hasCollider);
 
+        Write(out, obj.hasMaterial);
+        Write(out, obj.hasMapping);
+
+        Write(out, obj.tiling);
+
         Write(out, obj.visible);
 
     }
 
     for (int i = 0; i < lightObjCount; ++i) {
+
+        Write(out, scene_lgh_obj[i].id);
 
         WriteString(out, scene_lgh_obj[i].name);
         WriteString(out, scene_lgh_obj[i].mesh);
@@ -189,10 +198,17 @@ void Parser::save_scene(std::ofstream& out, const std::vector<Object>& scene, co
         Write(out, scene_lgh_obj[i].collider);
         Write(out, scene_lgh_obj[i].hasCollider);
 
+        Write(out, scene_lgh_obj[i].hasMaterial);
+        Write(out, scene_lgh_obj[i].hasMapping);
+
+        Write(out, scene_lgh_obj[i].tiling);
+
         Write(out, scene_lgh_obj[i].visible);
     }
 
     for (int i = 0; i < lightCount; ++i) {
+
+        Write(out, scene_lgh[i].id);
 
         WriteString(out, scene_lgh[i].name);
 
@@ -237,6 +253,11 @@ bool Parser::load_scene(std::ifstream& in, std::vector<Object>& scene_lgh_obj) {
 
     for (auto& obj : objects) {
 
+        Read(in, obj.id);
+
+        if (obj.id == 0)
+            obj.id = GenerateEntityID();
+
         ReadString(in, obj.obj_name);
         ReadString(in, obj.mesh);
         ReadString(in, obj.tex);
@@ -246,7 +267,7 @@ bool Parser::load_scene(std::ifstream& in, std::vector<Object>& scene_lgh_obj) {
         Read(in, obj.obj_texture);
         Read(in, obj.normalTexture);
 
-        Read(in, obj.has_normal_map);
+        Read(in, obj.hasNormalMap);
 
         Read(in, obj.position);
         Read(in, obj.scale);
@@ -275,10 +296,20 @@ bool Parser::load_scene(std::ifstream& in, std::vector<Object>& scene_lgh_obj) {
         Read(in, obj.collider);
         Read(in, obj.hasCollider);
 
+        Read(in, obj.hasMaterial);
+        Read(in, obj.hasMapping);
+
+        Read(in, obj.tiling);
+
         Read(in, obj.visible);
     }
 
     for (auto& obj : scene_lgh_obj) {
+
+        Read(in, obj.id);
+
+        if (obj.id == 0)
+            obj.id = GenerateEntityID();
 
         ReadString(in, obj.name);
         ReadString(in, obj.mesh);
@@ -316,10 +347,20 @@ bool Parser::load_scene(std::ifstream& in, std::vector<Object>& scene_lgh_obj) {
         Read(in, obj.collider);
         Read(in, obj.hasCollider);
 
+        Read(in, obj.hasMaterial);
+        Read(in, obj.hasMapping);
+
+        Read(in, obj.tiling);
+
         Read(in, obj.visible);
     }
 
     for (auto& lgh : lights) {
+
+        Read(in, lgh.id);
+
+        if (lgh.id == 0)
+            lgh.id = GenerateEntityID();
 
         ReadString(in, lgh.name);
 

@@ -157,6 +157,7 @@
     <ClCompile Include="..\external\tinyexr\deps\miniz\miniz.c" />
     <ClCompile Include="..\external\tinyexr\tinyexr.cc" />
     <ClCompile Include="..\src\buffers.cpp" />
+    <ClCompile Include="..\src\classes.cpp" />
     <ClCompile Include="..\src\helpers.cpp" />
     <ClCompile Include="..\src\ImGuizmo.cpp" />
     <ClCompile Include="..\src\inits.cpp" />

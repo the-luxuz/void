@@ -911,6 +911,7 @@ void RestoreOriginalUV(Object& obj) {
 
 	obj.vertices = obj.original_vertices;
 	obj.indices = obj.original_indices;
+
 }
 
 void GeneratePlanarUV(Object& obj, coord_types coordType) {
@@ -931,8 +932,9 @@ void GeneratePlanarUV(Object& obj, coord_types coordType) {
 			for (auto& vertex : obj.vertices) {
 
 				vertex.uv.x = (vertex.position.x - obj.min.x) / sizeX;
-				vertex.uv.y = (vertex.position.z - obj.min.z) / sizeZ;
+				vertex.uv.y = -(vertex.position.z - obj.min.z) / sizeZ;
 			}
+
 			break;
 		}
 
@@ -949,6 +951,7 @@ void GeneratePlanarUV(Object& obj, coord_types coordType) {
 				vertex.uv.x = (vertex.position.x - obj.min.x) / sizeX;
 				vertex.uv.y = (vertex.position.y - obj.min.y) / sizeY;
 			}
+
 			break;
 		}
 
@@ -965,6 +968,7 @@ void GeneratePlanarUV(Object& obj, coord_types coordType) {
 				vertex.uv.x = (vertex.position.y - obj.min.y) / sizeY;
 				vertex.uv.y = (vertex.position.z - obj.min.z) / sizeZ;
 			}
+
 			break;
 		}
 	}
@@ -1024,6 +1028,7 @@ void GenerateCubeUV(Object& obj) {
 				v.uv.y = (v.position.y - obj.min.y) / (obj.max.y - obj.min.y);
 			}
 		}
+
 	}
 }
 
@@ -1872,6 +1877,9 @@ void CreateLight(const std::string& type) {
 	if (!init_lights(obj))
 		return;
 
+	light.id = GenerateEntityID();
+	obj.id = GenerateEntityID();
+
 	light.name = GenerateObjectName("Light");
 	obj.name = GenerateObjectName("Light");
 
@@ -2096,7 +2104,7 @@ void ReplaceMesh(Object& obj, const std::string& path) {
 	mesh.normalTexture = obj.normalTexture;
 	mesh.norm_map = obj.norm_map;
 
-	mesh.has_normal_map = obj.has_normal_map;
+	mesh.hasNormalMap = obj.hasNormalMap;
 
 	mesh.shininess = obj.shininess;
 
@@ -2105,6 +2113,11 @@ void ReplaceMesh(Object& obj, const std::string& path) {
 
 	mesh.collider = obj.collider;
 	mesh.hasCollider = obj.hasCollider;
+
+	mesh.hasMaterial = obj.hasMaterial;
+	mesh.hasMapping = obj.hasMapping;
+
+	mesh.tiling = obj.tiling;
 
 	mesh.visible = obj.visible;
 
@@ -2618,4 +2631,68 @@ void UpdatePlayerCamera(Object& player) {
 	cam.cam_target = cam.cam_position + lookDir;
 
 	cam.cam_up = glm::vec3(0, 1, 0);
+}
+
+glm::vec2 TextureTiling(Object& obj, glm::vec3 worldSize) {
+
+	glm::vec2 tiling(1.0f);
+
+	switch (obj.mapping) {
+
+	case TextureMapping::Planar:
+
+		switch (obj.coordType) {
+
+		case coord_types::XZ:
+			tiling = glm::vec2(worldSize.x, worldSize.z);
+			break;
+
+		case coord_types::XY:
+			tiling = glm::vec2(worldSize.x, worldSize.y);
+			break;
+
+		case coord_types::YZ:
+			tiling = glm::vec2(worldSize.y, worldSize.z);
+			break;
+		}
+
+		break;
+
+	case TextureMapping::UV:
+
+		tiling = glm::vec2(worldSize.x, worldSize.y);
+		break;
+
+	case TextureMapping::Cylindrical:
+
+		switch (obj.cyaxisType) {
+
+		case cylinder_axis::X:
+			tiling = glm::vec2(worldSize.y, worldSize.x);
+			break;
+
+		case cylinder_axis::Y:
+			tiling = glm::vec2(worldSize.x, worldSize.y);
+			break;
+
+		case cylinder_axis::Z:
+			tiling = glm::vec2(worldSize.x, worldSize.z);
+			break;
+		}
+
+		break;
+
+	case TextureMapping::Cubic:
+
+		tiling = glm::vec2(1.f);
+
+		break;
+
+	case TextureMapping::Spherical:
+
+		tiling = glm::vec2(worldSize.x, worldSize.y);
+		break;
+	}
+
+	return tiling;
 }

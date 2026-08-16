@@ -313,3 +313,5 @@ Object* search_obj_by_name(const char* name);
 void PlayerControl(const bool* keyboard, float dt, Object& player);
 
 void UpdatePlayerCamera(Object& player);
+
+glm::vec2 TextureTiling(Object& obj, glm::vec3 worldSize);

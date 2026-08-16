@@ -75,6 +75,9 @@
     <ClCompile Include="..\external\nativefiledialog\nfd_win.cpp">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\classes.cpp">
+      <Filter>Archivos de origen</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\headers\classes.h">

@@ -23,7 +23,19 @@ void init_uniforms() {
 	shader_uniform.program_texture = glGetUniformLocation(program, "tex");
 
 	shader_uniform.color = glGetUniformLocation(program, "color");
+
 	shader_uniform.useTexture = glGetUniformLocation(program, "useTexture");
+
+	shader_uniform.tiling = glGetUniformLocation(program, "tiling");
+
+	shader_uniform.mapping = glGetUniformLocation(program, "mapping");
+
+	shader_uniform.min = glGetUniformLocation(program, "objMin");
+	shader_uniform.max = glGetUniformLocation(program, "objMax");
+
+	shader_uniform.worldSize = glGetUniformLocation(program, "worldSize");
+
+	shader_uniform.textureTiling = glGetUniformLocation(program, "textureTiling");
 
 	shader_uniform.lightVP = glGetUniformLocation(program, "lightVP");
 
@@ -39,7 +51,7 @@ void init_uniforms() {
 
 	shader_uniform.shininess = glGetUniformLocation(program, "shininess");
 
-	shader_uniform.has_normal_map = glGetUniformLocation(program, "hasNormalMap");
+	shader_uniform.hasNormalMap = glGetUniformLocation(program, "hasNormalMap");
 
 	// line shader uniforms
 
@@ -54,7 +66,6 @@ void init_uniforms() {
 	shader_uniform.is_hdr = glGetUniformLocation(program_skybox, "is_hdr");
 
 	shader_uniform.program_skybox_skybox = glGetUniformLocation(program_skybox, "skybox");
-
 }
 
 void init_class_uniforms() {
@@ -253,6 +264,8 @@ void init() {
 
 		buffer(obj);
 
+		obj.id = GenerateEntityID();
+
 		obj.name = p.obj_name;
 		obj.mesh = p.mesh;
 		obj.tex = p.tex;
@@ -265,14 +278,14 @@ void init() {
 		obj.cyaxisType = p.cyaxisType;
 		obj.mapping = p.mapping;
 
-		obj.has_normal_map = p.has_normal_map;
+		obj.hasNormalMap = p.hasNormalMap;
 
 		obj.max = p.max;
 		obj.min = p.min;
 
 		obj.obj_texture = TextureManager::Get(obj.tex);
 
-		buffer(obj);
+		//buffer(obj);
 
 		obj.original_vertices = obj.vertices;
 		obj.original_indices = obj.indices;
@@ -286,6 +299,11 @@ void init() {
 
 		obj.collider = p.collider;
 		obj.hasCollider = p.hasCollider;
+
+		obj.hasMaterial = p.hasMaterial;
+		obj.hasMapping = p.hasMapping;
+
+		obj.tiling = p.tiling;
 
 		obj.visible = p.visible;
 
@@ -304,6 +322,8 @@ void init() {
 		Object obj;
 
 		if (init_lights(obj)) {
+
+			light.id = GenerateEntityID();
 
 			light.name = par.lights[i].name;
 
@@ -333,6 +353,8 @@ void init() {
 
 			else if (light.type == "SPOT")
 				light.typeID = 2;
+
+			obj.id = GenerateEntityID();
 
 			obj.name = light.name;
 

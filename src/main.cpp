@@ -1,10 +1,8 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 
-#ifdef _DEBUG
 #define _CRTDBG_MAP_ALLOC
 #include <crtdbg.h>
 #include <cstdlib>
-#endif
 
 #include "local.h"
 #include "classes.h"
@@ -250,14 +248,10 @@ void Rebuild() {
 
 int main(int argc, char* args[]) {
 
-	#ifdef _DEBUG
 		_CrtSetDbgFlag(
 			_CRTDBG_ALLOC_MEM_DF |
 			_CRTDBG_LEAK_CHECK_DF
 		);
-
-		_CrtSetBreakAlloc(165);
-	#endif
 
 	init_("../data/settings.bin", "../data/scene/scene.bin");
 

@@ -223,7 +223,28 @@ void update_objects() {
 			glBindTexture(GL_TEXTURE_2D, obj.normalTexture);
 		}
 
-		glUniform1i(shader_uniform.has_normal_map, obj.has_normal_map);
+		if (obj.tiling) {
+
+			glm::vec3 size = obj.max - obj.min;
+
+			glm::vec3 worldSize = (size / glm::vec3(100)) * obj.scale;
+
+			obj.textureTiling = TextureTiling(obj, worldSize);
+
+
+			glUniform3fv(shader_uniform.min, 1, glm::value_ptr(obj.min));
+			glUniform3fv(shader_uniform.max, 1, glm::value_ptr(obj.max));
+
+			glUniform1i(shader_uniform.mapping, static_cast<int>(obj.mapping));
+
+			glUniform3fv(shader_uniform.worldSize, 1, glm::value_ptr(worldSize));
+
+			glUniform2f(shader_uniform.textureTiling, obj.textureTiling.x, obj.textureTiling.y);
+		}
+
+		glUniform1i(shader_uniform.tiling, obj.tiling);
+
+		glUniform1i(shader_uniform.hasNormalMap, obj.hasNormalMap);
 
 		glBindVertexArray(obj.vao);
 
@@ -649,7 +670,7 @@ void update_imgui_guizmo() {
 
 					if (ImGui::ImageButton("", (ImTextureID)(intptr_t)tex, ImVec2(64, 64), ImVec2(0, 1), ImVec2(1, 0))) {
 
-						if (selectedObject != -1) {
+						if (selectedObject != -1 && objects[selectedObject].hasMaterial) {
 
 							objects[selectedObject].obj_texture = tex;
 							objects[selectedObject].tex = path;
@@ -681,6 +702,8 @@ void update_imgui_guizmo() {
 						
 						init_obj(path.c_str(), obj);
 
+						obj.id = GenerateEntityID();
+
 						obj.name = GenerateObjectName(entry.path().stem().string());
 
 						obj.mesh = path;
@@ -696,7 +719,7 @@ void update_imgui_guizmo() {
 
 						obj.shininess = 20;
 
-						obj.has_normal_map = false;
+						obj.hasNormalMap = false;
 
 						obj.model = GetModelMatrix(obj);
 
@@ -875,6 +898,8 @@ void update_imgui_guizmo() {
 
 		if (ImGui::CollapsingHeader("General", ImGuiTreeNodeFlags_DefaultOpen)) {
 
+			ImGui::DragInt("ID", (int*)&obj->id);
+
 			static char name[256];
 			strncpy_s(name, objects[selectedObject].name.c_str(), sizeof(name));
 			name[255] = '\0';
@@ -902,55 +927,57 @@ void update_imgui_guizmo() {
 
 		//------------------------------------------------------------
 
-		if (ImGui::CollapsingHeader("Physics", ImGuiTreeNodeFlags_DefaultOpen)) {
+		if (obj->hasPhysics) {
 
-			Physics& p = obj->physics;
+			ImGui::Separator();
+		
+			if (ImGui::CollapsingHeader("Physics", ImGuiTreeNodeFlags_DefaultOpen)) {
 
-			ImGui::Checkbox("Has Physics", &obj->hasPhysics);
-			HandleInspectorUndo(*obj);
+				Physics& p = obj->physics;
 
-			ImGui::DragFloat3("Velocity", &obj->physics.velocity.x, 0.1f);
-			HandleInspectorUndo(*obj);
+				ImGui::DragFloat3("Velocity", &obj->physics.velocity.x, 0.1f);
+				HandleInspectorUndo(*obj);
 
-			ImGui::DragFloat3("Acceleration", &obj->physics.acceleration.x, 0.1f);
-			HandleInspectorUndo(*obj);
+				ImGui::DragFloat3("Acceleration", &obj->physics.acceleration.x, 0.1f);
+				HandleInspectorUndo(*obj);
 
-			ImGui::DragFloat("Drag", &obj->physics.drag, 0.1f);
-			HandleInspectorUndo(*obj);
+				ImGui::DragFloat("Drag", &obj->physics.drag, 0.1f);
+				HandleInspectorUndo(*obj);
 
-			ImGui::DragFloat("Restitution", &obj->physics.restitution, 0.1f);
-			HandleInspectorUndo(*obj);
+				ImGui::DragFloat("Restitution", &obj->physics.restitution, 0.1f);
+				HandleInspectorUndo(*obj);
 
-			ImGui::DragFloat("Friction", &obj->physics.friction, 0.1f);
-			HandleInspectorUndo(*obj);
+				ImGui::DragFloat("Friction", &obj->physics.friction, 0.1f);
+				HandleInspectorUndo(*obj);
 
-			ImGui::DragFloat3("Force", &obj->physics.force.x, 0.1f);
-			HandleInspectorUndo(*obj);
+				ImGui::DragFloat3("Force", &obj->physics.force.x, 0.1f);
+				HandleInspectorUndo(*obj);
 
-			float mass = (p.inverseMass == 0.0f) ? 0.0f : 1.0f / p.inverseMass;
+				float mass = (p.inverseMass == 0.0f) ? 0.0f : 1.0f / p.inverseMass;
 
-			if (ImGui::DragFloat("Mass", &mass, 0.1f, 0.0f, 1000.0f)) {
+				if (ImGui::DragFloat("Mass", &mass, 0.1f, 0.0f, 1000.0f)) {
 
-				if (mass == 0.0f)
-					p.inverseMass = 0.0f;
-				else
-					p.inverseMass = 1.0f / mass;
+					if (mass == 0.0f)
+						p.inverseMass = 0.0f;
+					else
+						p.inverseMass = 1.0f / mass;
+				}
+
+				HandleInspectorUndo(*obj);
+
+				ImGui::Checkbox("Use Gravity", &obj->physics.useGravity);
+				HandleInspectorUndo(*obj);
+
+				ImGui::Checkbox("Is Static", &obj->physics.isStatic);
+				HandleInspectorUndo(*obj);
+
+				if (ImGui::Button("Reset Velocities")) {
+
+					obj->physics.velocity = glm::vec3(0.0f);
+					obj->physics.acceleration = glm::vec3(0.0f);
+				}
+
 			}
-
-			HandleInspectorUndo(*obj);
-
-			ImGui::Checkbox("Use Gravity", &obj->physics.useGravity);
-			HandleInspectorUndo(*obj);
-
-			ImGui::Checkbox("Is Static", &obj->physics.isStatic);
-			HandleInspectorUndo(*obj);
-
-			if (ImGui::Button("Reset Velocities")) {
-
-				obj->physics.velocity = glm::vec3(0.0f);
-				obj->physics.acceleration = glm::vec3(0.0f);
-			}
-
 		}
 
 		//------------------------------------------------------------
@@ -963,140 +990,153 @@ void update_imgui_guizmo() {
 			"OBB"
 		};
 
-		if (ImGui::CollapsingHeader("Collision", ImGuiTreeNodeFlags_DefaultOpen)) {
-
-			ImGui::Checkbox("Has Collision", &obj->hasCollider);
+		if (obj->hasCollider) {
 
 			ImGui::Separator();
 
-			int currentType = (int)obj->collider.type;
+			if (ImGui::CollapsingHeader("Collision", ImGuiTreeNodeFlags_DefaultOpen)) {
 
-			if (ImGui::Combo("Type", &currentType, colliderTypes, IM_ARRAYSIZE(colliderTypes))) {
+				ImGui::Separator();
 
-				obj->undoStack.push_back(CaptureState(*obj));
-				obj->redoStack.clear();
+				int currentType = (int)obj->collider.type;
 
-				obj->collider.type = (ColliderType)currentType;
-			}
-
-			ImGui::Separator();
-
-			switch (obj->collider.type) {
-
-				case ColliderType::None: {
-
-					ImGui::TextDisabled("No collider.");
-					break;
-				}
-
-				case ColliderType::Plane: {
-
-					ImGui::Text("Plane Collider");
-
-					ImGui::Separator();
-
-					ImGui::Checkbox("Trigger", &obj->collider.isTrigger);
-					ImGui::InputScalar("Layer", ImGuiDataType_U32, &obj->collider.layer);
-					ImGui::InputScalar("Mask", ImGuiDataType_U32, &obj->collider.mask);
-
-					break;
-				}
-
-				case ColliderType::Sphere: {
-
-					ImGui::Text("Sphere Collider");
-
-					ImGui::Separator();
-
-					ImGui::DragFloat("Radius", &obj->collider.radius, 0.01f, 0.0f);
-
-					ImGui::Separator();
-
-					ImGui::Checkbox("Trigger", &obj->collider.isTrigger);
-					ImGui::InputScalar("Layer", ImGuiDataType_U32, &obj->collider.layer);
-					ImGui::InputScalar("Mask", ImGuiDataType_U32, &obj->collider.mask);
-
-					break;
-				}
-
-				case ColliderType::AABB: {
-
-					ImGui::Text("AABB Collider");
-
-					ImGui::Separator();
-
-					ImGui::DragFloat3("Half Extents", &obj->collider.halfExtents.x, 0.01f);
-
-					ImGui::Separator();
-
-					ImGui::Checkbox("Trigger", &obj->collider.isTrigger);
-					ImGui::InputScalar("Layer", ImGuiDataType_U32, &obj->collider.layer);
-					ImGui::InputScalar("Mask", ImGuiDataType_U32, &obj->collider.mask);
-
-					break;
-				}
-			}
-		}
-
-		if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen)) {
-
-			ImGui::DragFloat("Shininess", &obj->shininess, 1.0f, 1.0f, 256.0f);
-			HandleInspectorUndo(*obj);
-
-			ImGui::Text("Texture:");
-
-			ImGui::TextWrapped("%s", obj->tex.c_str());
-
-			ImGui::Image((ImTextureID)(intptr_t)obj->obj_texture, ImVec2(80, 80));
-
-			ImGui::Button("Drop texture here##Texture", ImVec2(80, 80));
-
-			if (ImGui::BeginDragDropTarget()) {
-
-				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("IMAGE_FILE")) {
+				if (ImGui::Combo("Type", &currentType, colliderTypes, IM_ARRAYSIZE(colliderTypes))) {
 
 					obj->undoStack.push_back(CaptureState(*obj));
 					obj->redoStack.clear();
 
-					const char* file = (const char*)payload->Data;
-
-					objects[selectedObject].obj_texture = TextureManager::Get(file);
-
-					objects[selectedObject].tex = file;
+					obj->collider.type = (ColliderType)currentType;
 				}
 
-				ImGui::EndDragDropTarget();
-			}
+				ImGui::Separator();
 
-			//------------------------------------------------------------
+				switch (obj->collider.type) {
 
-			ImGui::Text("Normal Map:");
+					case ColliderType::None: {
 
-			ImGui::TextWrapped("%s", obj->norm_map.c_str());
+						ImGui::TextDisabled("No collider.");
+						break;
+					}
 
-			ImGui::Image((ImTextureID)(intptr_t)obj->normalTexture, ImVec2(80, 80));
+					case ColliderType::Plane: {
 
-			ImGui::Button("Drop texture here##NormalMap", ImVec2(80, 80));
+						ImGui::Text("Plane Collider");
 
-			if (ImGui::BeginDragDropTarget()) {
+						ImGui::Separator();
 
-				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("IMAGE_FILE")) {
+						ImGui::Checkbox("Trigger", &obj->collider.isTrigger);
+						ImGui::InputScalar("Layer", ImGuiDataType_U32, &obj->collider.layer);
+						ImGui::InputScalar("Mask", ImGuiDataType_U32, &obj->collider.mask);
 
-					obj->undoStack.push_back(CaptureState(*obj));
-					obj->redoStack.clear();
+						break;
+					}
 
-					const char* file = (const char*)payload->Data;
+					case ColliderType::Sphere: {
 
-					objects[selectedObject].normalTexture = TextureManager::Get(file);
+						ImGui::Text("Sphere Collider");
 
-					objects[selectedObject].norm_map = file;
-					objects[selectedObject].has_normal_map = true;
+						ImGui::Separator();
+
+						ImGui::DragFloat("Radius", &obj->collider.radius, 0.01f, 0.0f);
+
+						ImGui::Separator();
+
+						ImGui::Checkbox("Trigger", &obj->collider.isTrigger);
+						ImGui::InputScalar("Layer", ImGuiDataType_U32, &obj->collider.layer);
+						ImGui::InputScalar("Mask", ImGuiDataType_U32, &obj->collider.mask);
+
+						break;
+					}
+
+					case ColliderType::AABB: {
+
+						ImGui::Text("AABB Collider");
+
+						ImGui::Separator();
+
+						ImGui::DragFloat3("Half Extents", &obj->collider.halfExtents.x, 0.01f);
+
+						ImGui::Separator();
+
+						ImGui::Checkbox("Trigger", &obj->collider.isTrigger);
+						ImGui::InputScalar("Layer", ImGuiDataType_U32, &obj->collider.layer);
+						ImGui::InputScalar("Mask", ImGuiDataType_U32, &obj->collider.mask);
+
+						break;
+					}
 				}
-
-				ImGui::EndDragDropTarget();
 			}
-
 		}
+
+		if (obj->hasMaterial) {
+
+			ImGui::Separator();
+
+			if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen)) {
+
+				ImGui::DragFloat("Shininess", &obj->shininess, 1.0f, 1.0f, 256.0f);
+				HandleInspectorUndo(*obj);
+
+				ImGui::Text("Texture:");
+
+				ImGui::TextWrapped("%s", obj->tex.c_str());
+
+				ImGui::Image((ImTextureID)(intptr_t)obj->obj_texture, ImVec2(80, 80), ImVec2(0, 1), ImVec2(1, 0));
+
+				ImGui::Button("Drop texture here##Texture", ImVec2(80, 80));
+
+				if (ImGui::BeginDragDropTarget()) {
+
+					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("IMAGE_FILE")) {
+
+						obj->undoStack.push_back(CaptureState(*obj));
+						obj->redoStack.clear();
+
+						const char* file = (const char*)payload->Data;
+
+						objects[selectedObject].obj_texture = TextureManager::Get(file);
+
+						objects[selectedObject].tex = file;
+					}
+
+					ImGui::EndDragDropTarget();
+				}
+
+				ImGui::Checkbox("Tiling", &obj->tiling);
+				HandleInspectorUndo(*obj);
+
+				//------------------------------------------------------------
+
+				ImGui::Text("Normal Map:");
+
+				ImGui::TextWrapped("%s", obj->norm_map.c_str());
+
+				ImGui::Image((ImTextureID)(intptr_t)obj->normalTexture, ImVec2(80, 80), ImVec2(0, 1), ImVec2(1, 0));
+
+				ImGui::Button("Drop texture here##NormalMap", ImVec2(80, 80));
+
+				if (ImGui::BeginDragDropTarget()) {
+
+					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("IMAGE_FILE")) {
+
+						obj->undoStack.push_back(CaptureState(*obj));
+						obj->redoStack.clear();
+
+						const char* file = (const char*)payload->Data;
+
+						objects[selectedObject].normalTexture = TextureManager::Get(file);
+
+						objects[selectedObject].norm_map = file;
+						objects[selectedObject].hasNormalMap = true;
+					}
+
+					ImGui::EndDragDropTarget();
+				}
+
+			}
+		}
+
+		ImGui::Separator();
 
 		if (ImGui::CollapsingHeader("Mesh")) {
 
@@ -1139,6 +1179,8 @@ void update_imgui_guizmo() {
 			ImGui::Text("Triangles: %d", (int)obj->indices.size() / 3);
 		}
 
+		ImGui::Separator();
+
 		if (ImGui::CollapsingHeader("Bounds")) {
 
 			ImGui::DragFloat3("Min", &obj->min.x, 0.1f);
@@ -1148,94 +1190,137 @@ void update_imgui_guizmo() {
 			HandleInspectorUndo(*obj);
 		}
 
-		ImGui::Separator();
+		if (obj->hasMapping) {
 
-		int current = (int)obj->mapping;
+			ImGui::Separator();
+		
+			int current = (int)obj->mapping;
 
-		if (ImGui::Combo("Mapping", &current, mappings, IM_ARRAYSIZE(mappings))) {
+			if (ImGui::CollapsingHeader("Mapping")) {
+			
+				if (ImGui::Combo("Mapping##M", &current, mappings, IM_ARRAYSIZE(mappings))) {
 
-			obj->undoStack.push_back(CaptureState(*obj));
-			obj->redoStack.clear();
+					obj->undoStack.push_back(CaptureState(*obj));
+					obj->redoStack.clear();
 
-			obj->mapping = (TextureMapping)current;
-			UpdateMapping(*obj);
-		}
+					obj->mapping = (TextureMapping)current;
+					UpdateMapping(*obj);
+				}
 
-		//------------------------------------------------------------
-		// Planar
+				//------------------------------------------------------------
+				// Planar
 
-		if (obj->mapping == TextureMapping::Planar) {
+				if (obj->mapping == TextureMapping::Planar) {
 
-			int coord = (int)obj->coordType;
+					int coord = (int)obj->coordType;
 
-			if (ImGui::Combo("Plane", &coord, planarCoords, IM_ARRAYSIZE(planarCoords))) {
+					if (ImGui::Combo("Plane", &coord, planarCoords, IM_ARRAYSIZE(planarCoords))) {
 
-				obj->undoStack.push_back(CaptureState(*obj));
-				obj->redoStack.clear();
+						obj->undoStack.push_back(CaptureState(*obj));
+						obj->redoStack.clear();
 
-				obj->coordType = (coord_types)coord;
-				UpdateMapping(*obj);
-			}
-		}
+						obj->coordType = (coord_types)coord;
+						UpdateMapping(*obj);
+					}
+				}
 		
 
-		//------------------------------------------------------------
-		// Cubic
+				//------------------------------------------------------------
+				// Cubic
 
-		if (obj->mapping == TextureMapping::Cubic) {
+				if (obj->mapping == TextureMapping::Cubic) {
 
-			if (ImGui::Button("Regenerate Cube UV")) {
+					if (ImGui::Button("Regenerate Cube UV")) {
 
-				obj->undoStack.push_back(CaptureState(*obj));
-				obj->redoStack.clear();
+						obj->undoStack.push_back(CaptureState(*obj));
+						obj->redoStack.clear();
 
-				UpdateMapping(*obj);
+						UpdateMapping(*obj);
+					}
+				}
+
+				//------------------------------------------------------------
+				// Cylindrical
+
+				if (obj->mapping == TextureMapping::Cylindrical) {
+
+					int axis = (int)obj->cyaxisType;
+
+					if (ImGui::Combo("Axis", &axis, cylinderAxes, IM_ARRAYSIZE(cylinderAxes))) {
+
+						obj->undoStack.push_back(CaptureState(*obj));
+						obj->redoStack.clear();
+
+						obj->cyaxisType = (cylinder_axis)axis;
+						UpdateMapping(*obj);
+					}
+				}
+
+				//------------------------------------------------------------
+				// Spherical
+
+				if (obj->mapping == TextureMapping::Spherical) {
+
+					if (ImGui::Button("Regenerate Sphere UV")) {
+
+						obj->undoStack.push_back(CaptureState(*obj));
+						obj->redoStack.clear();
+
+						UpdateMapping(*obj);
+					}
+				}
+
+				//------------------------------------------------------------
+				// UV
+
+				if (obj->mapping == TextureMapping::UV) {
+
+					if (ImGui::Button("Restore Original UV")) {
+
+						obj->undoStack.push_back(CaptureState(*obj));
+						obj->redoStack.clear();
+
+						UpdateMapping(*obj);
+					}
+				}
 			}
+
 		}
 
-		//------------------------------------------------------------
-		// Cylindrical
+		ImGui::Separator();
 
-		if (obj->mapping == TextureMapping::Cylindrical) {
+		if (ImGui::BeginCombo("Add Module", "Modules")) {
 
-			int axis = (int)obj->cyaxisType;
+			bool material = obj->hasMaterial;
+			bool collision = obj->hasCollider;
+			bool physics = obj->hasPhysics;
+			bool mapping = obj->hasMapping;
 
-			if (ImGui::Combo("Axis", &axis, cylinderAxes, IM_ARRAYSIZE(cylinderAxes))) {
-
-				obj->undoStack.push_back(CaptureState(*obj));
-				obj->redoStack.clear();
-
-				obj->cyaxisType = (cylinder_axis)axis;
-				UpdateMapping(*obj);
+			if (ImGui::Checkbox("Material", &material)) {
+			
+				obj->hasMaterial = material;
+				HandleInspectorUndo(*obj);
 			}
-		}
 
-		//------------------------------------------------------------
-		// Spherical
-
-		if (obj->mapping == TextureMapping::Spherical) {
-
-			if (ImGui::Button("Regenerate Sphere UV")) {
-
-				obj->undoStack.push_back(CaptureState(*obj));
-				obj->redoStack.clear();
-
-				UpdateMapping(*obj);
+			if (ImGui::Checkbox("Collision", &collision)) {
+			
+				obj->hasCollider = collision;
+				HandleInspectorUndo(*obj);
 			}
-		}
 
-		//------------------------------------------------------------
-		// UV
-
-		if (obj->mapping == TextureMapping::UV) {
-
-			if (ImGui::Button("Restore Original UV")) {
-
-				obj->undoStack.push_back(CaptureState(*obj));
-				obj->redoStack.clear();
-
-				UpdateMapping(*obj);
+			if (ImGui::Checkbox("Physics", &physics)) {
+			
+				obj->hasPhysics = physics;
+				HandleInspectorUndo(*obj);
 			}
+
+			if (ImGui::Checkbox("Mapping", &mapping)) {
+			
+				obj->hasMapping = mapping;
+				HandleInspectorUndo(*obj);
+			}
+
+			ImGui::EndCombo();
 		}
 
 		ImGui::Separator();
@@ -1270,6 +1355,9 @@ void update_imgui_guizmo() {
 		if (light) {
 
 			if(ImGui::CollapsingHeader("General", ImGuiTreeNodeFlags_DefaultOpen)) {
+
+				ImGui::DragInt("Light ID", (int*)&light->id);
+				ImGui::DragInt("Object ID", (int*)&obj->id);
 
 				static char name[256];
 				strncpy_s(name, lightObjects[selectedObject - objects.size()].name.c_str(), sizeof(name));

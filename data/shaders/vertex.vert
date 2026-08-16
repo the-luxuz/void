@@ -23,7 +23,14 @@ out vec3 bitangent;
 
 out vec4 fragPosLight[MAX_LIGHTS];
 
+out vec3 localPos;
+out vec3 localNormal;
+
 void main() {
+
+    localPos = aPosition;
+
+    localNormal= aNormal;
 
     gl_Position = MVP * vec4(aPosition, 1.0);
 

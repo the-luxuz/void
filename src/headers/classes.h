@@ -4,6 +4,12 @@
 #include <glm/gtx/quaternion.hpp>
 #include <unordered_map>
 
+using EntityID = uint64_t;
+
+inline EntityID nextEntityID = 1;
+
+EntityID GenerateEntityID();
+
 enum class TextureMapping {
     UV,
     Planar,
@@ -136,7 +142,7 @@ struct ObjectState {
     GLuint normalTexture;
     std::string norm_map;
 
-    bool has_normal_map;
+    bool hasNormalMap;
 
     float shininess;
 
@@ -145,6 +151,12 @@ struct ObjectState {
 
     Collider collider;
     bool hasCollider = false;
+
+    bool hasMaterial = true;
+
+    bool hasMapping = true;
+
+    bool tiling = false;
 
     bool visible = true;
 };
@@ -220,6 +232,8 @@ struct camera {
 
 struct Object {
 
+    EntityID id = 0;
+
     GLuint vao = 0;
     GLuint vbo = 0;
     GLuint ebo = 0;
@@ -241,6 +255,8 @@ struct Object {
     std::string tex; // has the texture path
 
     GLuint obj_texture = 0;
+
+    glm::vec2 textureTiling = glm::vec2(1.0f);
 
     std::vector<Vertex> vertices;
     std::vector<GLuint> indices;
@@ -277,7 +293,7 @@ struct Object {
     GLuint normalTexture = 0;
     std::string norm_map;
 
-    bool has_normal_map = false;
+    bool hasNormalMap = false;
 
     float shininess = 20;
 
@@ -287,10 +303,18 @@ struct Object {
     Collider collider;
 	bool hasCollider = false;
 
+    bool hasMaterial = true;
+
+    bool hasMapping = true;
+
+    bool tiling = false;
+
     bool visible = true;
 };
 
 struct Light {
+
+    EntityID id = 0;
 
     std::string name;
 
@@ -348,7 +372,7 @@ inline void ApplyLightState(Light& l, const LightState& s) {
 
 inline ObjectState CaptureState(const Object& o) {
 
-    return { o.position, o.rotation, o.scale, o.name, o.mesh, o.obj_texture, o.tex, o.min, o.max, o.mapping, o.coordType, o.cyaxisType, o.normalTexture, o.norm_map, o.has_normal_map, o.shininess, o.physics, o.hasPhysics, o.collider, o.hasCollider, o.visible };
+    return { o.position, o.rotation, o.scale, o.name, o.mesh, o.obj_texture, o.tex, o.min, o.max, o.mapping, o.coordType, o.cyaxisType, o.normalTexture, o.norm_map, o.hasNormalMap, o.shininess, o.physics, o.hasPhysics, o.collider, o.hasCollider, o.hasMaterial, o.hasMapping, o.tiling, o.visible };
 }
 
 inline void ApplyState(Object& o, const ObjectState& s) {
@@ -372,7 +396,7 @@ inline void ApplyState(Object& o, const ObjectState& s) {
 
 	o.normalTexture = s.normalTexture;
 	o.norm_map = s.norm_map;
-	o.has_normal_map = s.has_normal_map;
+	o.hasNormalMap = s.hasNormalMap;
 
 	o.shininess = s.shininess;
 
@@ -381,6 +405,11 @@ inline void ApplyState(Object& o, const ObjectState& s) {
 
     o.collider = s.collider;
     o.hasCollider = s.hasCollider;
+
+    o.hasMaterial = s.hasMaterial;
+    o.hasMapping = s.hasMapping;
+
+    o.tiling = s.tiling;
 
     o.visible = s.visible;
 }
@@ -419,7 +448,7 @@ struct Shader_Uniform {
 
 	GLint shininess;
 
-	GLint has_normal_map;
+	GLint hasNormalMap;
 
     GLint program_line_color;
 
@@ -434,6 +463,17 @@ struct Shader_Uniform {
 	GLint color;
 
 	GLint useTexture;
+
+	GLint textureTiling;
+
+	GLint mapping;
+
+	GLint min;
+	GLint max;
+
+    GLint worldSize;
+
+    GLint tiling;
 
 	bool class_uniforms_initialized = false;
 
