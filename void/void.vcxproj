@@ -160,6 +160,7 @@
     <ClCompile Include="..\src\classes.cpp" />
     <ClCompile Include="..\src\helpers.cpp" />
     <ClCompile Include="..\src\ImGuizmo.cpp" />
+    <ClCompile Include="..\src\imgui_helpers.cpp" />
     <ClCompile Include="..\src\inits.cpp" />
     <ClCompile Include="..\src\main.cpp" />
     <ClCompile Include="..\src\parser.cpp" />
@@ -175,6 +176,7 @@
     <ClInclude Include="..\src\headers\classes.h" />
     <ClInclude Include="..\src\headers\helpers.h" />
     <ClInclude Include="..\src\headers\ImGuizmo.h" />
+    <ClInclude Include="..\src\headers\imgui_helpers.h" />
     <ClInclude Include="..\src\headers\inits.h" />
     <ClInclude Include="..\src\headers\local.h" />
     <ClInclude Include="..\src\headers\parser.h" />

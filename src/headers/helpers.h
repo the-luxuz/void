@@ -138,6 +138,8 @@ extern Tools currentTool;
 
 extern bool camera_update;
 
+extern bool free_cam;
+
 //--------------------------------------------------------------------------
 // Load scene in the good way
 
@@ -226,6 +228,10 @@ void select_object(glm::vec3& rayOrigin, glm::vec3& rayDir);
 
 void controls(const bool* keyboard, float angle_step, float radius_step, float dt);
 
+void PlayerControl(const bool* keyboard, float dt, Object& player);
+
+void UpdatePlayerCamera(Object& player);
+
 //--------------------------------------------------------------------------
 // Grid
 
@@ -310,8 +316,15 @@ void load_scene_state();
 
 Object* search_obj_by_name(const char* name);
 
-void PlayerControl(const bool* keyboard, float dt, Object& player);
-
-void UpdatePlayerCamera(Object& player);
-
 glm::vec2 TextureTiling(Object& obj, glm::vec3 worldSize);
+
+//--------------------------------------------------------------
+// animations
+
+Object* FindObjectByID(EntityID id);
+
+Light* FindLightByID(EntityID id);
+
+void ApplyTrack(const AnimationTrack& track, float time);
+
+void EvaluateCurrentAnimation();

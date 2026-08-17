@@ -3,6 +3,8 @@
 #include "local.h"
 #include <glm/gtx/quaternion.hpp>
 #include <unordered_map>
+#include <variant>
+#include <algorithm>
 
 using EntityID = uint64_t;
 
@@ -478,3 +480,124 @@ struct Shader_Uniform {
 	bool class_uniforms_initialized = false;
 
 };
+
+//--------------------------------------------------------------
+// animations
+
+enum class AnimationTargetType {
+    Object,
+    Light
+};
+
+enum class AnimationProperty {
+
+    // object/light object
+
+    Position,
+    Rotation,
+    Scale,
+
+    // light
+
+    Color,
+    Ambient,
+    Attenuation,
+    Inner,
+    Outer,
+    Falloff,
+
+    // object/light object
+
+    Visible,
+
+    // object
+
+    Texture
+};
+
+using AnimationValue = std::variant<float, int, bool, glm::vec3, glm::quat, std::string>;
+
+struct AnimationKey {
+
+    float time = 0.0f;
+    AnimationValue value;
+};
+
+struct AnimationTrack {
+
+    AnimationTargetType targetType;
+
+    EntityID targetID;
+
+    AnimationProperty property;
+
+    std::vector<AnimationKey> keys;
+};
+
+struct AnimationClip {
+
+    std::string name;
+
+    float duration = 5.0f;
+
+    bool loop = true;
+
+    std::vector<AnimationTrack> tracks;
+};
+
+extern std::vector<AnimationClip> animations;
+
+struct AnimationPlayer {
+
+    int current_animation = -1;
+
+    float time = 0.0f;
+
+    bool playing = false;
+
+    float speed = 1.f;
+};
+
+extern AnimationPlayer animationPlayer;
+
+float InterpolateFloat(const AnimationKey& a, const AnimationKey& b, float time);
+
+glm::vec3 InterpolateVec3(const AnimationKey& a, const AnimationKey& b, float time);
+
+glm::quat InterpolateQuat(const AnimationKey& a, const AnimationKey& b, float time);
+
+const AnimationKey* GetPrevKey(const AnimationTrack& track, float time);
+
+const AnimationKey* GetNextKey(const AnimationTrack& track, float time);
+
+AnimationTrack* FindTrack(AnimationClip& clip, AnimationTargetType targetType, EntityID targetID, AnimationProperty property);
+
+AnimationTrack& GetOrCreateTrack(AnimationClip& clip, AnimationTargetType targetType, EntityID targetID, AnimationProperty property);
+
+void RecalculateAnimationDuration(AnimationClip& clip);
+
+template<typename T>
+void AddKey(AnimationTrack& track, float time, const T& value) {
+
+    for (AnimationKey& key : track.keys) {
+
+        if (std::abs(key.time - time) < 0.0001f) {
+
+            key.value = AnimationValue(value);
+
+            return;
+        }
+    }
+
+    track.keys.push_back({ time, AnimationValue(value) });
+
+    std::sort(track.keys.begin(), track.keys.end(), [](const AnimationKey& a, const AnimationKey& b) {
+
+        return a.time < b.time;
+
+        }
+    );
+}
+
+
+AnimationValue EvaluateTrack(const AnimationTrack& track, float time);

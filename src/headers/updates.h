@@ -5,6 +5,7 @@
 #include "helpers.h"
 #include "inits.h"
 #include "buffers.h"
+#include "imgui_helpers.h"
 
 //--------------------------------------------------------------------------
 // global variables
@@ -47,6 +48,11 @@ void PhysicsUpdate(float dt);
 // Update Collisions
 
 void CollisionUpdate();
+
+//--------------------------------------------------------------------------
+// animations
+
+void UpdateAnimation(float dt);
 
 //--------------------------------------------------------------------------
 // Update Imgui and guizmo

@@ -20,6 +20,8 @@ static float fps = 0.0f;
 
 const float fixedDt = 1.0f / 60.0f;
 
+Object* player = nullptr;
+
 SDL_DisplayID display;
 SDL_Rect rect;
 
@@ -33,7 +35,8 @@ void update(SDL_Window* window, float dt) {
 	if (st.light_active)
 		update_depthmap();
 
-	Object* player = search_obj_by_name("Player");
+	if(currentViewMode == view_Mode::PLAY)
+		player = search_obj_by_name("Player");
 
 	if (currentViewMode == view_Mode::PLAY && player)
 		cameraPos = cam.cam_position;
@@ -128,10 +131,16 @@ void update(SDL_Window* window, float dt) {
 
 		const bool* keyboard = SDL_GetKeyboardState(nullptr);
 
-		if (currentViewMode == view_Mode::PLAY && player)
+		if (currentViewMode == view_Mode::PLAY && player) {
+		
 			if (!io.WantCaptureKeyboard)
 				PlayerControl(keyboard, dt, *player);
 
+		} else if (!free_cam) {
+		
+			free_cam = true;
+
+		}
 		//----------------------------------------------------
 		// physics
 
@@ -154,8 +163,15 @@ void update(SDL_Window* window, float dt) {
 		if (st.collision_active)
 			CollisionUpdate();
 
-		if (currentViewMode == view_Mode::PLAY && player)
+		if (currentViewMode == view_Mode::PLAY && player) {
+		
 			UpdatePlayerCamera(*player);
+
+		} else if(!free_cam) {
+		
+			free_cam = true;
+
+		}
 
 		//----------------------------------------------------
 		// obj
@@ -170,6 +186,11 @@ void update(SDL_Window* window, float dt) {
 		//----------------------------------------------------
 
 	}
+
+	//--------------------------------------------------------------------------
+	// animations
+
+	UpdateAnimation(dt);
 
 	//----------------------------------------------------
 	// imgui / imguizmo
@@ -622,24 +643,8 @@ int main(int argc, char* args[]) {
 
 			case SDL_EVENT_MOUSE_MOTION:
 
-				if (currentViewMode == view_Mode::PLAY) {
+				if ((SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_LCTRL])) {
 
-					SDL_HideCursor();
-					SDL_SetWindowRelativeMouseMode(window, true);
-
-					cam.alpha -= -(event.motion.xrel * mouseSensitivity);
-					cam.beta -= event.motion.yrel * mouseSensitivity;
-
-					cam.beta = glm::clamp(cam.beta, glm::radians(-89.0f), glm::radians(89.0f));
-				}
-				else if(!SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_LCTRL]){
-					SDL_ShowCursor();
-					SDL_SetWindowRelativeMouseMode(window, false);
-				}
-
-				if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_LCTRL] && currentViewMode == view_Mode::EDITOR) {
-
-					SDL_HideCursor();
 					SDL_SetWindowRelativeMouseMode(window, true);
 
 					cam.alpha -= -(event.motion.xrel * mouseSensitivity); 
@@ -652,8 +657,11 @@ int main(int argc, char* args[]) {
 
 			case SDL_EVENT_KEY_UP:
 
-				if (event.key.scancode == SDL_SCANCODE_LCTRL)
+				if (event.key.scancode == SDL_SCANCODE_LCTRL) {
+
+					SDL_SetWindowRelativeMouseMode(window, false);
 					SDL_WarpMouseInWindow(window, st.w / 2.0f, st.h / 2.0f);
+				}
 
 				break;
 
@@ -744,8 +752,11 @@ int main(int argc, char* args[]) {
 
 		ImGuiIO& io = ImGui::GetIO();
 
-		if(!io.WantCaptureKeyboard)
-			controls(keyboard, angle_speed, radius_speed, dt);
+		if ((currentViewMode == view_Mode::PLAY && free_cam) || currentViewMode == view_Mode::EDITOR) {
+
+			if (!io.WantCaptureKeyboard)
+				controls(keyboard, angle_speed, radius_speed, dt);
+		}
 
 		totalTime += 1.0f / fps;
 

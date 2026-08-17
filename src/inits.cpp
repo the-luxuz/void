@@ -362,6 +362,8 @@ void init() {
 			obj.rotation = par.lights[i].rotation;
 			obj.scale = glm::vec3(20.f);
 
+			obj.visible = par.lights_objects[i].visible;
+
 			obj.model = GetModelMatrix(obj);
 
 			buffer(obj);
@@ -437,7 +439,7 @@ bool open_init(const char* settings, const char* scene, Settings& st) {
 
 	objectNameCounters.clear();
 
-	if (par.load(settings, scene, st, cam, objects, lightObjects))
+	if (par.load(settings, scene, st, cam, objects))
 		init();
 
 	return true;
@@ -457,7 +459,7 @@ void init_(const char* settings, const char* scene) {
 	//
 	//par.save(settings, scene, st, cam, objects, lightObjects, lights);
 
-	if (par.load(settings, scene,  st, cam, objects, lightObjects)) {
+	if (par.load(settings, scene,  st, cam, objects)) {
 
 		windowedSize = { st.w, st.h };
 

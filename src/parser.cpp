@@ -33,7 +33,7 @@ void Parser::save(const char* settings_name, const char* scene_name, Settings& s
 
 }
 
-bool Parser::load(const char* settings_name, const char* scene_name, Settings& st, camera& cam, std::vector<Object>& scene, std::vector<Object>& scene_lgh_obj) {
+bool Parser::load(const char* settings_name, const char* scene_name, Settings& st, camera& cam, std::vector<Object>& scene) {
 
     std::ifstream in(settings_name, std::ios::binary);
     std::ifstream in_scene(scene_name, std::ios::binary);
@@ -43,7 +43,7 @@ bool Parser::load(const char* settings_name, const char* scene_name, Settings& s
 
     load_settings(in, st, cam);
 
-    load_scene(in_scene, scene_lgh_obj);
+    load_scene(in_scene);
 
     return true;
 }
@@ -233,7 +233,7 @@ void Parser::save_scene(std::ofstream& out, const std::vector<Object>& scene, co
     }
 }
 
-bool Parser::load_scene(std::ifstream& in, std::vector<Object>& scene_lgh_obj) {
+bool Parser::load_scene(std::ifstream& in) {
     
     uint32_t count;
     uint32_t lightObjCount;
@@ -244,11 +244,11 @@ bool Parser::load_scene(std::ifstream& in, std::vector<Object>& scene_lgh_obj) {
     Read(in, lightCount);
 
     objects.clear();
-    scene_lgh_obj.clear();
+    lights_objects.clear();
     lights.clear();
 
     objects.resize(count);
-    scene_lgh_obj.resize(lightObjCount);
+    lights_objects.resize(lightObjCount);
     lights.resize(lightCount);
 
     for (auto& obj : objects) {
@@ -304,18 +304,18 @@ bool Parser::load_scene(std::ifstream& in, std::vector<Object>& scene_lgh_obj) {
         Read(in, obj.visible);
     }
 
-    for (auto& obj : scene_lgh_obj) {
+    for (auto& obj : lights_objects) {
 
         Read(in, obj.id);
 
         if (obj.id == 0)
             obj.id = GenerateEntityID();
 
-        ReadString(in, obj.name);
+        ReadString(in, obj.obj_name);
         ReadString(in, obj.mesh);
         ReadString(in, obj.tex);
 
-        ReadString(in, obj.norm_map);
+        ReadString(in, obj.normal_map);
 
         Read(in, obj.obj_texture);
         Read(in, obj.normalTexture);

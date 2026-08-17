@@ -172,10 +172,6 @@ void update_objects() {
 	glUniform1i(shader_uniform.normal_map_active, st.normal_map_active);
 	glUniform1i(shader_uniform.shadow_active, st.shadow_active);
 
-	if (st.wireframe_active)
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	else
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	for (Object& obj : objects) {
 
@@ -231,7 +227,6 @@ void update_objects() {
 
 			obj.textureTiling = TextureTiling(obj, worldSize);
 
-
 			glUniform3fv(shader_uniform.min, 1, glm::value_ptr(obj.min));
 			glUniform3fv(shader_uniform.max, 1, glm::value_ptr(obj.max));
 
@@ -248,6 +243,9 @@ void update_objects() {
 
 		glBindVertexArray(obj.vao);
 
+		if (st.wireframe_active)
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
 		glDrawElements(
 			GL_TRIANGLES,
 			obj.indices.size(),
@@ -256,7 +254,8 @@ void update_objects() {
 		);
 	}
 
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	if (!st.wireframe_active)
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	//-----------------------------------------------------------------------------------------------
 	// draw the lights and the normals, tangents and bitangents
@@ -287,6 +286,22 @@ void update_objects() {
 
 	for (int i = 0; i < lightObjects.size(); i++) {
 
+		if (currentViewMode == view_Mode::PLAY && !lightObjects[i].visible)
+			continue;
+
+		if (!lightObjects[i].visible) {
+
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+			glUniform3f(colorLoc, 0.2f, 0.8f, 1.0f); // cyan
+
+		}else {
+
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+			glUniform3f(colorLoc, 1.f, 1.f, 1.f); // white
+		}
+
 		lights[i].pos = lightObjects[i].position;
 
 		glm::mat4 model(1.0f);
@@ -298,11 +313,16 @@ void update_objects() {
 		glm::mat4 mvp = projection * view * model;
 
 		glUniformMatrix4fv(3, 1, GL_FALSE, glm::value_ptr(mvp));
-		glUniform3f(colorLoc, 1.0f, 1.0f, 1.0f); // white
 		glBindVertexArray(lightObjects[i].vao);
+
+		if (st.wireframe_active)
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 		glDrawElements(GL_TRIANGLES, (GLsizei)lightObjects[i].indices.size(), GL_UNSIGNED_INT, 0);
 	}
+
+	if(!st.wireframe_active)
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 }
 
@@ -369,6 +389,47 @@ void PhysicsUpdate(float dt) {
 
 		p.force = glm::vec3(0.0f);
 	}
+}
+
+//--------------------------------------------------------------------------
+// animations
+
+void UpdateAnimation(float dt) {
+
+	if (animationPlayer.current_animation < 0)
+		return;
+
+	if (animationPlayer.current_animation >= static_cast<int>(animations.size()))
+		return;
+
+	AnimationClip& clip = animations[animationPlayer.current_animation];
+
+	if (!animationPlayer.playing)
+		return;
+
+	if (clip.duration <= 0.0f) {
+
+		animationPlayer.time = 0.0f;
+		animationPlayer.playing = false;
+
+		EvaluateCurrentAnimation();
+
+		return;
+	}
+
+	animationPlayer.time += dt * animationPlayer.speed;
+
+	if (clip.loop) {
+
+		animationPlayer.time = std::fmod(animationPlayer.time,clip.duration);
+
+	} else if (animationPlayer.time >= clip.duration) {
+
+		animationPlayer.time = clip.duration;
+		animationPlayer.playing = false;
+	}
+
+	EvaluateCurrentAnimation();
 }
 
 //--------------------------------------------------------------------------
@@ -569,11 +630,6 @@ void update_imgui_guizmo() {
 			obj->position = translation;
 			obj->scale = scale;
 			obj->rotation = glm::quat(glm::radians(euler));
-
-			if (light) {
-
-				light->pos = translation;
-			}
 
 		}
 
@@ -897,8 +953,6 @@ void update_imgui_guizmo() {
 		Object* obj = GetSelectedObject();
 
 		if (ImGui::CollapsingHeader("General", ImGuiTreeNodeFlags_DefaultOpen)) {
-
-			ImGui::DragInt("ID", (int*)&obj->id);
 
 			static char name[256];
 			strncpy_s(name, objects[selectedObject].name.c_str(), sizeof(name));
@@ -1325,6 +1379,11 @@ void update_imgui_guizmo() {
 
 		ImGui::Separator();
 
+		if (obj)
+			DrawObjectAnimationButtons(*obj);
+
+		ImGui::Separator();
+
 		if (ImGui::Button("Delete Object")) {
 
 			DestroyBuffers(objects[selectedObject]);
@@ -1356,9 +1415,6 @@ void update_imgui_guizmo() {
 
 			if(ImGui::CollapsingHeader("General", ImGuiTreeNodeFlags_DefaultOpen)) {
 
-				ImGui::DragInt("Light ID", (int*)&light->id);
-				ImGui::DragInt("Object ID", (int*)&obj->id);
-
 				static char name[256];
 				strncpy_s(name, lightObjects[selectedObject - objects.size()].name.c_str(), sizeof(name));
 				name[255] = '\0';
@@ -1371,7 +1427,7 @@ void update_imgui_guizmo() {
 				ImGui::ColorEdit3("Color", &light->col.x);
 				HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
 
-				ImGui::DragFloat3("Position", &light->pos.x, 0.1f);
+				ImGui::DragFloat3("Position", &obj->position.x, 0.1f);
 				HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
 
 				glm::vec3 euler = glm::degrees(glm::eulerAngles(obj->rotation));
@@ -1388,7 +1444,8 @@ void update_imgui_guizmo() {
 				ImGui::DragFloat("Ambient", &light->ambient, 0.01f, 0.f, 1.f);
 				HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
 
-				lightObjects[selectedObject - objects.size()].position = light->pos;
+				ImGui::Checkbox("Visible", &obj->visible);
+				HandleInspectorUndo(*obj);
 			}
 
 			if (ImGui::CollapsingHeader("Attenuation", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -1475,9 +1532,17 @@ void update_imgui_guizmo() {
 
 		}
 
+		if (light)
+			DrawLightAnimationButtons(*light);
+
+		if (obj)
+			DrawObjectAnimationButtons(*obj);
+
 	}
 
 	ImGui::End();
+
+	UpdateAnimationImGui();
 
 	switch (currentTool) {
 

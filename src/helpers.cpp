@@ -131,6 +131,8 @@ static bool showGraphicsSettings = false;
 
 bool camera_update = true;
 
+bool free_cam = false;
+
 //--------------------------------------------------------------------------
 // Load scene in the good way
 
@@ -201,7 +203,7 @@ bool load_scene_ok(const char* scene) {
 
 	std::ifstream in(scene, std::ios::binary);
 
-	if (par.load_scene(in, lightObjects))
+	if (par.load_scene(in))
 		init();
 
 	return true;
@@ -282,6 +284,7 @@ void Docking() {
 		ImGui::DockBuilderDockWindow("Graphics Settings", dock_right);
 
 		ImGui::DockBuilderDockWindow("Assets", dock_bottom);
+		ImGui::DockBuilderDockWindow("Animation", dock_bottom);
 
 		ImGui::DockBuilderDockWindow("ViewPort", dock_main);
 
@@ -1544,7 +1547,7 @@ void select_object(glm::vec3& rayOrigin, glm::vec3& rayDir) {
 
 void controls(const bool* keyboard, float angle_step, float radius_step, float dt) {
 
-	if (currentViewMode == view_Mode::EDITOR) {
+	if (currentViewMode == view_Mode::EDITOR || free_cam) {
 
 		glm::vec3 cameraPos = get_cam_pos();
 
@@ -1577,6 +1580,61 @@ void controls(const bool* keyboard, float angle_step, float radius_step, float d
 
 		return;
 	}
+}
+
+void PlayerControl(const bool* keyboard, float dt, Object& player) {
+
+	// PLAY
+	// ---------------------------------------------------------
+
+	glm::vec3 forward(cos(cam.alpha), 0.0f, sin(cam.alpha));
+
+	forward = glm::normalize(forward);
+
+	glm::vec3 right = glm::normalize(glm::cross(forward, glm::vec3(0, 1, 0)));
+
+	glm::vec3 moveDirection(0.0f);
+
+	if (keyboard[SDL_SCANCODE_W])
+		moveDirection += forward;
+
+	if (keyboard[SDL_SCANCODE_S])
+		moveDirection -= forward;
+
+	if (keyboard[SDL_SCANCODE_A])
+		moveDirection -= right;
+
+	if (keyboard[SDL_SCANCODE_D])
+		moveDirection += right;
+
+	if (glm::length2(moveDirection) > 0.0001f)
+		moveDirection = glm::normalize(moveDirection);
+
+	float moveForce = 100.0f;
+
+	player.physics.force += moveDirection * moveForce;
+}
+
+void UpdatePlayerCamera(Object& player) {
+
+	// camera
+	// ---------------------------------------------------------
+
+	const float eyeHeight = 1.7f;
+
+	cam.cam_position = player.position + glm::vec3(0.0f, eyeHeight, 0.0f);
+
+	glm::vec3 lookDir;
+
+	lookDir.x = cos(cam.alpha) * cos(cam.beta);
+	lookDir.y = sin(cam.beta);
+	lookDir.z = sin(cam.alpha) * cos(cam.beta);
+
+	lookDir = glm::normalize(lookDir);
+
+	cam.cam_target = cam.cam_position + lookDir;
+
+	cam.cam_up = glm::vec3(0, 1, 0);
 }
 
 //--------------------------------------------------------------------------
@@ -2578,61 +2636,6 @@ Object* search_obj_by_name(const char* name) {
 	return nullptr;
 }
 
-void PlayerControl(const bool* keyboard, float dt, Object& player) {
-
-	// PLAY
-	// ---------------------------------------------------------
-
-	glm::vec3 forward(cos(cam.alpha), 0.0f, sin(cam.alpha));
-
-	forward = glm::normalize(forward);
-
-	glm::vec3 right = glm::normalize(glm::cross(forward, glm::vec3(0, 1, 0)));
-
-	glm::vec3 moveDirection(0.0f);
-
-	if (keyboard[SDL_SCANCODE_W])
-		moveDirection += forward;
-
-	if (keyboard[SDL_SCANCODE_S])
-		moveDirection -= forward;
-
-	if (keyboard[SDL_SCANCODE_A])
-		moveDirection -= right;
-
-	if (keyboard[SDL_SCANCODE_D])
-		moveDirection += right;
-
-	if (glm::length2(moveDirection) > 0.0001f)
-		moveDirection = glm::normalize(moveDirection);
-
-	float moveForce = 100.0f;
-
-	player.physics.force += moveDirection * moveForce;
-}
-
-void UpdatePlayerCamera(Object& player) {
-
-	// camera
-	// ---------------------------------------------------------
-
-	const float eyeHeight = 1.7f;
-
-	cam.cam_position = player.position + glm::vec3(0.0f, eyeHeight, 0.0f);
-
-	glm::vec3 lookDir;
-
-	lookDir.x = cos(cam.alpha) * cos(cam.beta);
-	lookDir.y = sin(cam.beta);
-	lookDir.z = sin(cam.alpha) * cos(cam.beta);
-
-	lookDir = glm::normalize(lookDir);
-
-	cam.cam_target = cam.cam_position + lookDir;
-
-	cam.cam_up = glm::vec3(0, 1, 0);
-}
-
 glm::vec2 TextureTiling(Object& obj, glm::vec3 worldSize) {
 
 	glm::vec2 tiling(1.0f);
@@ -2695,4 +2698,154 @@ glm::vec2 TextureTiling(Object& obj, glm::vec3 worldSize) {
 	}
 
 	return tiling;
+}
+
+//--------------------------------------------------------------
+// animations
+
+Object* FindObjectByID(EntityID id) {
+
+	for (auto& obj : objects) {
+
+		if (obj.id == id)
+			return &obj;
+	}
+
+	for (auto& obj : lightObjects) {
+
+		if (obj.id == id)
+			return &obj;
+	}
+
+	return nullptr;
+}
+
+Light* FindLightByID(EntityID id) {
+
+	for (auto& light : lights) {
+
+		if (light.id == id)
+			return &light;
+	}
+
+	return nullptr;
+}
+
+void ApplyTrack(const AnimationTrack& track, float time) {
+	
+	AnimationValue value = EvaluateTrack(track, time);
+
+	if (track.targetType == AnimationTargetType::Object) {
+
+		Object* obj = FindObjectByID(track.targetID);
+
+		if (!obj)
+			return;
+
+		switch (track.property) {
+
+			case AnimationProperty::Position:
+
+				obj->position = std::get<glm::vec3>(value);
+
+				break;
+
+			case AnimationProperty::Rotation:
+
+				obj->rotation = std::get<glm::quat>(value);
+
+				break;
+
+			case AnimationProperty::Scale:
+
+				obj->scale = std::get<glm::vec3>(value);
+
+				break;
+
+			case AnimationProperty::Visible:
+
+				obj->visible = std::get<bool>(value);
+
+				break;
+
+			case AnimationProperty::Texture: {
+
+				const std::string& path = std::get<std::string>(value);
+
+				obj->tex = path;
+				obj->obj_texture = TextureManager::Get(path);
+
+				break;
+			}
+
+			default:
+				break;
+		}
+
+	} else if (track.targetType == AnimationTargetType::Light) {
+
+		Light* light = FindLightByID(track.targetID);
+
+		if (!light)
+			return;
+
+		switch (track.property) {
+
+			case AnimationProperty::Color:
+
+				light->col = std::get<glm::vec3>(value);
+
+				break;
+
+			case AnimationProperty::Ambient:
+
+				light->ambient = std::get<float>(value);
+
+				break;
+
+			case AnimationProperty::Inner:
+
+				light->inner = std::get<float>(value);
+
+				break;
+
+			case AnimationProperty::Outer:
+
+				light->outer = std::get<float>(value);
+
+				break;
+
+			case AnimationProperty::Falloff:
+
+				light->falloff = std::get<float>(value);
+
+				break;
+			case AnimationProperty::Attenuation:
+
+				light->att = std::get<glm::vec3>(value);
+
+				break;
+
+			default:
+				break;
+		}
+	}
+}
+
+void EvaluateCurrentAnimation() {
+
+	if (animationPlayer.current_animation < 0)
+		return;
+
+	if (animationPlayer.current_animation >= static_cast<int>(animations.size()))
+		return;
+
+	AnimationClip& clip = animations[animationPlayer.current_animation];
+
+	animationPlayer.time = glm::clamp(animationPlayer.time, 0.0f, clip.duration);
+
+	for (const auto& track : clip.tracks) {
+
+		ApplyTrack(track, animationPlayer.time);
+	}
 }
