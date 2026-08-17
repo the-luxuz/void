@@ -45,6 +45,22 @@ struct Parser {
 		in.read(reinterpret_cast<char*>(&m), sizeof(m));
 	}
 
+	void WriteAnimationValue(std::ofstream& out, const AnimationValue& value);
+
+	void ReadAnimationValue(std::ifstream& in, AnimationValue& value);
+
+	void WriteAnimationKey(std::ofstream& out, const AnimationKey& key);
+
+	void ReadAnimationKey(std::ifstream& in, AnimationKey& key);
+
+	void WriteAnimationTrack(std::ofstream& out, const AnimationTrack& track);
+
+	void ReadAnimationTrack(std::ifstream& in, AnimationTrack& track);
+
+	void WriteAnimationClip(std::ofstream& out, const AnimationClip& clip);
+
+	void ReadAnimationClip(std::ifstream& in, AnimationClip& clip);
+
 	std::string skybox;
 
 	struct Transform {
@@ -56,9 +72,7 @@ struct Parser {
 		std::string mesh;
 
 		std::string tex;
-		GLuint obj_texture;
 
-		GLuint normalTexture;
 		std::string normal_map = "data/textures/brick_normal_map.png";
 		bool hasNormalMap = false;
 		
@@ -67,9 +81,6 @@ struct Parser {
 		glm::vec3 scale;
 
 		glm::vec3 min, max;
-
-		glm::mat4 model;
-		glm::mat4 mvp;
 
 		TextureMapping mapping = TextureMapping::UV;
 		coord_types coordType = coord_types::XZ;
@@ -86,6 +97,8 @@ struct Parser {
 		bool hasMaterial = true;
 
 		bool hasMapping = true;
+
+		bool hasAnimation = true;
 
 		bool tiling = false;
 
@@ -115,9 +128,16 @@ struct Parser {
 		float pcf;
 
 		std::string type = "POINT";
+
+		bool hasAnimation = true;
+
 	};
 
 	std::vector<Light> lights;
 	std::vector<Transform> lights_objects;
+
+	std::vector<AnimationClip> anim;
+	AnimationPlayer animPlayer;
+	AnimationEditorState animEditor;
 
 };

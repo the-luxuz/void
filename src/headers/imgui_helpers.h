@@ -9,3 +9,5 @@ void UpdateAnimationImGui();
 void DrawObjectAnimationButtons(Object& obj);
 
 void DrawLightAnimationButtons(Light& light);
+
+void DrawAnimationTimeline(AnimationClip& clip);

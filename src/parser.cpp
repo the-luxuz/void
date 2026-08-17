@@ -1,5 +1,174 @@
 #include "parser.h"
 
+
+void Parser::WriteAnimationValue(std::ofstream& out, const AnimationValue& value) {
+
+    uint8_t type = static_cast<uint8_t>(value.index());
+
+    Write(out, type);
+
+    switch (value.index()) {
+
+    case 0: // float
+        Write(out, std::get<float>(value));
+        break;
+
+    case 1: // int
+        Write(out, std::get<int>(value));
+        break;
+
+    case 2: // bool
+        Write(out, std::get<bool>(value));
+        break;
+
+    case 3: // vec3
+        Write(out, std::get<glm::vec3>(value));
+        break;
+
+    case 4: // quat
+        Write(out, std::get<glm::quat>(value));
+        break;
+
+    case 5: // string
+        WriteString(out, std::get<std::string>(value));
+        break;
+    }
+}
+
+void Parser::ReadAnimationValue(std::ifstream& in, AnimationValue& value) {
+
+    uint8_t type;
+
+    Read(in, type);
+
+    switch (type) {
+
+    case 0: {
+        float v;
+        Read(in, v);
+        value = v;
+        break;
+    }
+
+    case 1: {
+        int v;
+        Read(in, v);
+        value = v;
+        break;
+    }
+
+    case 2: {
+        bool v;
+        Read(in, v);
+        value = v;
+        break;
+    }
+
+    case 3: {
+        glm::vec3 v;
+        Read(in, v);
+        value = v;
+        break;
+    }
+
+    case 4: {
+        glm::quat v;
+        Read(in, v);
+        value = v;
+        break;
+    }
+
+    case 5: {
+        std::string v;
+        ReadString(in, v);
+        value = v;
+        break;
+    }
+
+    default:
+        in.setstate(std::ios::failbit);
+        break;
+    }
+}
+
+void Parser::WriteAnimationKey(std::ofstream& out, const AnimationKey& key) {
+
+    Write(out, key.time);
+
+    WriteAnimationValue(out, key.value);
+}
+
+void Parser::ReadAnimationKey(std::ifstream& in, AnimationKey& key) {
+
+    Read(in, key.time);
+
+    ReadAnimationValue(in, key.value);
+}
+
+void Parser::WriteAnimationTrack(std::ofstream& out, const AnimationTrack& track) {
+
+    Write(out, track.targetType);
+    Write(out, track.targetID);
+    Write(out, track.property);
+
+    uint32_t keyCount =
+        static_cast<uint32_t>(track.keys.size());
+
+    Write(out, keyCount);
+
+    for (const auto& key : track.keys)
+        WriteAnimationKey(out, key);
+}
+
+void Parser::ReadAnimationTrack(std::ifstream& in, AnimationTrack& track) {
+
+    Read(in, track.targetType);
+    Read(in, track.targetID);
+    Read(in, track.property);
+
+    uint32_t keyCount;
+
+    Read(in, keyCount);
+
+    track.keys.resize(keyCount);
+
+    for (auto& key : track.keys)
+        ReadAnimationKey(in, key);
+}
+
+void Parser::WriteAnimationClip(std::ofstream& out, const AnimationClip& clip) {
+
+    WriteString(out, clip.name);
+
+    Write(out, clip.duration);
+    Write(out, clip.loop);
+
+    uint32_t trackCount =
+        static_cast<uint32_t>(clip.tracks.size());
+
+    Write(out, trackCount);
+
+    for (const auto& track : clip.tracks)
+        WriteAnimationTrack(out, track);
+}
+
+void Parser::ReadAnimationClip(std::ifstream& in, AnimationClip& clip) {
+
+    ReadString(in, clip.name);
+
+    Read(in, clip.duration);
+    Read(in, clip.loop);
+
+    uint32_t trackCount;
+
+    Read(in, trackCount);
+
+    clip.tracks.resize(trackCount);
+
+    for (auto& track : clip.tracks)
+        ReadAnimationTrack(in, track);
+}
+
 void Parser::WriteString(std::ofstream& out, const std::string& str) {
 
     uint32_t len = static_cast<uint32_t>(str.size());
@@ -8,15 +177,24 @@ void Parser::WriteString(std::ofstream& out, const std::string& str) {
     out.write(str.data(), len);
 }
 
+constexpr uint32_t MAX_STRING_SIZE = 1024 * 1024;
+
 void Parser::ReadString(std::ifstream& in, std::string& str) {
 
     uint32_t len;
 
-    in.read(reinterpret_cast<char*>(&len), sizeof(len));
+    Read(in, len);
+
+    if (!in || len > MAX_STRING_SIZE) {
+
+        in.setstate(std::ios::failbit);
+        return;
+    }
 
     str.resize(len);
 
-    in.read(str.data(), len);
+    if (len > 0)
+        in.read(str.data(), len);
 }
 
 void Parser::save(const char* settings_name, const char* scene_name, Settings& st, camera& cam, const std::vector<Object>& scene, const std::vector<Object>& scene_lgh_obj, const std::vector<::Light>& scene_lgh) {
@@ -24,7 +202,7 @@ void Parser::save(const char* settings_name, const char* scene_name, Settings& s
     std::ofstream out(settings_name, std::ios::binary);
     std::ofstream out_scene(scene_name, std::ios::binary);
 
-    if (!out)
+    if (!out || !out_scene)
         return;
 
     save_settings(out, st, cam);
@@ -38,12 +216,13 @@ bool Parser::load(const char* settings_name, const char* scene_name, Settings& s
     std::ifstream in(settings_name, std::ios::binary);
     std::ifstream in_scene(scene_name, std::ios::binary);
 
-    if (!in)
+    if (!in || !in_scene)
         return false;
 
     load_settings(in, st, cam);
 
-    load_scene(in_scene);
+    if (!load_scene(in_scene))
+        return false;
 
     return true;
 }
@@ -106,10 +285,12 @@ void Parser::save_scene(std::ofstream& out, const std::vector<Object>& scene, co
     uint32_t count = scene.size();
     uint32_t lightObjCount = scene_lgh_obj.size();
     uint32_t lightCount = scene_lgh.size();
+    uint32_t animCount = animations.size();
 
     Write(out, count);
     Write(out, lightObjCount);
     Write(out, lightCount);
+    Write(out, animCount);
 
     for (auto& obj : scene) {
 
@@ -120,9 +301,6 @@ void Parser::save_scene(std::ofstream& out, const std::vector<Object>& scene, co
         WriteString(out, obj.tex);
 
         WriteString(out, obj.norm_map);
-
-        Write(out, obj.obj_texture);
-        Write(out, obj.normalTexture);
 
         Write(out, obj.hasNormalMap);
 
@@ -135,9 +313,6 @@ void Parser::save_scene(std::ofstream& out, const std::vector<Object>& scene, co
 
         Write(out, obj.min);
         Write(out, obj.max);
-
-        Write(out, obj.model);
-        Write(out, obj.mvp);
 
         Write(out, obj.shininess);
 
@@ -153,6 +328,8 @@ void Parser::save_scene(std::ofstream& out, const std::vector<Object>& scene, co
 
         Write(out, obj.hasMaterial);
         Write(out, obj.hasMapping);
+
+        Write(out, obj.hasAnimation);
 
         Write(out, obj.tiling);
 
@@ -170,9 +347,6 @@ void Parser::save_scene(std::ofstream& out, const std::vector<Object>& scene, co
 
         WriteString(out, scene_lgh_obj[i].norm_map);
 
-        Write(out, scene_lgh_obj[i].obj_texture);
-        Write(out, scene_lgh_obj[i].normalTexture);
-
         Write(out, scene_lgh_obj[i].position);
         Write(out, scene_lgh_obj[i].scale);
 
@@ -182,9 +356,6 @@ void Parser::save_scene(std::ofstream& out, const std::vector<Object>& scene, co
 
         Write(out, scene_lgh_obj[i].min);
         Write(out, scene_lgh_obj[i].max);
-
-        Write(out, scene_lgh_obj[i].model);
-        Write(out, scene_lgh_obj[i].mvp);
 
         Write(out, scene_lgh_obj[i].shininess);
 
@@ -200,6 +371,8 @@ void Parser::save_scene(std::ofstream& out, const std::vector<Object>& scene, co
 
         Write(out, scene_lgh_obj[i].hasMaterial);
         Write(out, scene_lgh_obj[i].hasMapping);
+
+        Write(out, scene_lgh_obj[i].hasAnimation);
 
         Write(out, scene_lgh_obj[i].tiling);
 
@@ -230,7 +403,35 @@ void Parser::save_scene(std::ofstream& out, const std::vector<Object>& scene, co
         Write(out, scene_lgh[i].pcf);
 
         WriteString(out, scene_lgh[i].type);
+
+        Write(out, scene_lgh[i].hasAnimation);
     }
+
+    for (auto& a : animations)
+        WriteAnimationClip(out, a);
+
+    // animPlayer
+
+    Write(out, animationPlayer.current_animation);
+
+    Write(out, animationPlayer.time);
+
+    Write(out, animationPlayer.playing);
+
+    Write(out, animationPlayer.speed);
+
+    // animEditor
+
+    Write(out, animationEditor.timelineViewMax);
+
+    Write(out, animationEditor.selectedTrack);
+
+    Write(out, animationEditor.selectedKey);
+
+    Write(out, animationEditor.draggingKey);
+
+    Write(out, animationEditor.dragOffsetTime);
+
 }
 
 bool Parser::load_scene(std::ifstream& in) {
@@ -238,18 +439,22 @@ bool Parser::load_scene(std::ifstream& in) {
     uint32_t count;
     uint32_t lightObjCount;
     uint32_t lightCount;
+    uint32_t animCount;
 
     Read(in, count);
     Read(in, lightObjCount);
     Read(in, lightCount);
+    Read(in, animCount);
 
     objects.clear();
     lights_objects.clear();
     lights.clear();
+    anim.clear();
 
     objects.resize(count);
     lights_objects.resize(lightObjCount);
     lights.resize(lightCount);
+    anim.resize(animCount);
 
     for (auto& obj : objects) {
 
@@ -263,9 +468,6 @@ bool Parser::load_scene(std::ifstream& in) {
         ReadString(in, obj.tex);
 
         ReadString(in, obj.normal_map);
-
-        Read(in, obj.obj_texture);
-        Read(in, obj.normalTexture);
 
         Read(in, obj.hasNormalMap);
 
@@ -281,9 +483,6 @@ bool Parser::load_scene(std::ifstream& in) {
         Read(in, obj.min);
         Read(in, obj.max);
 
-        Read(in, obj.model);
-        Read(in, obj.mvp);
-
         Read(in, obj.shininess);
 
         Read(in, obj.mapping);
@@ -298,6 +497,8 @@ bool Parser::load_scene(std::ifstream& in) {
 
         Read(in, obj.hasMaterial);
         Read(in, obj.hasMapping);
+
+        Read(in, obj.hasAnimation);
 
         Read(in, obj.tiling);
 
@@ -317,9 +518,6 @@ bool Parser::load_scene(std::ifstream& in) {
 
         ReadString(in, obj.normal_map);
 
-        Read(in, obj.obj_texture);
-        Read(in, obj.normalTexture);
-
         Read(in, obj.position);
         Read(in, obj.scale);
 
@@ -331,9 +529,6 @@ bool Parser::load_scene(std::ifstream& in) {
 
         Read(in, obj.min);
         Read(in, obj.max);
-
-        Read(in, obj.model);
-        Read(in, obj.mvp);
 
         Read(in, obj.shininess);
 
@@ -349,6 +544,8 @@ bool Parser::load_scene(std::ifstream& in) {
 
         Read(in, obj.hasMaterial);
         Read(in, obj.hasMapping);
+
+        Read(in, obj.hasAnimation);
 
         Read(in, obj.tiling);
 
@@ -385,7 +582,34 @@ bool Parser::load_scene(std::ifstream& in) {
         Read(in, lgh.pcf);
 
         ReadString(in, lgh.type);
+
+        Read(in, lgh.hasAnimation);
     }
 
-    return true;
+    for (auto& a : anim)
+        ReadAnimationClip(in, a);
+
+    // animPlayer
+
+    Read(in, animPlayer.current_animation);
+
+    Read(in, animPlayer.time);
+
+    Read(in, animPlayer.playing);
+
+    Read(in, animPlayer.speed);
+
+    // animEditor
+
+    Read(in, animEditor.timelineViewMax);
+
+    Read(in, animEditor.selectedTrack);
+
+    Read(in, animEditor.selectedKey);
+
+    Read(in, animEditor.draggingKey);
+
+    Read(in, animEditor.dragOffsetTime);
+
+    return static_cast<bool>(in);
 }

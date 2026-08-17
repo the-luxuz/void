@@ -252,6 +252,10 @@ void init() {
 
 	lights.clear();
 
+	animations.clear();
+
+	EntityID maxID = 0;
+
 	for (auto& p : par.objects) {
 
 		Object obj;
@@ -264,7 +268,9 @@ void init() {
 
 		buffer(obj);
 
-		obj.id = GenerateEntityID();
+		obj.id = p.id;
+
+		maxID = std::max(maxID, obj.id);
 
 		obj.name = p.obj_name;
 		obj.mesh = p.mesh;
@@ -285,14 +291,12 @@ void init() {
 
 		obj.obj_texture = TextureManager::Get(obj.tex);
 
-		//buffer(obj);
-
 		obj.original_vertices = obj.vertices;
 		obj.original_indices = obj.indices;
 
 		obj.shininess = p.shininess;
 
-		obj.norm_map = p.normal_map;
+		obj.normalTexture = TextureManager::Get(p.normal_map);
 
 		obj.physics = p.physics;
 		obj.hasPhysics = p.hasPhysics;
@@ -323,7 +327,10 @@ void init() {
 
 		if (init_lights(obj)) {
 
-			light.id = GenerateEntityID();
+			light.id = par.lights[i].id;
+
+			maxID = std::max(maxID, light.id);
+			maxID = std::max(maxID, obj.id);
 
 			light.name = par.lights[i].name;
 
@@ -354,7 +361,7 @@ void init() {
 			else if (light.type == "SPOT")
 				light.typeID = 2;
 
-			obj.id = GenerateEntityID();
+			obj.id = par.lights_objects[i].id;
 
 			obj.name = light.name;
 
@@ -373,6 +380,13 @@ void init() {
 			lightObjects.push_back(std::move(obj));
 		}
 	}
+
+	animations = std::move(par.anim);
+
+	animationPlayer = par.animPlayer;
+	animationEditor = par.animEditor;
+
+	nextEntityID = maxID + 1;
 }
 
 bool open_init(const char* settings, const char* scene, Settings& st) {

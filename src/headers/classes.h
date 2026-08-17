@@ -158,6 +158,8 @@ struct ObjectState {
 
     bool hasMapping = true;
 
+    bool hasAnimation = true;
+
     bool tiling = false;
 
     bool visible = true;
@@ -180,6 +182,8 @@ struct LightState {
     std::string type;
 
     GLuint typeID;
+
+    bool hasAnimation = true;
 
 };
 
@@ -205,9 +209,9 @@ struct Settings {
 
     bool VSync;
 
-    bool light_active = true;
-    bool normal_map_active = true;
-    bool shadow_active = true;
+    bool light_active = false;
+    bool normal_map_active = false;
+    bool shadow_active = false;
     bool wireframe_active = false;
 
     bool physics_active = true;
@@ -309,6 +313,8 @@ struct Object {
 
     bool hasMapping = true;
 
+    bool hasAnimation = true;
+
     bool tiling = false;
 
     bool visible = true;
@@ -345,12 +351,14 @@ struct Light {
 
     std::vector<LightState> undoStack;
     std::vector<LightState> redoStack;
+
+    bool hasAnimation = true;
 };
 
 
 inline LightState CaptureLightState(const Light& l) {
 
-    return { l.col, l.att, l.ambient, l.inner, l.outer, l.falloff, l.bias, l.pcf, l.type, l.typeID };
+    return { l.col, l.att, l.ambient, l.inner, l.outer, l.falloff, l.bias, l.pcf, l.type, l.typeID, l.hasAnimation };
 }
 
 inline void ApplyLightState(Light& l, const LightState& s) {
@@ -370,11 +378,13 @@ inline void ApplyLightState(Light& l, const LightState& s) {
 
     l.type = s.type;
     l.typeID = s.typeID;
+
+    l.hasAnimation = s.hasAnimation;
 }
 
 inline ObjectState CaptureState(const Object& o) {
 
-    return { o.position, o.rotation, o.scale, o.name, o.mesh, o.obj_texture, o.tex, o.min, o.max, o.mapping, o.coordType, o.cyaxisType, o.normalTexture, o.norm_map, o.hasNormalMap, o.shininess, o.physics, o.hasPhysics, o.collider, o.hasCollider, o.hasMaterial, o.hasMapping, o.tiling, o.visible };
+    return { o.position, o.rotation, o.scale, o.name, o.mesh, o.obj_texture, o.tex, o.min, o.max, o.mapping, o.coordType, o.cyaxisType, o.normalTexture, o.norm_map, o.hasNormalMap, o.shininess, o.physics, o.hasPhysics, o.collider, o.hasCollider, o.hasMaterial, o.hasMapping, o.hasAnimation, o.tiling, o.visible };
 }
 
 inline void ApplyState(Object& o, const ObjectState& s) {
@@ -410,6 +420,8 @@ inline void ApplyState(Object& o, const ObjectState& s) {
 
     o.hasMaterial = s.hasMaterial;
     o.hasMapping = s.hasMapping;
+
+    o.hasAnimation = s.hasAnimation;
 
     o.tiling = s.tiling;
 
@@ -558,6 +570,21 @@ struct AnimationPlayer {
     float speed = 1.f;
 };
 
+struct AnimationEditorState {
+
+    float timelineViewMax = 5.0f;
+
+    int selectedTrack = -1;
+
+    int selectedKey = -1;
+
+    bool draggingKey = false;
+
+    float dragOffsetTime = 0.0f;
+};
+
+extern AnimationEditorState animationEditor;
+
 extern AnimationPlayer animationPlayer;
 
 float InterpolateFloat(const AnimationKey& a, const AnimationKey& b, float time);
@@ -599,5 +626,10 @@ void AddKey(AnimationTrack& track, float time, const T& value) {
     );
 }
 
-
 AnimationValue EvaluateTrack(const AnimationTrack& track, float time);
+
+const char* AnimationPropertyName(AnimationProperty property);
+
+float TimelineTimeToX(float time, float startX, float width, float maxTime);
+
+float TimelineXToTime(float x, float startX, float width, float maxTime);

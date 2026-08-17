@@ -667,9 +667,13 @@ int main(int argc, char* args[]) {
 
 			case SDL_EVENT_MOUSE_WHEEL:
 
-				cam.radius -= (event.wheel.y * 10);
+				if (viewport_scroll_active || (currentViewMode == view_Mode::PLAY && free_cam)) {
+				
+					cam.radius -= (event.wheel.y * 10);
 
-				cam.radius = std::max(cam.radius, 1.0f);
+					cam.radius = std::max(cam.radius, 1.0f);
+
+				}
 
 				break;
 

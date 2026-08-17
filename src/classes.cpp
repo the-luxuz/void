@@ -5,6 +5,7 @@
 
 std::vector<AnimationClip> animations;
 AnimationPlayer animationPlayer;
+AnimationEditorState animationEditor;
 
 EntityID GenerateEntityID() {
 
@@ -153,4 +154,99 @@ void RecalculateAnimationDuration(AnimationClip& clip) {
 
     if (clip.duration < maxKeyTime)
         clip.duration = maxKeyTime;
+}
+
+const char* AnimationPropertyName(AnimationProperty property) {
+
+    switch (property) {
+
+        case AnimationProperty::Position:
+
+            return "Position";
+
+            break;
+
+        case AnimationProperty::Rotation:
+
+            return "Rotation";
+
+            break;
+
+        case AnimationProperty::Scale:
+
+            return "Scale";
+
+            break;
+
+        case AnimationProperty::Color:
+
+            return "Color";
+
+            break;
+
+        case AnimationProperty::Attenuation:
+
+            return "Attenuation";
+
+            break;
+
+        case AnimationProperty::Ambient:
+
+            return "Ambient";
+
+            break;
+
+        case AnimationProperty::Inner:
+
+            return "Inner";
+
+            break;
+
+        case AnimationProperty::Outer:
+
+            return "Outer";
+
+            break;
+
+        case AnimationProperty::Falloff:
+
+            return "Falloff";
+
+            break;
+
+        case AnimationProperty::Visible:
+
+            return "Visible";
+
+            break;
+
+        case AnimationProperty::Texture:
+
+            return "Texture";
+
+            break;
+    }
+
+    return "null";
+
+}
+
+float TimelineTimeToX(float time, float startX, float width, float maxTime) {
+
+    if (maxTime <= 0.f)
+        return startX;
+
+    return startX + (time / maxTime) * width;
+}
+
+float TimelineXToTime(float x, float startX, float width, float maxTime) {
+
+    if (maxTime <= 0.f)
+        return 0.f;
+
+    float t = (x - startX) / width;
+
+    t = glm::clamp(t, 0.f, 1.f);
+
+    return t * maxTime;
 }

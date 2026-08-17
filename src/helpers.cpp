@@ -133,6 +133,8 @@ bool camera_update = true;
 
 bool free_cam = false;
 
+bool viewport_scroll_active = false;
+
 //--------------------------------------------------------------------------
 // Load scene in the good way
 
@@ -2175,6 +2177,8 @@ void ReplaceMesh(Object& obj, const std::string& path) {
 	mesh.hasMaterial = obj.hasMaterial;
 	mesh.hasMapping = obj.hasMapping;
 
+	mesh.hasAnimation = obj.hasAnimation;
+
 	mesh.tiling = obj.tiling;
 
 	mesh.visible = obj.visible;
@@ -2848,4 +2852,24 @@ void EvaluateCurrentAnimation() {
 
 		ApplyTrack(track, animationPlayer.time);
 	}
+}
+
+std::string AnimationTrackTargetName(const AnimationTrack& track) {
+
+	if (track.targetType == AnimationTargetType::Object) {
+		
+		if (Object* obj = FindObjectByID(track.targetID)) {
+		
+			return obj->name;
+		}
+
+	}else if (track.targetType == AnimationTargetType::Light) {
+
+		if (Light* lgh = FindLightByID(track.targetID)) {
+
+			return lgh->name;
+		}
+	}
+
+	return "null";
 }

@@ -140,6 +140,8 @@ extern bool camera_update;
 
 extern bool free_cam;
 
+extern bool viewport_scroll_active;
+
 //--------------------------------------------------------------------------
 // Load scene in the good way
 
@@ -328,3 +330,5 @@ Light* FindLightByID(EntityID id);
 void ApplyTrack(const AnimationTrack& track, float time);
 
 void EvaluateCurrentAnimation();
+
+std::string AnimationTrackTargetName(const AnimationTrack& track);

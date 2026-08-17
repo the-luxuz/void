@@ -539,7 +539,7 @@ void update_imgui_guizmo() {
 
 	ImGui::Begin("ViewPort", nullptr);
 
-	ImVec2 pos = ImGui::GetCursorScreenPos();
+	viewport_scroll_active = ImGui::IsWindowHovered();
 
 	viewportPos = ImGui::GetCursorScreenPos();
 	viewportSize = ImGui::GetContentRegionAvail();
@@ -766,7 +766,7 @@ void update_imgui_guizmo() {
 
 						buffer(obj);
 
-						obj.position = glm::vec3(0.0f);
+						obj.position = glm::vec3(0.0f, 50.0f, 0.0f);
 						obj.rotation = glm::quat(1.f, 0.f, 0.f, 0.f);
 						obj.scale = glm::vec3(50.0f);
 
@@ -952,7 +952,7 @@ void update_imgui_guizmo() {
 
 		Object* obj = GetSelectedObject();
 
-		if (ImGui::CollapsingHeader("General", ImGuiTreeNodeFlags_DefaultOpen)) {
+		if (ImGui::CollapsingHeader("General")) {
 
 			static char name[256];
 			strncpy_s(name, objects[selectedObject].name.c_str(), sizeof(name));
@@ -985,7 +985,7 @@ void update_imgui_guizmo() {
 
 			ImGui::Separator();
 		
-			if (ImGui::CollapsingHeader("Physics", ImGuiTreeNodeFlags_DefaultOpen)) {
+			if (ImGui::CollapsingHeader("Physics")) {
 
 				Physics& p = obj->physics;
 
@@ -1048,7 +1048,7 @@ void update_imgui_guizmo() {
 
 			ImGui::Separator();
 
-			if (ImGui::CollapsingHeader("Collision", ImGuiTreeNodeFlags_DefaultOpen)) {
+			if (ImGui::CollapsingHeader("Collision")) {
 
 				ImGui::Separator();
 
@@ -1126,7 +1126,7 @@ void update_imgui_guizmo() {
 
 			ImGui::Separator();
 
-			if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen)) {
+			if (ImGui::CollapsingHeader("Material")) {
 
 				ImGui::DragFloat("Shininess", &obj->shininess, 1.0f, 1.0f, 256.0f);
 				HandleInspectorUndo(*obj);
@@ -1349,6 +1349,7 @@ void update_imgui_guizmo() {
 			bool collision = obj->hasCollider;
 			bool physics = obj->hasPhysics;
 			bool mapping = obj->hasMapping;
+			bool animation = obj->hasAnimation;
 
 			if (ImGui::Checkbox("Material", &material)) {
 			
@@ -1371,6 +1372,12 @@ void update_imgui_guizmo() {
 			if (ImGui::Checkbox("Mapping", &mapping)) {
 			
 				obj->hasMapping = mapping;
+				HandleInspectorUndo(*obj);
+			}
+
+			if (ImGui::Checkbox("Animation", &animation)) {
+			
+				obj->hasAnimation = animation;
 				HandleInspectorUndo(*obj);
 			}
 
