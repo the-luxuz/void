@@ -253,14 +253,14 @@ void DrawAnimationTimeline(AnimationClip& clip) {
         if (io.MouseWheel != 0.0f) {
 
             if (io.MouseWheel > 0.0f) 
-                clip.duration = std::max(0.1f, clip.duration - 1.0f);
+                animationEditor.timelineViewMax = std::max(0.1f, animationEditor.timelineViewMax - 1.0f);
             else 
-                clip.duration += 1.0f;
+                animationEditor.timelineViewMax += 1.0f;
             
         }
     }
 
-    animationEditor.timelineViewMax = clip.duration;
+    //animationEditor.timelineViewMax = clip.duration;
 
     ImDrawList* drawList = ImGui::GetWindowDrawList();
 
@@ -391,16 +391,20 @@ void DrawAnimationTimeline(AnimationClip& clip) {
             AnimationTrack& track = clip.tracks[trackIndex];
 
             if (keyIndex >= 0 && keyIndex < static_cast<int>(track.keys.size())) {
-            
+
                 AnimationKey& key = track.keys[keyIndex];
 
                 ImVec2 mouse = ImGui::GetMousePos();
-
+                    
                 float mouse_time = TimelineXToTime(mouse.x, timeLineStartx, timeLineWidth, maxtime);
 
-                key.time = mouse_time + animationEditor.dragOffsetTime;
+                float new_time = mouse_time + animationEditor.dragOffsetTime;
 
-                key.time = glm::clamp(key.time, 0.f, clip.duration);
+                if (animationEditor.animationSnapEnable)
+                    new_time = Snap(new_time, animationEditor.animationSnap);
+
+                key.time = glm::clamp(new_time, 0.f, maxtime);
+
             }
 
         }
@@ -424,6 +428,8 @@ void DrawAnimationTimeline(AnimationClip& clip) {
 
                 }
             );
+
+            RecalculateAnimationDuration(clip);
         }
 
     }
@@ -432,13 +438,13 @@ void DrawAnimationTimeline(AnimationClip& clip) {
 
     ImVec2 mouse = ImGui::GetMousePos();
 
-    bool insideTimeline = mouse.x >= timeLineStartx && mouse.x <= timeLineStartx + timeLineWidth && mouse.y >= canvasPos.y + rulerHeight && mouse.y <= canvasPos.y + rulerHeight + clip.tracks.size() * rowHeight;
+    bool insideTimeline = mouse.x >= timeLineStartx && mouse.x <= timeLineStartx + timeLineWidth && mouse.y >= canvasPos.y && mouse.y <= canvasPos.y + rulerHeight + clip.tracks.size() * rowHeight;
 
     if (insideTimeline && !animationEditor.draggingKey && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
     
         animationPlayer.time = TimelineXToTime(mouse.x, timeLineStartx, timeLineWidth, maxtime);
 
-        animationPlayer.time = glm::clamp(animationPlayer.time, 0.f, clip.duration);
+        animationPlayer.time = glm::clamp(animationPlayer.time, 0.f, maxtime);
 
         EvaluateCurrentAnimation();
 

@@ -332,3 +332,8 @@ void ApplyTrack(const AnimationTrack& track, float time);
 void EvaluateCurrentAnimation();
 
 std::string AnimationTrackTargetName(const AnimationTrack& track);
+
+//--------------------------------------------------------------
+//snap
+
+float Snap(float time, float step);

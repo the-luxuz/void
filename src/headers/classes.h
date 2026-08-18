@@ -581,6 +581,10 @@ struct AnimationEditorState {
     bool draggingKey = false;
 
     float dragOffsetTime = 0.0f;
+
+    float animationSnap = 0.15f;
+
+    bool animationSnapEnable = true;
 };
 
 extern AnimationEditorState animationEditor;

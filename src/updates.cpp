@@ -1549,6 +1549,8 @@ void update_imgui_guizmo() {
 
 	ImGui::End();
 
+	animationEditor.animationSnapEnable = SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_LSHIFT];
+
 	UpdateAnimationImGui();
 
 	switch (currentTool) {

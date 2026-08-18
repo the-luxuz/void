@@ -2846,11 +2846,11 @@ void EvaluateCurrentAnimation() {
 
 	AnimationClip& clip = animations[animationPlayer.current_animation];
 
-	animationPlayer.time = glm::clamp(animationPlayer.time, 0.0f, clip.duration);
+	float evalTime = glm::clamp(animationPlayer.time, 0.0f, clip.duration);
 
 	for (const auto& track : clip.tracks) {
 
-		ApplyTrack(track, animationPlayer.time);
+		ApplyTrack(track, evalTime);
 	}
 }
 
@@ -2872,4 +2872,15 @@ std::string AnimationTrackTargetName(const AnimationTrack& track) {
 	}
 
 	return "null";
+}
+
+//--------------------------------------------------------------
+//snap
+
+float Snap(float time, float step) {
+	
+	if (step <= 0.0f)
+		return time;
+
+	return glm::round(time / step) * step;
 }

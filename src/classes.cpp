@@ -152,7 +152,6 @@ void RecalculateAnimationDuration(AnimationClip& clip) {
             maxKeyTime = std::max(maxKeyTime, track.keys.back().time);
     }
 
-    if (clip.duration < maxKeyTime)
         clip.duration = maxKeyTime;
 }
 
