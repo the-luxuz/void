@@ -126,3 +126,56 @@ void UpdateMeshBuffers(Object& obj) {
 		GL_STATIC_DRAW
 	);
 }
+
+void CreateVideoQuad(VideoQuad& quad) {
+
+	glGenVertexArrays(1, &quad.vao);
+	glGenBuffers(1, &quad.vbo);
+	glGenBuffers(1, &quad.ebo);
+
+	glBindVertexArray(quad.vao);
+
+	glBindBuffer(GL_ARRAY_BUFFER, quad.vbo);
+
+	glBufferData(
+		GL_ARRAY_BUFFER,
+		sizeof(quad.vertices),
+		quad.vertices,
+		GL_STATIC_DRAW
+	);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, quad.ebo);
+
+	glBufferData(
+		GL_ELEMENT_ARRAY_BUFFER,
+		sizeof(quad.indices),
+		quad.indices,
+		GL_STATIC_DRAW
+	);
+
+	// Position
+	glVertexAttribPointer(
+		0,
+		2,
+		GL_FLOAT,
+		GL_FALSE,
+		4 * sizeof(float),
+		(void*)0
+	);
+
+	glEnableVertexAttribArray(0);
+
+	// UV
+	glVertexAttribPointer(
+		1,
+		2,
+		GL_FLOAT,
+		GL_FALSE,
+		4 * sizeof(float),
+		(void*)(2 * sizeof(float))
+	);
+
+	glEnableVertexAttribArray(1);
+
+	glBindVertexArray(0);
+}

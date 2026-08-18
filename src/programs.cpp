@@ -10,6 +10,7 @@ GLuint program_line;
 GLuint program_grid;
 GLuint program_depth;
 GLuint program_skybox;
+GLuint program_videoplayer;
 GLuint program_hdrToCubemap;
 
 //depth framebuffer
@@ -82,6 +83,8 @@ void create_programs() {
 	program_grid = create_shaders(program_grid, "../data/shaders/vertex_grid.vert", "../data/shaders/fragment_grid.frag");
 
 	program_skybox = create_shaders(program_skybox, "../data/shaders/vertex_skybox.vert", "../data/shaders/fragment_skybox.frag");
+
+	program_videoplayer = create_shaders(program_videoplayer, "../data/shaders/vertex_videoplayer.vert", "../data/shaders/fragment_videoplayer.frag");
 
 	program_hdrToCubemap = create_shaders(program_hdrToCubemap, "../data/shaders/vertex_hdrToCubemap.vert", "../data/shaders/fragment_hdrToCubemap.frag");
 }

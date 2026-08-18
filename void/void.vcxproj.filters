@@ -81,6 +81,9 @@
     <ClCompile Include="..\src\imgui_helpers.cpp">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\video_player.cpp">
+      <Filter>Archivos de origen</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\headers\classes.h">
@@ -125,6 +128,9 @@
     <ClInclude Include="..\src\headers\imgui_helpers.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\headers\video_player.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\data\shaders\vertex.vert" />
@@ -139,5 +145,7 @@
     <None Include="..\data\shaders\fragment_line.frag" />
     <None Include="..\data\shaders\vertex_depth.vert" />
     <None Include="..\data\shaders\vertex_line.vert" />
+    <None Include="..\data\shaders\fragment_videoplayer.frag" />
+    <None Include="..\data\shaders\vertex_videoplayer.vert" />
   </ItemGroup>
 </Project>

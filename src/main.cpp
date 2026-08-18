@@ -246,6 +246,17 @@ void update(SDL_Window* window, float dt) {
 		init_viewport();
 	}
 
+	if(isCinematicActive)
+		videoPlayer.Update(dt);
+
+	if (isCinematicActive && videoPlayer.IsFinished()) {
+
+		isCinematicActive = false;
+	}
+
+	if (isCinematicActive)
+		DrawVideo(videoPlayer);
+
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glBindVertexArray(0);
 	glUseProgram(0);

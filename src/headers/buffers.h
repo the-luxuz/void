@@ -10,3 +10,5 @@ void CreateNormalBuffers(Object& obj);
 void UpdateLineBuffers(Object& obj);
 
 void UpdateMeshBuffers(Object& obj);
+
+void CreateVideoQuad(VideoQuad& quad);

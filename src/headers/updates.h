@@ -58,3 +58,5 @@ void UpdateAnimation(float dt);
 // Update Imgui and guizmo
 
 void update_imgui_guizmo();
+
+void DrawVideo(const VideoPlayer& video);

@@ -25,4 +25,14 @@
 
 #include <glm/gtx/quaternion.hpp>
 
+extern "C" {
+
+#include <libavformat/avformat.h>
+#include <libavcodec/avcodec.h>
+#include <libavutil/avutil.h>
+#include <libavutil/imgutils.h>
+#include <libswscale/swscale.h>
+
+}
+
 const int MAX_LIGHTS = 8;

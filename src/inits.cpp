@@ -236,6 +236,29 @@ void init() {
 
 	init_uniforms();
 
+	CreateVideoQuad(videoQuad);
+
+	if (!videoPlayer.Open("../data/cinematics/test.mp4")) {
+
+		std::cout << "VIDEO FAILED\n";
+
+	} else {
+
+		std::cout << "VIDEO OK\n";
+
+		std::cout << "Size: " << videoPlayer.GetWidth() << "x" << videoPlayer.GetHeight() << '\n';
+
+		std::cout << "Duration: " << videoPlayer.GetDuration() << '\n';
+
+		videoPlayer.Play();
+
+		isCinematicActive = true;
+
+		std::cout << "Video texture = " << videoPlayer.GetTexture() << '\n';
+
+		std::cout << "Video VAO = " << videoQuad.vao << '\n';
+	}
+
 	init_grid();
 
 	init_skybox(st.skybox.c_str(), true);
@@ -474,6 +497,8 @@ void init_(const char* settings, const char* scene) {
 	//par.save(settings, scene, st, cam, objects, lightObjects, lights);
 
 	if (par.load(settings, scene,  st, cam, objects)) {
+
+		avformat_network_init();
 
 		windowedSize = { st.w, st.h };
 

@@ -11,6 +11,7 @@ extern GLuint program_line;
 extern GLuint program_grid;
 extern GLuint program_depth;
 extern GLuint program_skybox;
+extern GLuint program_videoplayer;
 extern GLuint program_hdrToCubemap;
 
 //depth framebuffer

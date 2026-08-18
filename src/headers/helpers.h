@@ -6,6 +6,7 @@
 #include "programs.h"
 #include "textures.h"
 #include "inits.h"
+#include "video_player.h"
 
 //--------------------------------------------------------------------------
 // global variables
@@ -142,6 +143,12 @@ extern bool free_cam;
 
 extern bool viewport_scroll_active;
 
+extern VideoPlayer videoPlayer;
+
+extern VideoQuad videoQuad;
+
+extern bool isCinematicActive;
+
 //--------------------------------------------------------------------------
 // Load scene in the good way
 
@@ -149,6 +156,8 @@ bool load_scene_ok(const char* scene);
 
 //--------------------------------------------------------------------------
 // ImGui docking
+
+extern bool animationWindow;
 
 void Docking();
 

@@ -117,6 +117,42 @@ void update_depthmap() {
 	//--------------------------------------------------------------------
 }
 
+void DrawVideo(const VideoPlayer& video) {
+
+	glDisable(GL_DEPTH_TEST);
+
+	glUseProgram(program_videoplayer);
+
+	glActiveTexture(GL_TEXTURE0);
+
+	glBindTexture(
+		GL_TEXTURE_2D,
+		video.GetTexture()
+	);
+
+	glUniform1i(
+		glGetUniformLocation(program_videoplayer, "videoTexture"),
+		0
+	);
+
+	glBindVertexArray(videoQuad.vao);
+
+	glDrawElements(
+		GL_TRIANGLES,
+		6,
+		GL_UNSIGNED_INT,
+		nullptr
+	);
+
+	glBindVertexArray(0);
+
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	glUseProgram(0);
+
+	glEnable(GL_DEPTH_TEST);
+}
+
 //--------------------------------------------------------------------------
 // Update Objects
 
@@ -1687,8 +1723,11 @@ void update_imgui_guizmo() {
 
 		ImGui::Separator();
 
-		if (obj)
-			DrawObjectAnimationButtons(*obj);
+		if (animationWindow) {
+
+			if (obj)
+				DrawObjectAnimationButtons(*obj);
+		}
 
 		ImGui::Separator();
 
@@ -1791,6 +1830,17 @@ void update_imgui_guizmo() {
 				HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
 			}
 
+			ImGui::Separator();
+
+			if (animationWindow) {
+
+				if (light)
+					DrawLightAnimationButtons(*light);
+
+				if (obj)
+					DrawObjectAnimationButtons(*obj);
+			}
+
 			if (ImGui::CollapsingHeader("Type", ImGuiTreeNodeFlags_DefaultOpen)) {
 
 				static const char* types[] = {
@@ -1839,20 +1889,16 @@ void update_imgui_guizmo() {
 			}
 
 		}
-
-		if (light)
-			DrawLightAnimationButtons(*light);
-
-		if (obj)
-			DrawObjectAnimationButtons(*obj);
-
 	}
 
 	ImGui::End();
 
-	animationEditor.animationSnapEnable = SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_LSHIFT];
+	if (animationWindow) {
+	
+		animationEditor.animationSnapEnable = SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_LSHIFT];
 
-	UpdateAnimationImGui();
+		UpdateAnimationImGui();
+	}
 
 	switch (currentTool) {
 

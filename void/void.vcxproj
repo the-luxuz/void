@@ -112,13 +112,13 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)external\tinyexr\deps\libdeflate\lib;$(SolutionDir)include\stb;$(SolutionDir)src\headers;$(SolutionDir)external\tinyexr\deps\zstd;$(SolutionDir)external\tinyexr\deps\miniz;$(SolutionDir)external\tinyexr;$(SolutionDir)external\imgui\backends;$(SolutionDir)external\imgui;$(SolutionDir)include;$(SolutionDir)external\nativefiledialog\include;$(SolutionDir)external\nativefiledialog;$(SolutionDir)external\tinyexr\deps\zstd;$(SolutionDir)external\tinyexr\deps\miniz;$(SolutionDir)external\tinyexr;$(SolutionDir)external\imgui\backends;$(SolutionDir)external\imgui;$(SolutionDir)include;$(SolutionDir)external\nativefiledialog\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)external\tinyexr\deps\libdeflate\lib;$(SolutionDir)include\stb;$(SolutionDir)src\headers;$(SolutionDir)external\tinyexr\deps\zstd;$(SolutionDir)external\tinyexr\deps\miniz;$(SolutionDir)external\tinyexr;$(SolutionDir)external\imgui\backends;$(SolutionDir)external\imgui;$(SolutionDir)include;$(SolutionDir)external\nativefiledialog\include;$(SolutionDir)external\nativefiledialog;$(SolutionDir)external\ffmpeg\include;$(SolutionDir)external\tinyexr\deps\zstd;$(SolutionDir)external\tinyexr\deps\miniz;$(SolutionDir)external\tinyexr;$(SolutionDir)external\imgui\backends;$(SolutionDir)external\imgui;$(SolutionDir)include;$(SolutionDir)external\nativefiledialog\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>SDL3.lib;glew32.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>SDL3.lib;glew32.lib;opengl32.lib;avcodec.lib;avdevice.lib;avfilter.lib;avformat.lib;avutil.lib;swresample.lib;swscale.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)lib;$(SolutionDir)external\ffmpeg\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <Manifest>
       <EnableSegmentHeap>true</EnableSegmentHeap>
@@ -133,13 +133,13 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)external\tinyexr\deps\libdeflate\lib;$(SolutionDir)include\stb;$(SolutionDir)src\headers;$(SolutionDir)external\tinyexr\deps\zstd;$(SolutionDir)external\tinyexr\deps\miniz;$(SolutionDir)external\tinyexr;$(SolutionDir)external\imgui\backends;$(SolutionDir)external\imgui;$(SolutionDir)include;$(SolutionDir)external\nativefiledialog\include;$(SolutionDir)external\nativefiledialog</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)external\tinyexr\deps\libdeflate\lib;$(SolutionDir)include\stb;$(SolutionDir)src\headers;$(SolutionDir)external\tinyexr\deps\zstd;$(SolutionDir)external\tinyexr\deps\miniz;$(SolutionDir)external\tinyexr;$(SolutionDir)external\imgui\backends;$(SolutionDir)external\imgui;$(SolutionDir)include;$(SolutionDir)external\nativefiledialog\include;$(SolutionDir)external\nativefiledialog;$(SolutionDir)external\ffmpeg\include;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>SDL3.lib;glew32.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>SDL3.lib;glew32.lib;opengl32.lib;avcodec.lib;avdevice.lib;avfilter.lib;avformat.lib;avutil.lib;swresample.lib;swscale.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)lib;$(SolutionDir)external\ffmpeg\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <Manifest>
       <EnableSegmentHeap>true</EnableSegmentHeap>
@@ -168,6 +168,7 @@
     <ClCompile Include="..\src\textures.cpp" />
     <ClCompile Include="..\src\tinyobjloader.cpp" />
     <ClCompile Include="..\src\updates.cpp" />
+    <ClCompile Include="..\src\video_player.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\external\tinyexr\deps\miniz\miniz.h" />
@@ -184,6 +185,7 @@
     <ClInclude Include="..\src\headers\textures.h" />
     <ClInclude Include="..\src\headers\tiny_obj_loader.h" />
     <ClInclude Include="..\src\headers\updates.h" />
+    <ClInclude Include="..\src\headers\video_player.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\data\shaders\fragment.frag" />
@@ -192,12 +194,14 @@
     <None Include="..\data\shaders\fragment_hdrToCubemap.frag" />
     <None Include="..\data\shaders\fragment_line.frag" />
     <None Include="..\data\shaders\fragment_skybox.frag" />
+    <None Include="..\data\shaders\fragment_videoplayer.frag" />
     <None Include="..\data\shaders\vertex.vert" />
     <None Include="..\data\shaders\vertex_depth.vert" />
     <None Include="..\data\shaders\vertex_grid.vert" />
     <None Include="..\data\shaders\vertex_hdrToCubemap.vert" />
     <None Include="..\data\shaders\vertex_line.vert" />
     <None Include="..\data\shaders\vertex_skybox.vert" />
+    <None Include="..\data\shaders\vertex_videoplayer.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

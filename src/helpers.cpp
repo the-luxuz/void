@@ -135,6 +135,12 @@ bool free_cam = false;
 
 bool viewport_scroll_active = false;
 
+VideoPlayer videoPlayer;
+
+VideoQuad videoQuad;
+
+bool isCinematicActive = false;
+
 //--------------------------------------------------------------------------
 // Load scene in the good way
 
@@ -214,6 +220,8 @@ bool load_scene_ok(const char* scene) {
 //--------------------------------------------------------------------------
 // ImGui docking
 
+bool animationWindow = false;
+
 void Docking() {
 	
 	ImGuiViewport* viewport = ImGui::GetMainViewport();
@@ -285,8 +293,8 @@ void Docking() {
 		ImGui::DockBuilderDockWindow("Inspector", dock_right);
 		ImGui::DockBuilderDockWindow("Graphics Settings", dock_right);
 
-		ImGui::DockBuilderDockWindow("Assets", dock_bottom);
 		ImGui::DockBuilderDockWindow("Animation", dock_bottom);
+		ImGui::DockBuilderDockWindow("Assets", dock_bottom);
 
 		ImGui::DockBuilderDockWindow("ViewPort", dock_main);
 
@@ -655,13 +663,17 @@ void Docking() {
 			ImGui::EndMenu();
 		}
 
-		//if (ImGui::BeginMenu("View")) {
+		if (ImGui::BeginMenu("Windows")) {
 
-		//	ImGui::MenuItem("Hierarchy");
-		//	ImGui::MenuItem("Assets");
-		//	ImGui::MenuItem("Tools");
-		//	ImGui::EndMenu();
-		//}
+			if (ImGui::MenuItem("Animation")) {
+			
+				animationWindow = !animationWindow;
+			}
+
+			//ImGui::MenuItem("Assets");
+			//ImGui::MenuItem("Tools");
+			ImGui::EndMenu();
+		}
 
 
 		if (ImGui::BeginMenu("Settings")) {

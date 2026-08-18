@@ -42,6 +42,26 @@ public:
 
 };
 
+struct VideoQuad {
+
+    GLuint vao = 0;
+    GLuint vbo = 0;
+    GLuint ebo = 0;
+
+    float vertices[16] = {
+        // position     // uv
+        -1.0f, -1.0f,   0.0f, 1.0f,
+         1.0f, -1.0f,   1.0f, 1.0f,
+         1.0f,  1.0f,   1.0f, 0.0f,
+        -1.0f,  1.0f,   0.0f, 0.0f
+    };
+
+    unsigned int indices[6] = {
+        0, 1, 2,
+        2, 3, 0
+    };
+};
+
 struct Program {
 
     GLuint id;
