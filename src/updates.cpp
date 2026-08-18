@@ -1040,8 +1040,7 @@ void update_imgui_guizmo() {
 			"None",
 			"Plane",
 			"Sphere",
-			"AABB",
-			"OBB"
+			"AABB"
 		};
 
 		if (obj->hasCollider) {
@@ -1056,8 +1055,7 @@ void update_imgui_guizmo() {
 
 				if (ImGui::Combo("Type", &currentType, colliderTypes, IM_ARRAYSIZE(colliderTypes))) {
 
-					obj->undoStack.push_back(CaptureState(*obj));
-					obj->redoStack.clear();
+					HandleInspectorUndo(*obj);
 
 					obj->collider.type = (ColliderType)currentType;
 				}
@@ -1079,8 +1077,112 @@ void update_imgui_guizmo() {
 						ImGui::Separator();
 
 						ImGui::Checkbox("Trigger", &obj->collider.isTrigger);
-						ImGui::InputScalar("Layer", ImGuiDataType_U32, &obj->collider.layer);
-						ImGui::InputScalar("Mask", ImGuiDataType_U32, &obj->collider.mask);
+
+						ImGui::Separator();
+
+						if (ImGui::BeginCombo("Layers", "Select layers")) {
+
+							bool world = (obj->collider.layer & CollisionLayer::World) != 0;;
+							bool player = (obj->collider.layer & CollisionLayer::Player) != 0;;
+							bool enemy = (obj->collider.layer & CollisionLayer::Enemy) != 0;;
+							bool bullet = (obj->collider.layer & CollisionLayer::Bullets) != 0;;
+
+							if (ImGui::Checkbox("World", &world)) {
+
+								if (world)
+									obj->collider.layer |= CollisionLayer::World;
+								else
+									obj->collider.layer &= ~CollisionLayer::World;
+
+								HandleInspectorUndo(*obj);
+							}
+
+							if (ImGui::Checkbox("Player", &player)) {
+
+								if (player)
+									obj->collider.layer |= CollisionLayer::Player;
+								else
+									obj->collider.layer &= ~CollisionLayer::Player;
+
+								HandleInspectorUndo(*obj);
+							}
+
+							if (ImGui::Checkbox("Enemy", &enemy)) {
+
+								if (enemy)
+									obj->collider.layer |= CollisionLayer::Enemy;
+								else
+									obj->collider.layer &= ~CollisionLayer::Enemy;
+
+								HandleInspectorUndo(*obj);
+							}
+
+							if (ImGui::Checkbox("Bullet", &bullet)) {
+
+								if (bullet)
+									obj->collider.layer |= CollisionLayer::Bullets;
+								else
+									obj->collider.layer &= ~CollisionLayer::Bullets;
+
+								HandleInspectorUndo(*obj);
+							}
+
+							ImGui::EndCombo();
+						}
+
+						ImGui::Separator();
+
+						if (ImGui::BeginCombo("Mask", "Collides With")) {
+
+							bool world = (obj->collider.mask & CollisionLayer::World) != 0;;
+							bool player = (obj->collider.mask & CollisionLayer::Player) != 0;;
+							bool enemy = (obj->collider.mask & CollisionLayer::Enemy) != 0;;
+							bool bullet = (obj->collider.mask & CollisionLayer::Bullets) != 0;;
+
+							if (ImGui::Checkbox("World", &world)) {
+
+								if (world)
+									obj->collider.mask |= CollisionLayer::World;
+								else
+									obj->collider.mask &= ~CollisionLayer::World;
+
+								HandleInspectorUndo(*obj);
+							}
+
+							if (ImGui::Checkbox("Player", &player)) {
+
+								if (player)
+									obj->collider.mask |= CollisionLayer::Player;
+								else
+									obj->collider.mask &= ~CollisionLayer::Player;
+
+								HandleInspectorUndo(*obj);
+							}
+
+							if (ImGui::Checkbox("Enemy", &enemy)) {
+
+								if (enemy)
+									obj->collider.mask |= CollisionLayer::Enemy;
+								else
+									obj->collider.mask &= ~CollisionLayer::Enemy;
+
+								HandleInspectorUndo(*obj);
+							}
+
+							if (ImGui::Checkbox("Bullet", &bullet)) {
+
+								if (bullet)
+									obj->collider.mask |= CollisionLayer::Bullets;
+								else
+									obj->collider.mask &= ~CollisionLayer::Bullets;
+
+								HandleInspectorUndo(*obj);
+							}
+
+							ImGui::EndCombo();
+						}
+
+						ImGui::Separator();
 
 						break;
 					}
@@ -1096,8 +1198,112 @@ void update_imgui_guizmo() {
 						ImGui::Separator();
 
 						ImGui::Checkbox("Trigger", &obj->collider.isTrigger);
-						ImGui::InputScalar("Layer", ImGuiDataType_U32, &obj->collider.layer);
-						ImGui::InputScalar("Mask", ImGuiDataType_U32, &obj->collider.mask);
+						
+						ImGui::Separator();
+
+						if (ImGui::BeginCombo("Layers", "Select layers")) {
+
+							bool world = (obj->collider.layer & CollisionLayer::World) != 0;;
+							bool player = (obj->collider.layer & CollisionLayer::Player) != 0;;
+							bool enemy = (obj->collider.layer & CollisionLayer::Enemy) != 0;;
+							bool bullet = (obj->collider.layer & CollisionLayer::Bullets) != 0;;
+
+							if (ImGui::Checkbox("World", &world)) {
+
+								if (world)
+									obj->collider.layer |= CollisionLayer::World;
+								else
+									obj->collider.layer &= ~CollisionLayer::World;
+
+								HandleInspectorUndo(*obj);
+							}
+
+							if (ImGui::Checkbox("Player", &player)) {
+
+								if (player)
+									obj->collider.layer |= CollisionLayer::Player;
+								else
+									obj->collider.layer &= ~CollisionLayer::Player;
+
+								HandleInspectorUndo(*obj);
+							}
+
+							if (ImGui::Checkbox("Enemy", &enemy)) {
+
+								if (enemy)
+									obj->collider.layer |= CollisionLayer::Enemy;
+								else
+									obj->collider.layer &= ~CollisionLayer::Enemy;
+
+								HandleInspectorUndo(*obj);
+							}
+
+							if (ImGui::Checkbox("Bullet", &bullet)) {
+
+								if (bullet)
+									obj->collider.layer |= CollisionLayer::Bullets;
+								else
+									obj->collider.layer &= ~CollisionLayer::Bullets;
+
+								HandleInspectorUndo(*obj);
+							}
+
+							ImGui::EndCombo();
+						}
+
+						ImGui::Separator();
+
+						if (ImGui::BeginCombo("Mask", "Collides With")) {
+
+							bool world = (obj->collider.mask & CollisionLayer::World) != 0;;
+							bool player = (obj->collider.mask & CollisionLayer::Player) != 0;;
+							bool enemy = (obj->collider.mask & CollisionLayer::Enemy) != 0;;
+							bool bullet = (obj->collider.mask & CollisionLayer::Bullets) != 0;;
+
+							if (ImGui::Checkbox("World", &world)) {
+
+								if (world)
+									obj->collider.mask |= CollisionLayer::World;
+								else
+									obj->collider.mask &= ~CollisionLayer::World;
+
+								HandleInspectorUndo(*obj);
+							}
+
+							if (ImGui::Checkbox("Player", &player)) {
+
+								if (player)
+									obj->collider.mask |= CollisionLayer::Player;
+								else
+									obj->collider.mask &= ~CollisionLayer::Player;
+
+								HandleInspectorUndo(*obj);
+							}
+
+							if (ImGui::Checkbox("Enemy", &enemy)) {
+
+								if (enemy)
+									obj->collider.mask |= CollisionLayer::Enemy;
+								else
+									obj->collider.mask &= ~CollisionLayer::Enemy;
+
+								HandleInspectorUndo(*obj);
+							}
+
+							if (ImGui::Checkbox("Bullet", &bullet)) {
+
+								if (bullet)
+									obj->collider.mask |= CollisionLayer::Bullets;
+								else
+									obj->collider.mask &= ~CollisionLayer::Bullets;
+
+								HandleInspectorUndo(*obj);
+							}
+
+							ImGui::EndCombo();
+						}
+
+						ImGui::Separator();
 
 						break;
 					}
@@ -1108,13 +1314,117 @@ void update_imgui_guizmo() {
 
 						ImGui::Separator();
 
-						ImGui::DragFloat3("Half Extents", &obj->collider.halfExtents.x, 0.01f);
+						//ImGui::DragFloat3("Half Extents", &obj->collider.halfExtents.x, 0.01f);
 
 						ImGui::Separator();
 
 						ImGui::Checkbox("Trigger", &obj->collider.isTrigger);
-						ImGui::InputScalar("Layer", ImGuiDataType_U32, &obj->collider.layer);
-						ImGui::InputScalar("Mask", ImGuiDataType_U32, &obj->collider.mask);
+						
+						ImGui::Separator();
+
+						if (ImGui::BeginCombo("Layers", "Select layers")) {
+
+							bool world = (obj->collider.layer & CollisionLayer::World) != 0;
+							bool player = (obj->collider.layer & CollisionLayer::Player) != 0;
+							bool enemy = (obj->collider.layer & CollisionLayer::Enemy) != 0;
+							bool bullet = (obj->collider.layer & CollisionLayer::Bullets) != 0;
+
+							if (ImGui::Checkbox("World", &world)) {
+
+								if (world)
+									obj->collider.layer |= CollisionLayer::World;
+								else
+									obj->collider.layer &= ~CollisionLayer::World;
+
+								HandleInspectorUndo(*obj);
+							}
+
+							if (ImGui::Checkbox("Player", &player)) {
+
+								if (player)
+									obj->collider.layer |= CollisionLayer::Player;
+								else
+									obj->collider.layer &= ~CollisionLayer::Player;
+
+								HandleInspectorUndo(*obj);
+							}
+
+							if (ImGui::Checkbox("Enemy", &enemy)) {
+
+								if (enemy)
+									obj->collider.layer |= CollisionLayer::Enemy;
+								else
+									obj->collider.layer &= ~CollisionLayer::Enemy;
+
+								HandleInspectorUndo(*obj);
+							}
+
+							if (ImGui::Checkbox("Bullet", &bullet)) {
+
+								if (bullet)
+									obj->collider.layer |= CollisionLayer::Bullets;
+								else
+									obj->collider.layer &= ~CollisionLayer::Bullets;
+
+								HandleInspectorUndo(*obj);
+							}
+
+							ImGui::EndCombo();
+						}
+
+						ImGui::Separator();
+
+						if (ImGui::BeginCombo("Mask", "Collides With")) {
+
+							bool world = (obj->collider.mask & CollisionLayer::World) != 0;;
+							bool player = (obj->collider.mask & CollisionLayer::Player) != 0;;
+							bool enemy = (obj->collider.mask & CollisionLayer::Enemy) != 0;;
+							bool bullet = (obj->collider.mask & CollisionLayer::Bullets) != 0;;
+
+							if (ImGui::Checkbox("World", &world)) {
+
+								if (world)
+									obj->collider.mask |= CollisionLayer::World;
+								else
+									obj->collider.mask &= ~CollisionLayer::World;
+
+								HandleInspectorUndo(*obj);
+							}
+
+							if (ImGui::Checkbox("Player", &player)) {
+
+								if (player)
+									obj->collider.mask |= CollisionLayer::Player;
+								else
+									obj->collider.mask &= ~CollisionLayer::Player;
+
+								HandleInspectorUndo(*obj);
+							}
+
+							if (ImGui::Checkbox("Enemy", &enemy)) {
+
+								if (enemy)
+									obj->collider.mask |= CollisionLayer::Enemy;
+								else
+									obj->collider.mask &= ~CollisionLayer::Enemy;
+
+								HandleInspectorUndo(*obj);
+							}
+
+							if (ImGui::Checkbox("Bullet", &bullet)) {
+
+								if (bullet)
+									obj->collider.mask |= CollisionLayer::Bullets;
+								else
+									obj->collider.mask &= ~CollisionLayer::Bullets;
+
+								HandleInspectorUndo(*obj);
+							}
+
+							ImGui::EndCombo();
+						}
+
+						ImGui::Separator();
 
 						break;
 					}
@@ -1143,8 +1453,7 @@ void update_imgui_guizmo() {
 
 					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("IMAGE_FILE")) {
 
-						obj->undoStack.push_back(CaptureState(*obj));
-						obj->redoStack.clear();
+						HandleInspectorUndo(*obj);
 
 						const char* file = (const char*)payload->Data;
 
@@ -1173,8 +1482,7 @@ void update_imgui_guizmo() {
 
 					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("IMAGE_FILE")) {
 
-						obj->undoStack.push_back(CaptureState(*obj));
-						obj->redoStack.clear();
+						HandleInspectorUndo(*obj);
 
 						const char* file = (const char*)payload->Data;
 
@@ -1204,8 +1512,7 @@ void update_imgui_guizmo() {
 
 				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("OBJ_FILE")) {
 
-					obj->undoStack.push_back(CaptureState(*obj));
-					obj->redoStack.clear();
+					HandleInspectorUndo(*obj);
 
 					DestroyBuffers(*obj);
 
@@ -1254,8 +1561,7 @@ void update_imgui_guizmo() {
 			
 				if (ImGui::Combo("Mapping##M", &current, mappings, IM_ARRAYSIZE(mappings))) {
 
-					obj->undoStack.push_back(CaptureState(*obj));
-					obj->redoStack.clear();
+					HandleInspectorUndo(*obj);
 
 					obj->mapping = (TextureMapping)current;
 					UpdateMapping(*obj);
@@ -1270,8 +1576,7 @@ void update_imgui_guizmo() {
 
 					if (ImGui::Combo("Plane", &coord, planarCoords, IM_ARRAYSIZE(planarCoords))) {
 
-						obj->undoStack.push_back(CaptureState(*obj));
-						obj->redoStack.clear();
+						HandleInspectorUndo(*obj);
 
 						obj->coordType = (coord_types)coord;
 						UpdateMapping(*obj);
@@ -1286,8 +1591,7 @@ void update_imgui_guizmo() {
 
 					if (ImGui::Button("Regenerate Cube UV")) {
 
-						obj->undoStack.push_back(CaptureState(*obj));
-						obj->redoStack.clear();
+						HandleInspectorUndo(*obj);
 
 						UpdateMapping(*obj);
 					}
@@ -1302,8 +1606,7 @@ void update_imgui_guizmo() {
 
 					if (ImGui::Combo("Axis", &axis, cylinderAxes, IM_ARRAYSIZE(cylinderAxes))) {
 
-						obj->undoStack.push_back(CaptureState(*obj));
-						obj->redoStack.clear();
+						HandleInspectorUndo(*obj);
 
 						obj->cyaxisType = (cylinder_axis)axis;
 						UpdateMapping(*obj);
@@ -1317,8 +1620,7 @@ void update_imgui_guizmo() {
 
 					if (ImGui::Button("Regenerate Sphere UV")) {
 
-						obj->undoStack.push_back(CaptureState(*obj));
-						obj->redoStack.clear();
+						HandleInspectorUndo(*obj);
 
 						UpdateMapping(*obj);
 					}
@@ -1331,8 +1633,7 @@ void update_imgui_guizmo() {
 
 					if (ImGui::Button("Restore Original UV")) {
 
-						obj->undoStack.push_back(CaptureState(*obj));
-						obj->redoStack.clear();
+						HandleInspectorUndo(*obj);
 
 						UpdateMapping(*obj);
 					}

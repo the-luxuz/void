@@ -295,6 +295,8 @@ void DrawAnimationTimeline(AnimationClip& clip) {
 
     drawList->AddLine(ImVec2(current_time, rulerY), ImVec2(current_time, rulerY + rulerHeight), IM_COL32(255, 80, 80, 255), 2.5f);
 
+    ImGui::Separator();
+
     // tracks (position, scale...)
 
     for (int i = 0; i < static_cast<int>(clip.tracks.size()); i++) {
@@ -375,6 +377,10 @@ void DrawAnimationTimeline(AnimationClip& clip) {
             }
 
         }
+
+        std::string loopName = AnimationTrackTargetName(track) + ", Loop: " + AnimationPropertyName(track.property);
+
+        ImGui::Checkbox(loopName.c_str(), &clip.loop);
 
     }
 

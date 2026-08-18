@@ -63,6 +63,13 @@ enum class ColliderType {
     AABB
 };
 
+enum CollisionLayer{
+    World = 1 << 0,
+    Player = 1 << 1,
+    Enemy = 1 << 2,
+    Bullets = 1 << 3
+};
+
 struct Contact {
 
     bool hit;
@@ -78,19 +85,16 @@ struct Collider {
 
     ColliderType type = ColliderType::AABB;
 
-	uint32_t layer = 1 << 0;        // layer of the object, used for collision filtering
-	uint32_t mask = 0xFFFFFFFF;    // with which layers it can collide
+	uint32_t layer = CollisionLayer::World;        // layer of the object, used for collision filtering
+	uint32_t mask = CollisionLayer::World;    // with which layers it can collide
 
     bool isTrigger = false;
 
     // Sphere
     float radius;
 
-    // Capsule
-    float height = 2.0f;
-
-    // AABB/OBB
-    glm::vec3 halfExtents = glm::vec3(0.5f);
+    // AABB
+    //glm::vec3 halfExtents = glm::vec3(0.5f);
 };
 
 struct Vertex {
