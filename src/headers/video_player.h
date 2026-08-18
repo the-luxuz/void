@@ -1,6 +1,7 @@
 #pragma once
 
 #include "local.h"
+#include "helpers.h"
 
 class VideoPlayer {
 
@@ -52,6 +53,26 @@ public:
         return finished;
     }
 
+    AVCodecContext* audioCodecContext = nullptr;
+
+    const AVCodec* audioCodec = nullptr;
+    AVStream* audioStream = nullptr;
+
+    int audioStreamIndex = -1;
+
+    AVFrame* audioFrame = nullptr;
+
+    SwrContext* swrContext = nullptr;
+
+    SDL_AudioStream* audioOutput = nullptr;
+
+    int audioSampleRate = 48000;
+    int audioChannels = 2;
+
+    AVSampleFormat audioSampleFormat = AV_SAMPLE_FMT_S16;
+
+    std::vector<uint8_t> audioBuffer;
+
 private:
 
     bool OpenDecoder();
@@ -61,6 +82,8 @@ private:
 
     void CreateTexture();
     void DestroyTexture();
+
+    bool DecodeAudioFrame();
 
     static std::string FFmpegError(int error);
 
@@ -96,4 +119,6 @@ private:
     GLuint texture = 0;
 
     std::vector<uint8_t> rgbaBuffer;
+
+
 };

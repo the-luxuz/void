@@ -5,6 +5,13 @@
 #include <cmath>
 #include <cstring>
 
+// Appointment
+// Thanks god ai exist for things like this, because learning ffpeg trash api and aplying this will take me weeks to do 
+// and i fucking hate audio integration of this shit
+
+// this is litterally the wildest videcoding i have never done before and i'm actually proud of avoiding this bullshit,
+// bcs i don't fucking want in my entire life to learn this disgusting thing
+
 VideoPlayer::VideoPlayer() {}
 
 VideoPlayer::~VideoPlayer() {
@@ -17,11 +24,7 @@ std::string VideoPlayer::FFmpegError(int error) {
 
     char buffer[AV_ERROR_MAX_STRING_SIZE];
 
-    av_strerror(
-        error,
-        buffer,
-        sizeof(buffer)
-    );
+    av_strerror(error, buffer, sizeof(buffer));
 
     return std::string(buffer);
 }
@@ -34,36 +37,47 @@ bool VideoPlayer::Open(const std::string& path) {
 
     if (ret < 0) {
 
+        std::cerr << "FFmpeg: avformat_open_input failed: " << FFmpegError(ret) << '\n';
+
+        Close();
         return false;
     }
 
-    ret = avformat_find_stream_info(
-        formatContext,
-        nullptr
-    );
+    ret = avformat_find_stream_info(formatContext, nullptr);
 
     if (ret < 0) {
+
+        std::cerr << "FFmpeg: avformat_find_stream_info failed: " << FFmpegError(ret) << '\n';
 
         Close();
         return false;
     }
 
     videoStreamIndex = -1;
+    audioStreamIndex = -1;
+
+    videoStream = nullptr;
+    audioStream = nullptr;
 
     for (unsigned int i = 0; i < formatContext->nb_streams; ++i) {
 
         AVStream* stream = formatContext->streams[i];
 
-        if (stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
+        if (stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO && videoStreamIndex < 0) {
 
             videoStreamIndex = static_cast<int>(i);
-
             videoStream = stream;
-            break;
+
+        } else if (stream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO && audioStreamIndex < 0) {
+
+            audioStreamIndex = static_cast<int>(i);
+            audioStream = stream;
         }
     }
 
     if (videoStreamIndex < 0) {
+
+        std::cerr << "FFmpeg: no video stream found\n";
 
         Close();
         return false;
@@ -71,14 +85,20 @@ bool VideoPlayer::Open(const std::string& path) {
 
     timeBase = av_q2d(videoStream->time_base);
 
-    if (formatContext->duration != AV_NOPTS_VALUE)
+    if (formatContext->duration != AV_NOPTS_VALUE) {
+
         duration = static_cast<double>(formatContext->duration) / AV_TIME_BASE;
-    else
+
+    } else {
+
         duration = 0.0;
+    }
 
     codec = avcodec_find_decoder(videoStream->codecpar->codec_id);
 
     if (!codec) {
+
+        std::cerr << "FFmpeg: video decoder not found\n";
 
         Close();
         return false;
@@ -88,6 +108,8 @@ bool VideoPlayer::Open(const std::string& path) {
 
     if (!codecContext) {
 
+        std::cerr << "FFmpeg: failed to allocate video codec context\n";
+
         Close();
         return false;
     }
@@ -96,26 +118,208 @@ bool VideoPlayer::Open(const std::string& path) {
 
     if (ret < 0) {
 
+        std::cerr << "FFmpeg: failed to copy video codec parameters: " << FFmpegError(ret) << '\n';
+
         Close();
         return false;
     }
 
     codecContext->pkt_timebase = videoStream->time_base;
 
-    ret = avcodec_open2(
-        codecContext,
-        codec,
-        nullptr
-    );
+    ret = avcodec_open2(codecContext, codec, nullptr);
 
     if (ret < 0) {
+
+        std::cerr << "FFmpeg: failed to open video decoder: " << FFmpegError(ret) << '\n';
 
         Close();
         return false;
     }
 
+    if (audioStreamIndex >= 0) {
+        audioCodec = avcodec_find_decoder(audioStream->codecpar->codec_id);
+
+        if (!audioCodec) {
+
+            std::cerr << "FFmpeg: audio decoder not found\n";
+
+            Close();
+            return false;
+        }
+
+        audioCodecContext = avcodec_alloc_context3(audioCodec);
+
+        if (!audioCodecContext) {
+
+            std::cerr << "FFmpeg: failed to allocate audio codec context\n";
+
+            Close();
+            return false;
+        }
+
+        ret = avcodec_parameters_to_context(audioCodecContext, audioStream->codecpar);
+
+        if (ret < 0) {
+
+            std::cerr << "FFmpeg: failed to copy audio codec parameters: " << FFmpegError(ret) << '\n';
+
+            Close();
+            return false;
+        }
+
+        audioCodecContext->pkt_timebase = audioStream->time_base;
+
+        ret = avcodec_open2(audioCodecContext, audioCodec, nullptr);
+
+        if (ret < 0) {
+
+            std::cerr << "FFmpeg: failed to open audio decoder: " << FFmpegError(ret) << '\n';
+
+            Close();
+            return false;
+        }
+
+        audioFrame = av_frame_alloc();
+
+        if (!audioFrame) {
+
+            std::cerr << "FFmpeg: failed to allocate audio frame\n";
+
+            Close();
+            return false;
+        }
+
+        SDL_AudioSpec spec{};
+
+        spec.format = SDL_AUDIO_S16;
+        spec.channels = audioChannels;
+        spec.freq = audioSampleRate;
+
+        audioOutput = SDL_OpenAudioDeviceStream(
+            SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK,
+            &spec,
+            nullptr,
+            nullptr
+        );
+
+        if (!audioOutput) {
+
+            std::cerr << "SDL: failed to open audio device: " << SDL_GetError() << '\n';
+
+            Close();
+            return false;
+        }
+
+        if (!SDL_ResumeAudioStreamDevice(audioOutput)) {
+
+            std::cerr << "SDL: failed to start audio device: " << SDL_GetError() << '\n';
+
+            Close();
+            return false;
+        }
+
+        swrContext = swr_alloc();
+
+        if (!swrContext) {
+
+            std::cerr << "FFmpeg: failed to allocate SwrContext\n";
+
+            Close();
+            return false;
+        }
+
+        ret = av_opt_set_chlayout(swrContext, "in_chlayout", &audioCodecContext->ch_layout, 0);
+
+        if (ret < 0) {
+
+            std::cerr << "FFmpeg: failed to set input channel layout: " << FFmpegError(ret) << '\n';
+
+            Close();
+            return false;
+        }
+
+        AVChannelLayout stereo = AV_CHANNEL_LAYOUT_STEREO;
+
+        ret = av_opt_set_chlayout(swrContext, "out_chlayout", &stereo, 0);
+
+        if (ret < 0) {
+
+            std::cerr << "FFmpeg: failed to set output channel layout: " << FFmpegError(ret) << '\n';
+
+            Close();
+            return false;
+        }
+
+        ret = av_opt_set_int(swrContext, "in_sample_rate", audioCodecContext->sample_rate, 0);
+
+        if (ret < 0) {
+
+            std::cerr << "FFmpeg: failed to set input sample rate\n";
+
+            Close();
+            return false;
+        }
+
+        ret = av_opt_set_int(swrContext, "out_sample_rate", audioSampleRate, 0);
+
+        if (ret < 0) {
+
+            std::cerr << "FFmpeg: failed to set output sample rate\n";
+
+            Close();
+            return false;
+        }
+
+        ret = av_opt_set_sample_fmt(swrContext, "in_sample_fmt", audioCodecContext->sample_fmt, 0);
+
+        if (ret < 0) {
+
+            std::cerr << "FFmpeg: failed to set input sample format\n";
+
+            Close();
+            return false;
+        }
+
+        ret = av_opt_set_sample_fmt(swrContext, "out_sample_fmt", audioSampleFormat, 0);
+
+        if (ret < 0) {
+
+            std::cerr << "FFmpeg: failed to set output sample format\n";
+
+            Close();
+            return false;
+        }
+
+        ret = swr_init(swrContext);
+
+        if (ret < 0) {
+
+            std::cerr << "FFmpeg: failed to initialize SwrContext: " << FFmpegError(ret) << '\n';
+
+            Close();
+            return false;
+        }
+
+        std::cout
+            << "Audio initialized: "
+            << audioCodecContext->sample_rate
+            << " Hz -> "
+            << audioSampleRate
+            << " Hz, "
+            << audioChannels
+            << " channels\n";
+    }
+
     width = codecContext->width;
     height = codecContext->height;
+
+    if (width <= 0 || height <= 0) {
+
+        std::cerr << "FFmpeg: invalid video dimensions\n";
+
+        Close();
+        return false;
+    }
 
     packet = av_packet_alloc();
     decodeFrame = av_frame_alloc();
@@ -123,25 +327,28 @@ bool VideoPlayer::Open(const std::string& path) {
 
     if (!packet || !decodeFrame || !pendingFrame) {
 
+        std::cerr << "FFmpeg: failed to allocate video packet/frame\n";
 
         Close();
         return false;
     }
 
     swsContext = sws_getContext(
-                width,
-                height,
-                codecContext->pix_fmt,
-                width,
-                height,
-                AV_PIX_FMT_RGBA,
-                SWS_BILINEAR,
-                nullptr,
-                nullptr,
-                nullptr
-            );
+        width,
+        height,
+        codecContext->pix_fmt,
+        width,
+        height,
+        AV_PIX_FMT_RGBA,
+        SWS_BILINEAR,
+        nullptr,
+        nullptr,
+        nullptr
+    );
 
     if (!swsContext) {
+
+        std::cerr << "FFmpeg: failed to create SwsContext\n";
 
         Close();
         return false;
@@ -151,6 +358,8 @@ bool VideoPlayer::Open(const std::string& path) {
 
     if (rgbaSize <= 0) {
 
+        std::cerr << "FFmpeg: invalid RGBA buffer size\n";
+
         Close();
         return false;
     }
@@ -158,6 +367,14 @@ bool VideoPlayer::Open(const std::string& path) {
     rgbaBuffer.resize(static_cast<size_t>(rgbaSize));
 
     CreateTexture();
+
+    if (texture == 0) {
+
+        std::cerr << "OpenGL: failed to create video texture\n";
+
+        Close();
+        return false;
+    }
 
     currentTime = 0.0;
     playing = false;
@@ -172,39 +389,14 @@ void VideoPlayer::CreateTexture() {
 
     DestroyTexture();
 
-    glGenTextures(
-        1,
-        &texture
-    );
+    glGenTextures(1, &texture);
 
-    glBindTexture(
-        GL_TEXTURE_2D,
-        texture
-    );
+    glBindTexture(GL_TEXTURE_2D, texture);
 
-    glTexParameteri(
-        GL_TEXTURE_2D,
-        GL_TEXTURE_MIN_FILTER,
-        GL_LINEAR
-    );
-
-    glTexParameteri(
-        GL_TEXTURE_2D,
-        GL_TEXTURE_MAG_FILTER,
-        GL_LINEAR
-    );
-
-    glTexParameteri(
-        GL_TEXTURE_2D,
-        GL_TEXTURE_WRAP_S,
-        GL_CLAMP_TO_EDGE
-    );
-
-    glTexParameteri(
-        GL_TEXTURE_2D,
-        GL_TEXTURE_WRAP_T,
-        GL_CLAMP_TO_EDGE
-    );
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
     glTexImage2D(
         GL_TEXTURE_2D,
@@ -218,107 +410,86 @@ void VideoPlayer::CreateTexture() {
         nullptr
     );
 
-    glBindTexture(
-        GL_TEXTURE_2D,
-        0
-    );
+    glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 void VideoPlayer::DestroyTexture() {
 
     if (texture != 0) {
 
-        glDeleteTextures(
-            1,
-            &texture
-        );
-
+        glDeleteTextures(1, &texture);
         texture = 0;
     }
 }
 
 bool VideoPlayer::DecodeNextFrame(AVFrame* output) {
 
-    if (!formatContext || !codecContext || !packet || !output) {
-
+    if (!formatContext || !codecContext || !packet || !output)
         return false;
-    }
 
     while (true) {
 
-        int ret =
-            avcodec_receive_frame(
-                codecContext,
-                output
-            );
+        int ret = avcodec_receive_frame(codecContext, output);
 
-        if (ret == 0) {
-
+        if (ret == 0)
             return true;
-        }
 
-        if (ret == AVERROR_EOF) {
-
+        if (ret == AVERROR_EOF)
             return false;
-        }
 
-        if (ret != AVERROR(EAGAIN)) {
-
+        if (ret != AVERROR(EAGAIN))
             return false;
-        }
 
-        ret = av_read_frame(
-                formatContext,
-                packet
-            );
+        ret = av_read_frame(formatContext, packet);
 
         if (ret < 0) {
 
             if (ret == AVERROR_EOF) {
 
-                ret = avcodec_send_packet(
-                        codecContext,
-                        nullptr
-                    );
+                ret = avcodec_send_packet(codecContext, nullptr);
 
-                if (ret < 0 && ret != AVERROR_EOF) {
-
+                if (ret < 0 && ret != AVERROR_EOF && ret != AVERROR(EAGAIN))
                     return false;
-                }
 
                 continue;
             }
 
-
             return false;
         }
 
-        if (packet->stream_index != videoStreamIndex) {
+        if (packet->stream_index == videoStreamIndex) {
+
+            ret = avcodec_send_packet(codecContext, packet);
 
             av_packet_unref(packet);
+
+            if (ret < 0)
+                return false;
+
             continue;
         }
 
-        ret = avcodec_send_packet(
-                codecContext,
-                packet
-            );
+        if (packet->stream_index == audioStreamIndex) {
+
+            ret = avcodec_send_packet(audioCodecContext, packet);
+
+            av_packet_unref(packet);
+
+            if (ret < 0)
+                return false;
+
+            DecodeAudioFrame();
+            continue;
+        }
 
         av_packet_unref(packet);
-
-        if (ret < 0) {
-
-            return false;
-        }
     }
 }
 
 bool VideoPlayer::PresentFrame(AVFrame* frame) {
 
-    if (!frame || !swsContext || !texture) {
-
+    if (!frame || !swsContext || !texture)
         return false;
-    }
 
     static int frameCount = 0;
 
@@ -327,9 +498,7 @@ bool VideoPlayer::PresentFrame(AVFrame* frame) {
         double pts = 0.0;
 
         if (frame->best_effort_timestamp != AV_NOPTS_VALUE)
-            pts =
-            frame->best_effort_timestamp *
-            timeBase;
+            pts = frame->best_effort_timestamp * timeBase;
     }
 
     uint8_t* dstData[4] = {
@@ -356,15 +525,9 @@ bool VideoPlayer::PresentFrame(AVFrame* frame) {
         dstLinesize
     );
 
-    glBindTexture(
-        GL_TEXTURE_2D,
-        texture
-    );
+    glBindTexture(GL_TEXTURE_2D, texture);
 
-    glPixelStorei(
-        GL_UNPACK_ALIGNMENT,
-        1
-    );
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
     glTexSubImage2D(
         GL_TEXTURE_2D,
@@ -378,10 +541,7 @@ bool VideoPlayer::PresentFrame(AVFrame* frame) {
         rgbaBuffer.data()
     );
 
-    glBindTexture(
-        GL_TEXTURE_2D,
-        0
-    );
+    glBindTexture(GL_TEXTURE_2D, 0);
 
     return true;
 }
@@ -398,13 +558,10 @@ bool VideoPlayer::DecodeUntil(double targetTime) {
             frameToUse = pendingFrame;
             usingPending = true;
 
-        }
-        else {
+        } else {
 
-            if (!DecodeNextFrame(decodeFrame)) {
-
+            if (!DecodeNextFrame(decodeFrame))
                 return false;
-            }
 
             frameToUse = decodeFrame;
         }
@@ -429,18 +586,12 @@ bool VideoPlayer::DecodeUntil(double targetTime) {
             continue;
         }
 
-        if (usingPending) {
-
-
+        if (usingPending)
             return true;
-        }
 
         av_frame_unref(pendingFrame);
 
-        av_frame_move_ref(
-            pendingFrame,
-            decodeFrame
-        );
+        av_frame_move_ref(pendingFrame, decodeFrame);
 
         hasPendingFrame = true;
 
@@ -485,39 +636,29 @@ void VideoPlayer::Pause() {
 void VideoPlayer::Stop() {
 
     playing = false;
-
     Seek(0.0);
 }
 
 void VideoPlayer::Seek(double seconds) {
 
-    if (!formatContext || !codecContext || !videoStream) {
-
+    if (!formatContext || !codecContext || !videoStream)
         return;
-    }
 
-    seconds = std::clamp(
-            seconds,
-            0.0,
-            duration
-        );
+    seconds = std::clamp(seconds, 0.0, duration);
 
     int64_t timestamp = static_cast<int64_t>(seconds / timeBase);
 
-    int ret =
-        avformat_seek_file(
-            formatContext,
-            videoStreamIndex,
-            INT64_MIN,
-            timestamp,
-            INT64_MAX,
-            0
-        );
+    int ret = avformat_seek_file(
+        formatContext,
+        videoStreamIndex,
+        INT64_MIN,
+        timestamp,
+        INT64_MAX,
+        0
+    );
 
-    if (ret < 0) {
-
+    if (ret < 0)
         return;
-    }
 
     avcodec_flush_buffers(codecContext);
 
@@ -539,47 +680,42 @@ void VideoPlayer::Close() {
 
     if (swsContext) {
 
-        sws_freeContext(
-            swsContext
-        );
-
+        sws_freeContext(swsContext);
         swsContext = nullptr;
     }
 
-    if (pendingFrame) {
+    if (pendingFrame)
+        av_frame_free(&pendingFrame);
 
-        av_frame_free(
-            &pendingFrame
-        );
+    if (decodeFrame)
+        av_frame_free(&decodeFrame);
+
+    if (packet)
+        av_packet_free(&packet);
+
+    if (codecContext)
+        avcodec_free_context(&codecContext);
+
+    if (formatContext)
+        avformat_close_input(&formatContext);
+
+    if (audioFrame)
+        av_frame_free(&audioFrame);
+
+    if (swrContext)
+        swr_free(&swrContext);
+
+    if (audioCodecContext)
+        avcodec_free_context(&audioCodecContext);
+
+    if (audioOutput) {
+        SDL_DestroyAudioStream(audioOutput);
     }
 
-    if (decodeFrame) {
-
-        av_frame_free(
-            &decodeFrame
-        );
-    }
-
-    if (packet) {
-
-        av_packet_free(
-            &packet
-        );
-    }
-
-    if (codecContext) {
-
-        avcodec_free_context(
-            &codecContext
-        );
-    }
-
-    if (formatContext) {
-
-        avformat_close_input(
-            &formatContext
-        );
-    }
+    audioOutput = nullptr;
+    audioCodec = nullptr;
+    audioStream = nullptr;
+    audioStreamIndex = -1;
 
     codec = nullptr;
     videoStream = nullptr;
@@ -597,4 +733,75 @@ void VideoPlayer::Close() {
     hasPendingFrame = false;
 
     rgbaBuffer.clear();
+    audioBuffer.clear();
+}
+
+bool VideoPlayer::DecodeAudioFrame() {
+        
+    if (!audioCodecContext || !audioFrame || !swrContext || !audioOutput)
+        return false;
+
+    while (true) {
+
+        int ret = avcodec_receive_frame(audioCodecContext, audioFrame);
+
+        if (ret == 0) {
+
+            int64_t delay = swr_get_delay(
+                swrContext,
+                audioCodecContext->sample_rate
+            );
+
+            int outputSamples = static_cast<int>(
+                av_rescale_rnd(
+                    delay + audioFrame->nb_samples,
+                    audioSampleRate,
+                    audioCodecContext->sample_rate,
+                    AV_ROUND_UP
+                )
+                );
+
+            size_t bytes = static_cast<size_t>(
+                outputSamples * audioChannels * sizeof(int16_t)
+                );
+
+            audioBuffer.resize(bytes);
+
+            uint8_t* outputData[1] = {
+                audioBuffer.data()
+            };
+
+            const uint8_t** inputData =
+                const_cast<const uint8_t**>(audioFrame->extended_data);
+
+            int converted = swr_convert(
+                swrContext,
+                outputData,
+                outputSamples,
+                inputData,
+                audioFrame->nb_samples
+            );
+
+            if (converted < 0)
+                return false;
+
+            int outputBytes = converted * audioChannels * sizeof(int16_t);
+
+            if (!SDL_PutAudioStreamData(audioOutput, audioBuffer.data(), outputBytes)) {
+
+                std::cerr << "SDL_PutAudioStreamData: " << SDL_GetError() << '\n';
+                return false;
+            }
+
+            continue;
+        }
+
+        if (ret == AVERROR(EAGAIN))
+            return true;
+
+        if (ret == AVERROR_EOF)
+            return false;
+
+        return false;
+    }
 }

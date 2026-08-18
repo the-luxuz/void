@@ -246,17 +246,9 @@ void init() {
 
 		std::cout << "VIDEO OK\n";
 
-		std::cout << "Size: " << videoPlayer.GetWidth() << "x" << videoPlayer.GetHeight() << '\n';
-
-		std::cout << "Duration: " << videoPlayer.GetDuration() << '\n';
-
 		videoPlayer.Play();
 
 		isCinematicActive = true;
-
-		std::cout << "Video texture = " << videoPlayer.GetTexture() << '\n';
-
-		std::cout << "Video VAO = " << videoQuad.vao << '\n';
 	}
 
 	init_grid();
@@ -502,7 +494,15 @@ void init_(const char* settings, const char* scene) {
 
 		windowedSize = { st.w, st.h };
 
-		SDL_Init(SDL_INIT_VIDEO);
+		if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
+
+			std::cerr
+				<< "SDL_Init failed: "
+				<< SDL_GetError()
+				<< '\n';
+
+			return;
+		}
 
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
@@ -520,6 +520,7 @@ void init_(const char* settings, const char* scene) {
 			SDL_GL_SetSwapInterval(1);
 
 		glewExperimental = GL_TRUE;
+
 		GLenum err = glewInit();
 
 		if (err != GLEW_OK) {

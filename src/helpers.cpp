@@ -141,6 +141,8 @@ VideoQuad videoQuad;
 
 bool isCinematicActive = false;
 
+SDL_AudioSpec spec{};
+
 //--------------------------------------------------------------------------
 // Load scene in the good way
 

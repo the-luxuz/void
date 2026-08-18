@@ -143,11 +143,15 @@ extern bool free_cam;
 
 extern bool viewport_scroll_active;
 
+class VideoPlayer;
+
 extern VideoPlayer videoPlayer;
 
 extern VideoQuad videoQuad;
 
 extern bool isCinematicActive;
+
+extern SDL_AudioSpec spec;
 
 //--------------------------------------------------------------------------
 // Load scene in the good way
