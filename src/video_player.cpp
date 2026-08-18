@@ -6,10 +6,11 @@
 #include <cstring>
 
 // Appointment
-// Thanks god ai exist for things like this, because learning ffpeg trash api and aplying this will take me weeks to do 
+
+// Thanks god ai exist for things like this, bcs learning ffmpeg trash api and aplying this would take me weeks to do 
 // and i fucking hate audio integration of this shit
 
-// this is litterally the wildest videcoding i have never done before and i'm actually proud of avoiding this bullshit,
+// this is literally the wildest vibe coding i have never done before and i'm actually proud of avoiding this bullshit,
 // bcs i don't fucking want in my entire life to learn this disgusting thing
 
 VideoPlayer::VideoPlayer() {}
