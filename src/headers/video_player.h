@@ -64,6 +64,9 @@ public:
         return finished;
     }
 
+    void SetAudioEnabled(bool enabled);
+    bool IsAudioEnabled() const;
+
     AVCodecContext* audioCodecContext = nullptr;
 
     const AVCodec* audioCodec = nullptr;
@@ -107,6 +110,8 @@ private:
     static std::string FFmpegError(int error);
 
 private:
+
+    bool audioEnabled = true;
 
     AVFormatContext* formatContext = nullptr;
     AVCodecContext* codecContext = nullptr;

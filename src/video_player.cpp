@@ -34,6 +34,38 @@ AVPixelFormat VideoPlayer::GetHardwareFormat(AVCodecContext* ctx, const AVPixelF
     return AV_PIX_FMT_NONE;
 }
 
+void VideoPlayer::SetAudioEnabled(bool enabled) {
+
+    if (audioEnabled == enabled)
+        return;
+
+    audioEnabled = enabled;
+
+    if (!audioOutput || !audioCodecContext)
+        return;
+
+    if (!audioEnabled) {
+
+        SDL_ClearAudioStream(audioOutput);
+
+        return;
+    }
+
+    SDL_ClearAudioStream(audioOutput);
+
+    avcodec_flush_buffers(audioCodecContext);
+
+    if (swrContext) {
+        swr_close(swrContext);
+        swr_init(swrContext);
+    }
+}
+
+bool VideoPlayer::IsAudioEnabled() const {
+
+    return audioEnabled;
+}
+
 std::string VideoPlayer::FFmpegError(int error) {
 
     char buffer[AV_ERROR_MAX_STRING_SIZE];
@@ -865,7 +897,7 @@ void VideoPlayer::Close() {
 }
 
 bool VideoPlayer::DecodeAudioFrame() {
-        
+
     if (!audioCodecContext || !audioFrame || !swrContext || !audioOutput)
         return false;
 
@@ -874,6 +906,9 @@ bool VideoPlayer::DecodeAudioFrame() {
         int ret = avcodec_receive_frame(audioCodecContext, audioFrame);
 
         if (ret == 0) {
+
+            if (!audioEnabled)
+                continue;
 
             int64_t delay = swr_get_delay(
                 swrContext,
@@ -890,7 +925,9 @@ bool VideoPlayer::DecodeAudioFrame() {
                 );
 
             size_t bytes = static_cast<size_t>(
-                outputSamples * audioChannels * sizeof(int16_t)
+                outputSamples *
+                audioChannels *
+                sizeof(int16_t)
                 );
 
             audioBuffer.resize(bytes);
@@ -899,8 +936,7 @@ bool VideoPlayer::DecodeAudioFrame() {
                 audioBuffer.data()
             };
 
-            const uint8_t** inputData =
-                const_cast<const uint8_t**>(audioFrame->extended_data);
+            const uint8_t** inputData = const_cast<const uint8_t**>(audioFrame->extended_data);
 
             int converted = swr_convert(
                 swrContext,
@@ -913,11 +949,18 @@ bool VideoPlayer::DecodeAudioFrame() {
             if (converted < 0)
                 return false;
 
-            int outputBytes = converted * audioChannels * sizeof(int16_t);
+            int outputBytes =
+                converted *
+                audioChannels *
+                sizeof(int16_t);
 
-            if (!SDL_PutAudioStreamData(audioOutput, audioBuffer.data(), outputBytes)) {
+            if (!SDL_PutAudioStreamData(audioOutput, audioBuffer.data(), outputBytes )) {
 
-                std::cerr << "SDL_PutAudioStreamData: " << SDL_GetError() << '\n';
+                std::cerr
+                    << "SDL_PutAudioStreamData: "
+                    << SDL_GetError()
+                    << '\n';
+
                 return false;
             }
 

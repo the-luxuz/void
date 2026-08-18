@@ -260,8 +260,27 @@ void update(SDL_Window* window, float dt) {
 		isCinematicActive = false;
 	}
 
-	if (isCinematicActive)
+	if (isCinematicActive) {
+
 		DrawVideo(videoPlayer);
+
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplSDL3_NewFrame();
+		ImGui::NewFrame();
+
+		ImGui::Begin("Audio");
+
+		bool audio = videoPlayer.IsAudioEnabled();
+
+		if (ImGui::Checkbox("Audio", &audio))
+			videoPlayer.SetAudioEnabled(audio);
+
+		ImGui::End();
+
+		ImGui::Render();
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+	}
 
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glBindVertexArray(0);
