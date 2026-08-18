@@ -868,6 +868,21 @@ void update_imgui_guizmo() {
 
 					ImGui::TextWrapped("%s", entry.path().stem().string().c_str());
 				}
+
+				if (ext == ".mp4") {
+
+					std::string path = entry.path().string();
+
+					if (ImGui::Button("", ImVec2(64, 64))) {
+
+						videoPlayer.Open(path.c_str());
+						videoPlayer.Play();
+
+						isCinematicActive = true;
+					}
+
+					ImGui::TextWrapped("%s", entry.path().stem().string().c_str());
+				}
 			}
 
 			ImGui::PopID();

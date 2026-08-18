@@ -1,5 +1,9 @@
 #pragma once
 
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+
 #include <GL/glew.h>
 #include <GL/GL.h>
 #include <SDL3/SDL.h>
@@ -24,17 +28,5 @@
 #include <nfd.h>
 
 #include <glm/gtx/quaternion.hpp>
-
-extern "C" {
-
-#include <libavformat/avformat.h>
-#include <libavcodec/avcodec.h>
-#include <libavutil/avutil.h>
-#include <libavutil/imgutils.h>
-#include <libswscale/swscale.h>
-#include <libswresample/swresample.h>
-#include <libavutil/opt.h>
-
-}
 
 const int MAX_LIGHTS = 8;

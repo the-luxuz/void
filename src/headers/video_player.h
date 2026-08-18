@@ -1,7 +1,18 @@
 #pragma once
 
 #include "local.h"
-#include "helpers.h"
+
+extern "C" {
+#include <libavformat/avformat.h>
+#include <libavcodec/avcodec.h>
+#include <libavutil/avutil.h>
+#include <libavutil/imgutils.h>
+#include <libswscale/swscale.h>
+#include <libswresample/swresample.h>
+#include <libavutil/opt.h>
+}
+#include <libavutil/hwcontext.h>
+#include <libavutil/hwcontext_d3d11va.h>
 
 class VideoPlayer {
 
@@ -72,6 +83,14 @@ public:
     AVSampleFormat audioSampleFormat = AV_SAMPLE_FMT_S16;
 
     std::vector<uint8_t> audioBuffer;
+
+    AVBufferRef* hwDeviceContext = nullptr;
+    AVFrame* hwTransferFrame = nullptr;
+
+    static AVPixelFormat GetHardwareFormat(
+        AVCodecContext* ctx,
+        const AVPixelFormat* formats
+    );
 
 private:
 

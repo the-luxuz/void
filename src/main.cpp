@@ -32,89 +32,91 @@ float radius_speed = 20.0f;
 
 void update(SDL_Window* window, float dt) {
 
-	if (st.light_active)
-		update_depthmap();
+	if (!isCinematicActive) {
 
-	if(currentViewMode == view_Mode::PLAY)
-		player = search_obj_by_name("Player");
+		if (st.light_active)
+			update_depthmap();
 
-	if (currentViewMode == view_Mode::PLAY && player)
-		cameraPos = cam.cam_position;
-	else
-		cameraPos = get_cam_pos();
+		if(currentViewMode == view_Mode::PLAY)
+			player = search_obj_by_name("Player");
 
-	view = glm::lookAt(
-		cameraPos,
-		cam.cam_target,
-		cam.cam_up
-	);
+		if (currentViewMode == view_Mode::PLAY && player)
+			cameraPos = cam.cam_position;
+		else
+			cameraPos = get_cam_pos();
 
-	if (currentViewMode != prevViewMode && currentViewMode == view_Mode::PLAY) {
+		view = glm::lookAt(
+			cameraPos,
+			cam.cam_target,
+			cam.cam_up
+		);
+
+		if (currentViewMode != prevViewMode && currentViewMode == view_Mode::PLAY) {
 	
-		save_scene_state();
-		prevViewMode = currentViewMode;
+			save_scene_state();
+			prevViewMode = currentViewMode;
 
-	} else if (currentViewMode != prevViewMode && currentViewMode == view_Mode::EDITOR) {
+		} else if (currentViewMode != prevViewMode && currentViewMode == view_Mode::EDITOR) {
 		
-		load_scene_state();
-		prevViewMode = currentViewMode;
-	}
-
-	if (camera_update) {
-	
-		projection = glm::perspective(
-			glm::radians(st.fov),
-			(float)viewport_width / viewport_height,
-			cam.nearPlane,
-			cam.farPlane
-		); 
-		
-		camera_update = false;
-	}
-
-	if (currentViewMode == view_Mode::EDITOR) {
-	
-		if ((int)viewportSize.x != viewport_width || (int)viewportSize.y != viewport_height)
-			ResizeViewport((int)viewportSize.x, (int)viewportSize.y);
-
-		glBindFramebuffer(GL_FRAMEBUFFER, viewportFBO);
-
-		glViewport(0, 0, viewport_width, viewport_height);
-
-		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		
-
-		if (currentViewMode == view_Mode::EDITOR) {
-		
-			//----------------------------------------------------
-			// grid
-
-			update_grid(cameraPos);
-
+			load_scene_state();
+			prevViewMode = currentViewMode;
 		}
 
-		//----------------------------------------------------
-		// obj
+		if (camera_update) {
+	
+			projection = glm::perspective(
+				glm::radians(st.fov),
+				(float)viewport_width / viewport_height,
+				cam.nearPlane,
+				cam.farPlane
+			); 
+		
+			camera_update = false;
+		}
 
-		update_objects();
+		if (currentViewMode == view_Mode::EDITOR) {
+	
+			if ((int)viewportSize.x != viewport_width || (int)viewportSize.y != viewport_height)
+				ResizeViewport((int)viewportSize.x, (int)viewportSize.y);
 
-		//----------------------------------------------------
-		// skybox
+			glBindFramebuffer(GL_FRAMEBUFFER, viewportFBO);
 
-		update_skybox();
+			glViewport(0, 0, viewport_width, viewport_height);
 
-		//----------------------------------------------------
+			glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 
-		glBindTexture(GL_TEXTURE_2D, 0);
-		glBindVertexArray(0);
-		glUseProgram(0);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		
+
+			if (currentViewMode == view_Mode::EDITOR) {
+		
+				//----------------------------------------------------
+				// grid
+
+				update_grid(cameraPos);
+
+			}
+
+			//----------------------------------------------------
+			// obj
+
+			update_objects();
+
+			//----------------------------------------------------
+			// skybox
+
+			update_skybox();
+
+			//----------------------------------------------------
+
+			glBindTexture(GL_TEXTURE_2D, 0);
+			glBindVertexArray(0);
+			glUseProgram(0);
+
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		}
 	}
-
 
 	//----------------------------------------------------
 
@@ -122,120 +124,124 @@ void update(SDL_Window* window, float dt) {
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	static ImGuiIO& io = ImGui::GetIO();
-	(void)io;
+	if (!isCinematicActive) {
+	
+		static ImGuiIO& io = ImGui::GetIO();
+		(void)io;
 
-	if (currentViewMode == view_Mode::PLAY) {
+		if (currentViewMode == view_Mode::PLAY) {
 
-		io.ConfigFlags &= ~ImGuiConfigFlags_ViewportsEnable;
+			io.ConfigFlags &= ~ImGuiConfigFlags_ViewportsEnable;
 
-		const bool* keyboard = SDL_GetKeyboardState(nullptr);
+			const bool* keyboard = SDL_GetKeyboardState(nullptr);
 
-		if (currentViewMode == view_Mode::PLAY && player) {
+			if (currentViewMode == view_Mode::PLAY && player) {
 		
-			if (!io.WantCaptureKeyboard)
-				PlayerControl(keyboard, dt, *player);
+				if (!io.WantCaptureKeyboard)
+					PlayerControl(keyboard, dt, *player);
 
-		} else if (!free_cam) {
+			} else if (!free_cam) {
 		
-			free_cam = true;
+				free_cam = true;
+
+			}
+			//----------------------------------------------------
+			// physics
+
+			static float accumulator = 0.0f;
+
+			if (st.physics_active) {
+
+				accumulator += dt;
+
+				while (accumulator >= fixedDt) {
+
+					PhysicsUpdate(fixedDt);
+					accumulator -= fixedDt;
+				}
+			}
+
+			//----------------------------------------------------
+			// col
+
+			if (st.collision_active)
+				CollisionUpdate();
+
+			if (currentViewMode == view_Mode::PLAY && player) {
+		
+				UpdatePlayerCamera(*player);
+
+			} else if(!free_cam) {
+		
+				free_cam = true;
+
+			}
+
+			//----------------------------------------------------
+			// obj
+
+			update_objects();
+
+			//----------------------------------------------------
+			// skybox
+
+			update_skybox();
+
+			//----------------------------------------------------
 
 		}
+
+		//--------------------------------------------------------------------------
+		// animations
+
+		UpdateAnimation(dt);
+
 		//----------------------------------------------------
-		// physics
+		// imgui / imguizmo
 
-		static float accumulator = 0.0f;
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplSDL3_NewFrame();
+		ImGui::NewFrame();
 
-		if (st.physics_active) {
+		if (currentViewMode == view_Mode::EDITOR) {
 
-			accumulator += dt;
+			io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+			Docking();
+		}
 
-			while (accumulator >= fixedDt) {
+		fps = ImGui::GetIO().Framerate;
 
-				PhysicsUpdate(fixedDt);
-				accumulator -= fixedDt;
+		ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+
+		ImGui::Begin("HUD", nullptr, flags);
+
+		ImGui::Text("FPS: %.1f", fps);
+		ImGui::Text("Frame: %.3f ms", 1000.0f / fps);
+
+		ImGui::End();
+
+		if (currentViewMode == view_Mode::EDITOR)
+			update_imgui_guizmo();
+
+		ImGui::Render();
+
+		if (currentViewMode == view_Mode::EDITOR) {
+
+			if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+
+				SDL_Window* backupWindow = SDL_GL_GetCurrentWindow();
+				SDL_GLContext backupContext = SDL_GL_GetCurrentContext();
+
+				ImGui::UpdatePlatformWindows();
+				ImGui::RenderPlatformWindowsDefault();
+
+				SDL_GL_MakeCurrent(backupWindow, backupContext);
 			}
 		}
 
-		//----------------------------------------------------
-		// col
-
-		if (st.collision_active)
-			CollisionUpdate();
-
-		if (currentViewMode == view_Mode::PLAY && player) {
-		
-			UpdatePlayerCamera(*player);
-
-		} else if(!free_cam) {
-		
-			free_cam = true;
-
-		}
-
-		//----------------------------------------------------
-		// obj
-
-		update_objects();
-
-		//----------------------------------------------------
-		// skybox
-
-		update_skybox();
-
-		//----------------------------------------------------
-
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 	}
 
-	//--------------------------------------------------------------------------
-	// animations
-
-	UpdateAnimation(dt);
-
-	//----------------------------------------------------
-	// imgui / imguizmo
-
-	ImGui_ImplOpenGL3_NewFrame();
-	ImGui_ImplSDL3_NewFrame();
-	ImGui::NewFrame();
-
-	if (currentViewMode == view_Mode::EDITOR) {
-
-		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-		Docking();
-	}
-
-	fps = ImGui::GetIO().Framerate;
-
-	ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
-
-	ImGui::Begin("HUD", nullptr, flags);
-
-	ImGui::Text("FPS: %.1f", fps);
-	ImGui::Text("Frame: %.3f ms", 1000.0f / fps);
-
-	ImGui::End();
-
-	if (currentViewMode == view_Mode::EDITOR)
-		update_imgui_guizmo();
-
-	ImGui::Render();
-
-	if (currentViewMode == view_Mode::EDITOR) {
-
-		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
-
-			SDL_Window* backupWindow = SDL_GL_GetCurrentWindow();
-			SDL_GLContext backupContext = SDL_GL_GetCurrentContext();
-
-			ImGui::UpdatePlatformWindows();
-			ImGui::RenderPlatformWindowsDefault();
-
-			SDL_GL_MakeCurrent(backupWindow, backupContext);
-		}
-	}
-
-	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 	//----------------------------------------------------
 	// windows
@@ -783,6 +789,8 @@ int main(int argc, char* args[]) {
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplSDL3_Shutdown();
 	ImGui::DestroyContext();
+
+	videoPlayer.Close();
 
 	SDL_GL_DestroyContext(context);
 	SDL_DestroyWindow(window);

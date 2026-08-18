@@ -21,6 +21,19 @@ VideoPlayer::~VideoPlayer() {
     DestroyTexture();
 }
 
+AVPixelFormat VideoPlayer::GetHardwareFormat(AVCodecContext* ctx, const AVPixelFormat* formats) {
+
+    for (const AVPixelFormat* p = formats; *p != AV_PIX_FMT_NONE; ++p) {
+
+        if (*p == AV_PIX_FMT_D3D11)
+            return AV_PIX_FMT_D3D11;
+    }
+
+    std::cerr << "D3D11VA format not offered by decoder\n";
+
+    return AV_PIX_FMT_NONE;
+}
+
 std::string VideoPlayer::FFmpegError(int error) {
 
     char buffer[AV_ERROR_MAX_STRING_SIZE];
@@ -86,7 +99,11 @@ bool VideoPlayer::Open(const std::string& path) {
 
     timeBase = av_q2d(videoStream->time_base);
 
-    if (formatContext->duration != AV_NOPTS_VALUE) {
+    if (videoStream->duration != AV_NOPTS_VALUE) {
+
+        duration = videoStream->duration * av_q2d(videoStream->time_base);
+
+    } else if (formatContext->duration != AV_NOPTS_VALUE) {
 
         duration = static_cast<double>(formatContext->duration) / AV_TIME_BASE;
 
@@ -108,18 +125,22 @@ bool VideoPlayer::Open(const std::string& path) {
     codecContext = avcodec_alloc_context3(codec);
 
     if (!codecContext) {
-
         std::cerr << "FFmpeg: failed to allocate video codec context\n";
 
         Close();
         return false;
     }
 
-    ret = avcodec_parameters_to_context(codecContext, videoStream->codecpar);
+    ret = avcodec_parameters_to_context(
+        codecContext,
+        videoStream->codecpar
+    );
 
     if (ret < 0) {
-
-        std::cerr << "FFmpeg: failed to copy video codec parameters: " << FFmpegError(ret) << '\n';
+        std::cerr
+            << "FFmpeg: failed to copy video codec parameters: "
+            << FFmpegError(ret)
+            << '\n';
 
         Close();
         return false;
@@ -127,11 +148,50 @@ bool VideoPlayer::Open(const std::string& path) {
 
     codecContext->pkt_timebase = videoStream->time_base;
 
+    codecContext->get_format = GetHardwareFormat;
+
+    ret = av_hwdevice_ctx_create(
+        &hwDeviceContext,
+        AV_HWDEVICE_TYPE_D3D11VA,
+        nullptr,
+        nullptr,
+        0
+    );
+
+    if (ret < 0) {
+        std::cerr
+            << "FFmpeg: failed to create D3D11VA device: "
+            << FFmpegError(ret)
+            << '\n';
+
+        Close();
+        return false;
+    }
+
+    codecContext->hw_device_ctx = av_buffer_ref(hwDeviceContext);
+
+    if (!codecContext->hw_device_ctx) {
+        std::cerr << "FFmpeg: failed to reference D3D11VA device\n";
+
+        Close();
+        return false;
+    }
+
     ret = avcodec_open2(codecContext, codec, nullptr);
 
     if (ret < 0) {
+        std::cerr
+            << "FFmpeg: failed to open video decoder with D3D11VA: "
+            << FFmpegError(ret)
+            << '\n';
 
-        std::cerr << "FFmpeg: failed to open video decoder: " << FFmpegError(ret) << '\n';
+        Close();
+        return false;
+    }
+
+    if (ret < 0) {
+        std::cerr << "FFmpeg: failed to open video decoder with D3D11VA: "
+            << FFmpegError(ret) << '\n';
 
         Close();
         return false;
@@ -325,31 +385,13 @@ bool VideoPlayer::Open(const std::string& path) {
     packet = av_packet_alloc();
     decodeFrame = av_frame_alloc();
     pendingFrame = av_frame_alloc();
+    hwTransferFrame = av_frame_alloc();
 
-    if (!packet || !decodeFrame || !pendingFrame) {
-
-        std::cerr << "FFmpeg: failed to allocate video packet/frame\n";
-
-        Close();
-        return false;
-    }
-
-    swsContext = sws_getContext(
-        width,
-        height,
-        codecContext->pix_fmt,
-        width,
-        height,
-        AV_PIX_FMT_RGBA,
-        SWS_BILINEAR,
-        nullptr,
-        nullptr,
-        nullptr
-    );
-
-    if (!swsContext) {
-
-        std::cerr << "FFmpeg: failed to create SwsContext\n";
+    if (!packet ||
+        !decodeFrame ||
+        !pendingFrame ||
+        !hwTransferFrame) {
+        std::cerr << "FFmpeg: failed to allocate frames\n";
 
         Close();
         return false;
@@ -432,8 +474,23 @@ bool VideoPlayer::DecodeNextFrame(AVFrame* output) {
 
         int ret = avcodec_receive_frame(codecContext, output);
 
-        if (ret == 0)
+        if (ret == 0) {
+
+            static bool printed = false;
+
+            if (!printed) {
+                std::cout
+                    << "VIDEO PIX FORMAT: "
+                    << av_get_pix_fmt_name(
+                        static_cast<AVPixelFormat>(output->format)
+                    )
+                    << '\n';
+
+                printed = true;
+            }
+
             return true;
+        }
 
         if (ret == AVERROR_EOF)
             return false;
@@ -489,18 +546,70 @@ bool VideoPlayer::DecodeNextFrame(AVFrame* output) {
 
 bool VideoPlayer::PresentFrame(AVFrame* frame) {
 
-    if (!frame || !swsContext || !texture)
+    if (!frame || !texture)
         return false;
 
-    static int frameCount = 0;
+    AVFrame* cpuFrame = frame;
 
-    if ((frameCount++ % 30) == 0) {
+    // ------------------------------------------------------------
+    // D3D11 GPU frame -> CPU frame
 
-        double pts = 0.0;
+    if (frame->format == AV_PIX_FMT_D3D11) {
 
-        if (frame->best_effort_timestamp != AV_NOPTS_VALUE)
-            pts = frame->best_effort_timestamp * timeBase;
+        av_frame_unref(hwTransferFrame);
+
+        int ret = av_hwframe_transfer_data(
+            hwTransferFrame,
+            frame,
+            0
+        );
+
+        if (ret < 0) {
+
+            std::cerr
+                << "FFmpeg: D3D11 frame transfer failed: "
+                << FFmpegError(ret)
+                << '\n';
+
+            return false;
+        }
+
+        cpuFrame = hwTransferFrame;
     }
+
+    // ------------------------------------------------------------
+    // Crear SwsContext usando EL FORMATO DEL FRAME CPU
+
+    AVPixelFormat sourceFormat = static_cast<AVPixelFormat>(cpuFrame->format);
+
+    if (!swsContext) {
+
+        swsContext = sws_getContext(
+            cpuFrame->width,
+            cpuFrame->height,
+            sourceFormat,
+            width,
+            height,
+            AV_PIX_FMT_RGBA,
+            SWS_BILINEAR,
+            nullptr,
+            nullptr,
+            nullptr
+        );
+
+        if (!swsContext) {
+
+            std::cerr
+                << "FFmpeg: failed to create SwsContext for CPU frame. Format: "
+                << av_get_pix_fmt_name(sourceFormat)
+                << '\n';
+
+            return false;
+        }
+    }
+
+    // ------------------------------------------------------------
+    // Convertir a RGBA
 
     uint8_t* dstData[4] = {
         rgbaBuffer.data(),
@@ -518,17 +627,26 @@ bool VideoPlayer::PresentFrame(AVFrame* frame) {
 
     sws_scale(
         swsContext,
-        frame->data,
-        frame->linesize,
+        cpuFrame->data,
+        cpuFrame->linesize,
         0,
-        height,
+        cpuFrame->height,
         dstData,
         dstLinesize
     );
 
-    glBindTexture(GL_TEXTURE_2D, texture);
+    // ------------------------------------------------------------
+    // Subir RGBA a OpenGL
 
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glBindTexture(
+        GL_TEXTURE_2D,
+        texture
+    );
+
+    glPixelStorei(
+        GL_UNPACK_ALIGNMENT,
+        1
+    );
 
     glTexSubImage2D(
         GL_TEXTURE_2D,
@@ -542,7 +660,10 @@ bool VideoPlayer::PresentFrame(AVFrame* frame) {
         rgbaBuffer.data()
     );
 
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindTexture(
+        GL_TEXTURE_2D,
+        0
+    );
 
     return true;
 }
@@ -694,8 +815,14 @@ void VideoPlayer::Close() {
     if (packet)
         av_packet_free(&packet);
 
+    if (hwTransferFrame)
+        av_frame_free(&hwTransferFrame);
+
     if (codecContext)
         avcodec_free_context(&codecContext);
+
+    if (hwDeviceContext)
+        av_buffer_unref(&hwDeviceContext);
 
     if (formatContext)
         avformat_close_input(&formatContext);
