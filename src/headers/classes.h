@@ -596,7 +596,12 @@ struct AnimationPlayer {
 
 struct AnimationEditorState {
 
+    float timelineViewMin = 0.0f;
     float timelineViewMax = 5.0f;
+
+    float timelinePixelsPerSecond = 100.0f;
+    float timelineScrollTime = 0.0f;
+    float timelineTrackScrollY = 0.0f;
 
     int selectedTrack = -1;
 
@@ -606,7 +611,7 @@ struct AnimationEditorState {
 
     float dragOffsetTime = 0.0f;
 
-    float animationSnap = 0.15f;
+    float animationSnap = 0.10f;
 
     bool animationSnapEnable = true;
 };
@@ -658,6 +663,6 @@ AnimationValue EvaluateTrack(const AnimationTrack& track, float time);
 
 const char* AnimationPropertyName(AnimationProperty property);
 
-float TimelineTimeToX(float time, float startX, float width, float maxTime);
+float TimelineTimeToX(float time, float startX, float pixelsPerSecond, float scrollTime);
 
-float TimelineXToTime(float x, float startX, float width, float maxTime);
+float TimelineXToTime(float x, float startX, float pixelsPerSecond, float scrollTime);

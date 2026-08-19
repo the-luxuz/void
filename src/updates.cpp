@@ -463,6 +463,15 @@ void UpdateAnimation(float dt) {
 
 		animationPlayer.time = clip.duration;
 		animationPlayer.playing = false;
+
+
+		for (int i = 0; i < clip.tracks.size(); i++) {
+
+			Object* animated_obj = FindObjectByID(clip.tracks[i].targetID);
+			
+			animated_obj->physics.acceleration = glm::vec3(0.0f);
+			animated_obj->physics.velocity = glm::vec3(0.0f);
+		}
 	}
 
 	EvaluateCurrentAnimation();

@@ -69,6 +69,9 @@ void UpdateAnimationImGui() {
 
     if (clip) {
 
+        ImGui::Checkbox("Loop", &clip->loop);
+
+
         if (ImGui::IsWindowHovered())
             canScroll = true;
         else
@@ -230,230 +233,419 @@ void DrawLightAnimationButtons(Light& light) {
 
 void DrawAnimationTimeline(AnimationClip& clip) {
 
-    float leftPanelWidth = 220.f;
-    float rowHeight = 32.f;
-    float rulerHeight = 28.f;
+    const float leftPanelWidth = 220.0f;
+    const float rowHeight = 32.0f;
+    const float rulerHeight = 28.0f;
 
-    ImVec2 canvasPos = ImGui::GetCursorScreenPos();
-    ImVec2 canvasSize = ImGui::GetContentRegionAvail();
+    bool animationWindowHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows);
 
-    if (canvasSize.x < leftPanelWidth + 100.0f)
+    ImVec2 available = ImGui::GetContentRegionAvail();
+
+    if (available.x < leftPanelWidth + 100.0f)
         return;
 
-    float timeLineStartx = canvasPos.x + leftPanelWidth;
+    float timelineWidth = available.x - leftPanelWidth;
+    float tracksHeight = std::max(100.0f, available.y - rulerHeight);
 
-    float timeLineWidth = canvasSize.x - leftPanelWidth;
+    ImVec2 startPos = ImGui::GetCursorScreenPos();
+    ImGuiIO& io = ImGui::GetIO();
+    ImVec2 mouse = ImGui::GetMousePos();
+    ImDrawList* parentDrawList = ImGui::GetWindowDrawList();
 
-    float rulerY = canvasPos.y;
+    float pixelsPerSecond = animationEditor.timelinePixelsPerSecond;
+    float scrollTime = animationEditor.timelineScrollTime;
 
-    if (canScroll) {
+    bool mouseOverTimeline = mouse.x >= startPos.x + leftPanelWidth && mouse.x <= startPos.x + available.x && mouse.y >= startPos.y && mouse.y <= startPos.y + rulerHeight + tracksHeight;
 
-        ImGuiIO& io = ImGui::GetIO();
-    
-        if (io.MouseWheel != 0.0f) {
+    if (animationWindowHovered && canScroll && mouseOverTimeline && io.MouseWheel != 0.0f) {
 
-            if (io.MouseWheel > 0.0f) 
-                animationEditor.timelineViewMax = std::max(0.1f, animationEditor.timelineViewMax - 1.0f);
-            else 
-                animationEditor.timelineViewMax += 1.0f;
-            
-        }
+        float localMouseX = mouse.x - (startPos.x + leftPanelWidth);
+        float mouseTime = scrollTime + localMouseX / pixelsPerSecond;
+        float zoomFactor = io.MouseWheel > 0.0f ? 1.15f : 1.0f / 1.15f;
+
+        float newPixelsPerSecond = glm::clamp(pixelsPerSecond * zoomFactor, 10.0f, 2000.0f);
+        float newScrollTime = std::max(0.0f, mouseTime - localMouseX / newPixelsPerSecond);
+
+        animationEditor.timelinePixelsPerSecond = newPixelsPerSecond;
+        animationEditor.timelineScrollTime = newScrollTime;
+
+        pixelsPerSecond = newPixelsPerSecond;
+        scrollTime = newScrollTime;
     }
 
-    //animationEditor.timelineViewMax = clip.duration;
+    ImGui::BeginChild(
+        "AnimationTrackNames",
+        ImVec2(leftPanelWidth, tracksHeight),
+        true
+    );
 
-    ImDrawList* drawList = ImGui::GetWindowDrawList();
+    float scrollY = ImGui::GetScrollY();
+    animationEditor.timelineTrackScrollY = scrollY;
 
-    drawList->AddRectFilled(ImVec2(canvasPos.x, rulerY), ImVec2(canvasPos.x + canvasSize.x, rulerY + rulerHeight), IM_COL32(40, 40, 40, 255));
+    ImDrawList* leftDrawList = ImGui::GetWindowDrawList();
+    ImVec2 leftPos = ImGui::GetWindowPos();
 
-    float maxtime = std::max(animationEditor.timelineViewMax, 0.01f);
+    float leftPadding = ImGui::GetStyle().WindowPadding.x;
+    float leftTop = leftPos.y + ImGui::GetStyle().WindowPadding.y;
+    float leftX = leftPos.x + leftPadding;
 
-    int tickCount = static_cast<int>(std::ceil(maxtime));
+    float totalTrackHeight = rulerHeight + clip.tracks.size() * rowHeight;
 
-    // lines of the timeline
+    ImGui::Dummy(ImVec2(leftPanelWidth, totalTrackHeight));
 
-    for (int i = 0; i < tickCount; i++) {
-    
-        float time = static_cast<float>(i);
+    leftDrawList->AddRectFilled(
+        ImVec2(leftX, leftTop),
+        ImVec2(leftX + leftPanelWidth, leftTop + rulerHeight),
+        IM_COL32(40, 40, 40, 255)
+    );
 
-        if (time > maxtime)
-            break;
+    for (int i = 0; i < static_cast<int>(clip.tracks.size()); ++i) {
 
-        float x = TimelineTimeToX(time, timeLineStartx, timeLineWidth, maxtime);
-
-        drawList->AddLine(ImVec2(x, rulerY), ImVec2(x, rulerY + rulerHeight), IM_COL32(100, 100, 100, 255));
-
-        char text[32];
-
-        snprintf(text, sizeof(text), "%.1f", time);
-
-        drawList->AddText(ImVec2(x + 3.0f, rulerY + 4.0f), IM_COL32(200, 200, 200, 255), text);
-
-    }
-
-    float current_time = TimelineTimeToX(animationPlayer.time, timeLineStartx, timeLineWidth, maxtime);
-
-    drawList->AddLine(ImVec2(current_time, rulerY), ImVec2(current_time, rulerY + rulerHeight), IM_COL32(255, 80, 80, 255), 2.5f);
-
-    ImGui::Separator();
-
-    // tracks (position, scale...)
-
-    for (int i = 0; i < static_cast<int>(clip.tracks.size()); i++) {
-    
         AnimationTrack& track = clip.tracks[i];
 
-        float y = canvasPos.y + rulerHeight + (i * rowHeight);
+        float y = leftTop + rulerHeight + i * rowHeight - scrollY;
 
-        drawList->AddRectFilled(ImVec2(canvasPos.x, y), ImVec2(canvasPos.x + canvasSize.x, y + rowHeight), i % 2 == 0 ? IM_COL32(32, 32, 32, 255) : IM_COL32(38, 38, 38, 255));
+        if (y + rowHeight < leftTop + rulerHeight)
+            continue;
 
-        drawList->AddLine(ImVec2(canvasPos.x, y + rowHeight), ImVec2(canvasPos.x + canvasSize.x, y + rowHeight), IM_COL32(70, 70, 70, 255));
+        if (y > leftTop + tracksHeight)
+            continue;
+
+        leftDrawList->AddRectFilled(
+            ImVec2(leftX, y),
+            ImVec2(leftX + leftPanelWidth, y + rowHeight),
+            i % 2 == 0 ? IM_COL32(32, 32, 32, 255) : IM_COL32(38, 38, 38, 255)
+        );
+
+        leftDrawList->AddLine(
+            ImVec2(leftX, y + rowHeight),
+            ImVec2(leftX + leftPanelWidth, y + rowHeight),
+            IM_COL32(70, 70, 70, 255)
+        );
 
         std::string name = AnimationTrackTargetName(track) + " : " + AnimationPropertyName(track.property);
 
-        drawList->AddText(ImVec2(canvasPos.x + 6.f, y + 8.f), IM_COL32(255, 255, 255, 255), name.c_str());
+        leftDrawList->AddText(
+            ImVec2(leftX + 6.0f, y + 8.0f),
+            IM_COL32(255, 255, 255, 255),
+            name.c_str()
+        );
+    }
 
-        drawList->AddLine(ImVec2(timeLineStartx, y + rowHeight * 0.5f), ImVec2(timeLineStartx + timeLineWidth, y + rowHeight * 0.5f), IM_COL32(70, 70, 70, 255));
+    ImGui::EndChild();
 
-        // keys
+    ImGui::SameLine(0.0f, 0.0f);
 
-        for (int j = 0; j < static_cast<int>(track.keys.size()); j++) {
-            
+    ImGui::BeginChild(
+        "AnimationTimelineChild",
+        ImVec2(timelineWidth, tracksHeight),
+        true,
+        ImGuiWindowFlags_HorizontalScrollbar |
+        ImGuiWindowFlags_NoScrollWithMouse
+    );
+
+    ImVec2 timelineWindowPos = ImGui::GetWindowPos();
+
+    float windowPaddingX = ImGui::GetStyle().WindowPadding.x;
+    float windowPaddingY = ImGui::GetStyle().WindowPadding.y;
+
+    float timelineX = timelineWindowPos.x + windowPaddingX;
+    float timelineY = timelineWindowPos.y + windowPaddingY;
+
+    float visibleTime = timelineWidth / pixelsPerSecond;
+
+    float maxTrackTime = clip.duration;
+
+    for (const AnimationTrack& track : clip.tracks) {
+        for (const AnimationKey& key : track.keys) {
+            maxTrackTime = std::max(maxTrackTime, key.time);
+        }
+    }
+
+    float minimumTimelineTime = 120.0f;
+    float requiredTime = std::max(minimumTimelineTime, maxTrackTime + 60.0f);
+    float visibleRequiredTime = scrollTime + visibleTime + 60.0f;
+
+    if (visibleRequiredTime > requiredTime)
+        requiredTime = visibleRequiredTime;
+
+    float virtualWidth = std::max(timelineWidth, requiredTime * pixelsPerSecond);
+    float virtualHeight = std::max(tracksHeight, rulerHeight + clip.tracks.size() * rowHeight);
+
+    ImGui::Dummy(
+        ImVec2(
+            virtualWidth,
+            virtualHeight
+        )
+    );
+
+    ImGui::SetScrollY(scrollY);
+
+    float nativeScrollX = ImGui::GetScrollX();
+    float newScrollTime = nativeScrollX / pixelsPerSecond;
+
+    if (std::abs(newScrollTime - scrollTime) > 0.0001f) {
+
+        scrollTime = newScrollTime;
+        animationEditor.timelineScrollTime = scrollTime;
+    }
+
+    float visibleStartTime = scrollTime;
+    float visibleEndTime = scrollTime + visibleTime;
+
+    int firstTick = static_cast<int>(std::floor(visibleStartTime));
+    int lastTick = static_cast<int>(std::ceil(visibleEndTime));
+
+    float rulerX = startPos.x + leftPanelWidth;
+    float rulerY = startPos.y;
+
+    parentDrawList->AddRectFilled(
+        ImVec2(rulerX, rulerY),
+        ImVec2(rulerX + timelineWidth, rulerY + rulerHeight),
+        IM_COL32(40, 40, 40, 255)
+    );
+
+    for (int i = firstTick; i <= lastTick; ++i) {
+
+        float time = static_cast<float>(i);
+        float x = TimelineTimeToX(time, rulerX, pixelsPerSecond, scrollTime);
+
+        if (x < rulerX || x > rulerX + timelineWidth)
+            continue;
+
+        parentDrawList->AddLine(
+            ImVec2(x, rulerY),
+            ImVec2(x, rulerY + rulerHeight),
+            IM_COL32(100, 100, 100, 255)
+        );
+
+        char text[32];
+        snprintf(text, sizeof(text), "%.1f", time);
+
+        parentDrawList->AddText(
+            ImVec2(x + 3.0f, rulerY + 4.0f),
+            IM_COL32(200, 200, 200, 255),
+            text
+        );
+    }
+
+    float playheadX = TimelineTimeToX(
+        animationPlayer.time,
+        rulerX,
+        pixelsPerSecond,
+        scrollTime
+    );
+
+    if (playheadX >= rulerX && playheadX <= rulerX + timelineWidth) {
+
+        parentDrawList->AddLine(
+            ImVec2(playheadX, rulerY),
+            ImVec2(playheadX, rulerY + rulerHeight),
+            IM_COL32(255, 80, 80, 255),
+            2.5f
+        );
+    }
+
+    ImDrawList* timelineDrawList = ImGui::GetWindowDrawList();
+
+    for (int i = 0; i < static_cast<int>(clip.tracks.size()); ++i) {
+
+        AnimationTrack& track = clip.tracks[i];
+
+        float y = timelineY + rulerHeight + i * rowHeight - scrollY;
+
+        if (y + rowHeight < timelineY + rulerHeight)
+            continue;
+
+        if (y > timelineY + tracksHeight)
+            continue;
+
+        timelineDrawList->AddRectFilled(
+            ImVec2(timelineX, y),
+            ImVec2(timelineX + virtualWidth, y + rowHeight),
+            i % 2 == 0 ? IM_COL32(32, 32, 32, 255) : IM_COL32(38, 38, 38, 255)
+        );
+
+        timelineDrawList->AddLine(
+            ImVec2(timelineX, y + rowHeight),
+            ImVec2(timelineX + virtualWidth, y + rowHeight),
+            IM_COL32(70, 70, 70, 255)
+        );
+
+        timelineDrawList->AddLine(
+            ImVec2(timelineX, y + rowHeight * 0.5f),
+            ImVec2(timelineX + virtualWidth, y + rowHeight * 0.5f),
+            IM_COL32(70, 70, 70, 255)
+        );
+
+        for (int j = 0; j < static_cast<int>(track.keys.size()); ++j) {
+
             AnimationKey& key = track.keys[j];
 
-            float x = TimelineTimeToX(key.time, timeLineStartx, timeLineWidth, maxtime);
+            float x = TimelineTimeToX(
+                key.time,
+                timelineX,
+                pixelsPerSecond,
+                scrollTime
+            );
 
             float cy = y + rowHeight * 0.5f;
-
             const float radius = 6.0f;
+
+            ImVec2 mousePos = ImGui::GetMousePos();
 
             bool selected = animationEditor.selectedTrack == i && animationEditor.selectedKey == j;
 
-            ImVec2 mouse = ImGui::GetMousePos();
-
-            bool hovered = mouse.x >= x - radius - 3.0f && mouse.x <= x + radius + 3.0f && mouse.y >= cy - radius - 3.0f && mouse.y <= cy + radius + 3.0f;
+            bool hovered =
+                mousePos.x >= x - radius - 3.0f &&
+                mousePos.x <= x + radius + 3.0f &&
+                mousePos.y >= cy - radius - 3.0f &&
+                mousePos.y <= cy + radius + 3.0f;
 
             ImU32 keyColor = selected ? IM_COL32(255, 220, 70, 255) : IM_COL32(220, 180, 50, 255);
 
-            if (hovered) {
-            
+            if (hovered)
                 keyColor = IM_COL32(255, 240, 100, 255);
-            }
 
-            // diamond (chatgpteada, jej)
-
-            ImVec2 p1(x, cy - radius);
-            ImVec2 p2(x + radius, cy);
-            ImVec2 p3(x, cy + radius);
-            ImVec2 p4(x - radius, cy);
-
-            drawList->AddQuadFilled(p1, p2, p3, p4, keyColor);
+            timelineDrawList->AddQuadFilled(
+                ImVec2(x, cy - radius),
+                ImVec2(x + radius, cy),
+                ImVec2(x, cy + radius),
+                ImVec2(x - radius, cy),
+                keyColor
+            );
 
             if (hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
-                
+
                 animationEditor.selectedTrack = i;
-
                 animationEditor.selectedKey = j;
-
                 animationEditor.draggingKey = true;
-
                 animationPlayer.playing = false;
 
-                float mouse_time = TimelineXToTime(mouse.x, timeLineStartx, timeLineWidth, maxtime);
+                float mouseTime = TimelineXToTime(
+                    mousePos.x,
+                    timelineX,
+                    pixelsPerSecond,
+                    scrollTime
+                );
 
-                animationEditor.dragOffsetTime = key.time - mouse_time;
-
+                animationEditor.dragOffsetTime = key.time - mouseTime;
             }
 
             if (hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
-            
+
                 track.keys.erase(track.keys.begin() + j);
 
                 animationEditor.selectedTrack = -1;
-
                 animationEditor.selectedKey = -1;
+                animationEditor.draggingKey = false;
+
+                if (track.keys.empty()) {
+
+                    clip.tracks.erase(clip.tracks.begin() + i);
+
+                    RecalculateAnimationDuration(clip);
+
+                    ImGui::EndChild();
+
+                    return;
+                }
+
+                RecalculateAnimationDuration(clip);
 
                 break;
             }
-
         }
-
-        std::string loopName = AnimationTrackTargetName(track) + ", Loop: " + AnimationPropertyName(track.property);
-
-        ImGui::Checkbox(loopName.c_str(), &clip.loop);
-
     }
 
-    // drag
+    if (animationWindowHovered && animationEditor.draggingKey) {
 
-    if (animationEditor.draggingKey) {
-    
         int trackIndex = animationEditor.selectedTrack;
-
         int keyIndex = animationEditor.selectedKey;
 
         if (trackIndex >= 0 && trackIndex < static_cast<int>(clip.tracks.size())) {
-        
+
             AnimationTrack& track = clip.tracks[trackIndex];
 
             if (keyIndex >= 0 && keyIndex < static_cast<int>(track.keys.size())) {
 
                 AnimationKey& key = track.keys[keyIndex];
 
-                ImVec2 mouse = ImGui::GetMousePos();
-                    
-                float mouse_time = TimelineXToTime(mouse.x, timeLineStartx, timeLineWidth, maxtime);
+                ImVec2 mousePos = ImGui::GetMousePos();
 
-                float new_time = mouse_time + animationEditor.dragOffsetTime;
+                float mouseTime = TimelineXToTime(
+                    mousePos.x,
+                    timelineX,
+                    pixelsPerSecond,
+                    scrollTime
+                );
+
+                float newTime = mouseTime + animationEditor.dragOffsetTime;
 
                 if (animationEditor.animationSnapEnable)
-                    new_time = Snap(new_time, animationEditor.animationSnap);
+                    newTime = Snap(newTime, animationEditor.animationSnap);
 
-                key.time = glm::clamp(new_time, 0.f, maxtime);
-
+                key.time = glm::clamp(newTime, 0.0f, requiredTime);
             }
-
         }
     }
 
-    // release
-
     if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
-    
+
         animationEditor.draggingKey = false;
 
         int trackIndex = animationEditor.selectedTrack;
 
         if (trackIndex >= 0 && trackIndex < static_cast<int>(clip.tracks.size())) {
-        
+
             auto& keys = clip.tracks[trackIndex].keys;
 
-            std::sort(keys.begin(), keys.end(), [](const AnimationKey& a, const AnimationKey& b) {
-
-                return a.time < b.time; 
-
+            std::sort(
+                keys.begin(),
+                keys.end(),
+                [](const AnimationKey& a, const AnimationKey& b) {
+                    return a.time < b.time;
                 }
             );
 
             RecalculateAnimationDuration(clip);
         }
-
     }
 
-    // click empty
+    mouse = ImGui::GetMousePos();
 
-    ImVec2 mouse = ImGui::GetMousePos();
+    bool mouseInsideRuler =
+        mouse.x >= rulerX &&
+        mouse.x <= rulerX + timelineWidth &&
+        mouse.y >= rulerY &&
+        mouse.y <= rulerY + rulerHeight;
 
-    bool insideTimeline = mouse.x >= timeLineStartx && mouse.x <= timeLineStartx + timeLineWidth && mouse.y >= canvasPos.y && mouse.y <= canvasPos.y + rulerHeight + clip.tracks.size() * rowHeight;
+    bool mouseInsideTracks =
+        mouse.x >= timelineX &&
+        mouse.x <= timelineX + timelineWidth &&
+        mouse.y >= timelineY + rulerHeight &&
+        mouse.y <= timelineY + tracksHeight;
 
-    if (insideTimeline && !animationEditor.draggingKey && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
-    
-        animationPlayer.time = TimelineXToTime(mouse.x, timeLineStartx, timeLineWidth, maxtime);
+    if (animationWindowHovered && (mouseInsideRuler || mouseInsideTracks) &&
+        !animationEditor.draggingKey &&
+        ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
 
-        animationPlayer.time = glm::clamp(animationPlayer.time, 0.f, maxtime);
+        float mouseTime = TimelineXToTime(
+            mouse.x,
+            rulerX,
+            pixelsPerSecond,
+            scrollTime
+        );
+
+        if (animationEditor.animationSnapEnable)
+            mouseTime = Snap(mouseTime, animationEditor.animationSnap);
+
+        animationPlayer.time = glm::clamp(mouseTime, 0.0f, requiredTime);
+
+        animationPlayer.playing = false;
 
         EvaluateCurrentAnimation();
-
     }
 
+    ImGui::EndChild();
 }

@@ -238,18 +238,18 @@ void init() {
 
 	CreateVideoQuad(videoQuad);
 
-	if (!videoPlayer.Open("../data/cinematics/test.mp4")) {
+	//if (!videoPlayer.Open("../data/cinematics/test.mp4")) {
 
-		std::cout << "VIDEO FAILED\n";
+	//	std::cout << "VIDEO FAILED\n";
 
-	} else {
+	//} else {
 
-		std::cout << "VIDEO OK\n";
+	//	std::cout << "VIDEO OK\n";
 
-		videoPlayer.Play();
+	//	videoPlayer.Play();
 
-		isCinematicActive = true;
-	}
+	//	isCinematicActive = true;
+	//}
 
 	init_grid();
 

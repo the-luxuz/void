@@ -230,22 +230,16 @@ const char* AnimationPropertyName(AnimationProperty property) {
 
 }
 
-float TimelineTimeToX(float time, float startX, float width, float maxTime) {
+float TimelineTimeToX(float time, float startX, float pixelsPerSecond, float scrollTime) {
 
-    if (maxTime <= 0.f)
-        return startX;
-
-    return startX + (time / maxTime) * width;
+    return startX +
+        (time - scrollTime) *
+        pixelsPerSecond;
 }
 
-float TimelineXToTime(float x, float startX, float width, float maxTime) {
+float TimelineXToTime(float x, float startX, float pixelsPerSecond, float scrollTime) {
 
-    if (maxTime <= 0.f)
-        return 0.f;
-
-    float t = (x - startX) / width;
-
-    t = glm::clamp(t, 0.f, 1.f);
-
-    return t * maxTime;
+    return scrollTime +
+        (x - startX) /
+        pixelsPerSecond;
 }
