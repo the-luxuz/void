@@ -34,6 +34,8 @@ void update(SDL_Window* window, float dt) {
 
 	if (!isCinematicActive) {
 
+		eventManager.Dispatch();
+
 		if (st.light_active)
 			update_depthmap();
 

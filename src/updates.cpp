@@ -570,6 +570,8 @@ void CollisionUpdate() {
 
 				PositionalCorrection(a, b, contact);
 				ResolveVelocity(a, b, contact);
+
+				//eventManager.Throw(std::make_unique<PlayCinematicEvent>("../data/cinematics/test.mp4"));
 			}
 
 		}
@@ -1027,6 +1029,7 @@ void update_imgui_guizmo() {
 			HandleInspectorUndo(*obj);
 
 			glm::vec3 euler = glm::degrees(glm::eulerAngles(obj->rotation));
+
 			if (ImGui::DragFloat3("Rotation", &euler.x, 1.0f))
 				obj->rotation = glm::quat(glm::radians(euler));
 
@@ -1611,6 +1614,14 @@ void update_imgui_guizmo() {
 			HandleInspectorUndo(*obj);
 		}
 
+		if (animationWindow) {
+
+			if (obj)
+				DrawObjectAnimationButtons(*obj);
+		}
+
+		ImGui::Separator();
+
 		if (obj->hasMapping) {
 
 			ImGui::Separator();
@@ -1743,14 +1754,6 @@ void update_imgui_guizmo() {
 			}
 
 			ImGui::EndCombo();
-		}
-
-		ImGui::Separator();
-
-		if (animationWindow) {
-
-			if (obj)
-				DrawObjectAnimationButtons(*obj);
 		}
 
 		ImGui::Separator();

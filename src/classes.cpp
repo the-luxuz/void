@@ -7,6 +7,11 @@ std::vector<AnimationClip> animations;
 AnimationPlayer animationPlayer;
 AnimationEditorState animationEditor;
 
+VideoPlayer videoPlayer;
+bool isCinematicActive = false;
+
+EventManager eventManager;
+
 EntityID GenerateEntityID() {
 
     return nextEntityID++;
@@ -242,4 +247,28 @@ float TimelineXToTime(float x, float startX, float pixelsPerSecond, float scroll
     return scrollTime +
         (x - startX) /
         pixelsPerSecond;
+}
+
+//--------------------------------------------------------------
+// events
+
+int FindAnimations(std::string name, EntityID objId) {
+
+    for (int i = 0; i < static_cast<int>(animations.size()); i++) {
+
+        AnimationClip& clip = animations[i];
+
+        if (clip.name != name)
+            continue;
+
+        for (const AnimationTrack& track : clip.tracks) {
+
+            if (track.targetID == objId) {
+
+                return i;
+            }
+        }
+    }
+
+    return -1;
 }

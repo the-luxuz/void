@@ -28,11 +28,21 @@ void UpdateAnimationImGui() {
         ImGui::EndCombo();
     }
 
+    static std::string anim_name = "";
+    static char name[256];
+
+    strncpy_s(name, anim_name.c_str(), sizeof(name));
+
+    if (ImGui::InputText("Anim Name", name, sizeof(name))) {
+
+        anim_name = name;
+    }
+
     if (ImGui::Button("New")) {
 
         AnimationClip clip;
 
-        clip.name = "Animation_" + std::to_string(animations.size());
+        clip.name = anim_name;
 
         clip.duration = 1.0f;
         clip.loop = true;
@@ -70,7 +80,6 @@ void UpdateAnimationImGui() {
     if (clip) {
 
         ImGui::Checkbox("Loop", &clip->loop);
-
 
         if (ImGui::IsWindowHovered())
             canScroll = true;

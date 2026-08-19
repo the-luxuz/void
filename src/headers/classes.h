@@ -1,6 +1,8 @@
 #pragma once
 
 #include "local.h"
+#include "video_player.h"
+
 #include <glm/gtx/quaternion.hpp>
 #include <unordered_map>
 #include <variant>
@@ -666,3 +668,147 @@ const char* AnimationPropertyName(AnimationProperty property);
 float TimelineTimeToX(float time, float startX, float pixelsPerSecond, float scrollTime);
 
 float TimelineXToTime(float x, float startX, float pixelsPerSecond, float scrollTime);
+
+//--------------------------------------------------------------
+// events
+
+extern VideoPlayer videoPlayer;
+extern bool isCinematicActive;
+
+enum class EventType {
+    PlaySound,
+    StopSound,
+    PlayAnimation,
+    StopAnimation,
+    StartCinematic
+};
+
+struct Event {
+
+    virtual ~Event() = default;
+
+    virtual EventType GetType() const = 0;
+};
+
+struct PlaySoundEvent : public Event{
+
+    PlaySoundEvent(std::string p, float v) : path(p), volume(v) {}
+
+    EventType GetType() const override {
+        return EventType::PlaySound;
+    }
+
+    std::string path;
+    float volume;
+};
+
+int FindAnimations(std::string name, EntityID objId);
+
+//
+//struct StopSoundEvent : public Event{
+//
+//    StopSoundEvent(std::string p, float v) : path(p), volume(v)
+//    {}
+//
+//    EventType GetType() const override {
+//        return EventType::StopSound;
+//    }
+//
+//    std::string path;
+//    float volume;
+//};
+
+struct PlayAnimationEvent : public Event {
+
+    PlayAnimationEvent(EntityID entity, const std::string& animation) : entity(entity), animation(animation) {}
+
+    EventType GetType() const override {
+
+        return EventType::PlayAnimation;
+    }
+
+    EntityID entity;
+    std::string animation;
+};
+
+struct PlayCinematicEvent : public Event {
+
+    PlayCinematicEvent(const std::string& p) : path(p) {}
+
+    EventType GetType() const override {
+
+        return EventType::StartCinematic;
+    }
+
+    std::string path;
+};
+
+struct EventManager {
+
+    void Throw(std::unique_ptr<Event> event) {
+
+        events.push_back(std::move(event));
+    }
+
+    void HandleEvent(Event& event) {
+
+        switch (event.GetType()) {
+
+            case EventType::PlaySound: {
+        
+                PlaySoundEvent& soundEvent = static_cast<PlaySoundEvent&>(event);
+
+                // missing
+
+                break;
+
+            }
+
+            case EventType::PlayAnimation: {
+        
+                PlayAnimationEvent& animEvent = static_cast<PlayAnimationEvent&>(event);
+
+                int animation_id = FindAnimations(animEvent.animation, animEvent.entity);
+
+                if (animation_id >= 0) {
+                
+                    animationPlayer.current_animation = animation_id;
+
+                    animationPlayer.time = 0.0f;
+                    animationPlayer.playing = true;
+                }
+
+                break;
+
+            }
+
+            case EventType::StartCinematic: {
+
+                PlayCinematicEvent& cinematicEvent = static_cast<PlayCinematicEvent&>(event);
+
+                videoPlayer.Open(cinematicEvent.path.c_str());
+                videoPlayer.Play();
+
+                isCinematicActive = true;
+
+                break;
+            }
+        }
+    }
+
+    void Dispatch() {
+
+        for (auto& event : events) {
+
+            HandleEvent(*event);
+        }
+
+        events.clear();
+    }
+
+private:
+
+    std::vector<std::unique_ptr<Event>> events;
+};
+
+extern EventManager eventManager;

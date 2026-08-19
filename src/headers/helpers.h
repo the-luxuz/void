@@ -6,7 +6,6 @@
 #include "programs.h"
 #include "textures.h"
 #include "inits.h"
-#include "video_player.h"
 
 //--------------------------------------------------------------------------
 // global variables
@@ -143,13 +142,7 @@ extern bool free_cam;
 
 extern bool viewport_scroll_active;
 
-class VideoPlayer;
-
-extern VideoPlayer videoPlayer;
-
 extern VideoQuad videoQuad;
-
-extern bool isCinematicActive;
 
 extern SDL_AudioSpec spec;
 

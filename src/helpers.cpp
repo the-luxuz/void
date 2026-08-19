@@ -135,11 +135,7 @@ bool free_cam = false;
 
 bool viewport_scroll_active = false;
 
-VideoPlayer videoPlayer;
-
 VideoQuad videoQuad;
-
-bool isCinematicActive = false;
 
 SDL_AudioSpec spec{};
 
