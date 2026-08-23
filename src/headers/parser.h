@@ -137,7 +137,7 @@ struct Parser {
 	std::vector<Transform> lights_objects;
 
 	std::vector<AnimationClip> anim;
-	AnimationPlayer animPlayer;
+	std::vector<AnimationPlayer> animPlayer;
 	AnimationEditorState animEditor;
 
 };

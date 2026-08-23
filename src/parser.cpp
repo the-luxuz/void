@@ -412,13 +412,16 @@ void Parser::save_scene(std::ofstream& out, const std::vector<Object>& scene, co
 
     // animPlayer
 
-    Write(out, animationPlayer.current_animation);
+    for (auto& pl : animationPlayers) {
+    
+        Write(out, pl.current_animation);
 
-    Write(out, animationPlayer.time);
+        Write(out, pl.time);
 
-    Write(out, animationPlayer.playing);
+        Write(out, pl.playing);
 
-    Write(out, animationPlayer.speed);
+        Write(out, pl.speed);
+    }
 
     // animEditor
 
@@ -591,13 +594,16 @@ bool Parser::load_scene(std::ifstream& in) {
 
     // animPlayer
 
-    Read(in, animPlayer.current_animation);
+    for (int i = 0; i < animationPlayers.size(); i++) {
 
-    Read(in, animPlayer.time);
+        Read(in, animPlayer[i].current_animation);
 
-    Read(in, animPlayer.playing);
+        Read(in, animPlayer[i].time);
 
-    Read(in, animPlayer.speed);
+        Read(in, animPlayer[i].playing);
+
+        Read(in, animPlayer[i].speed);
+    }
 
     // animEditor
 

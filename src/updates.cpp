@@ -430,51 +430,24 @@ void PhysicsUpdate(float dt) {
 //--------------------------------------------------------------------------
 // animations
 
+void UpdateAnimations(float dt) {
+
+	for (auto& player : animationPlayers) {
+
+		UpdateAnimationPlayer(player, dt);
+	}
+}
+
+void UpdateAnimationPreview(float dt) {
+
+	UpdateAnimationPlayer(animationPreviewPlayer, dt);
+}
+
 void UpdateAnimation(float dt) {
 
-	if (animationPlayer.current_animation < 0)
-		return;
-
-	if (animationPlayer.current_animation >= static_cast<int>(animations.size()))
-		return;
-
-	AnimationClip& clip = animations[animationPlayer.current_animation];
-
-	if (!animationPlayer.playing)
-		return;
-
-	if (clip.duration <= 0.0f) {
-
-		animationPlayer.time = 0.0f;
-		animationPlayer.playing = false;
-
-		EvaluateCurrentAnimation();
-
-		return;
-	}
-
-	animationPlayer.time += dt * animationPlayer.speed;
-
-	if (clip.loop) {
-
-		animationPlayer.time = std::fmod(animationPlayer.time,clip.duration);
-
-	} else if (animationPlayer.time >= clip.duration) {
-
-		animationPlayer.time = clip.duration;
-		animationPlayer.playing = false;
-
-
-		for (int i = 0; i < clip.tracks.size(); i++) {
-
-			Object* animated_obj = FindObjectByID(clip.tracks[i].targetID);
-			
-			animated_obj->physics.acceleration = glm::vec3(0.0f);
-			animated_obj->physics.velocity = glm::vec3(0.0f);
-		}
-	}
-
-	EvaluateCurrentAnimation();
+	UpdateAnimations(dt);
+	
+	UpdateAnimationPreview(dt);
 }
 
 //--------------------------------------------------------------------------
@@ -1145,10 +1118,10 @@ void update_imgui_guizmo() {
 
 						if (ImGui::BeginCombo("Layers", "Select layers")) {
 
-							bool world = (obj->collider.layer & CollisionLayer::World) != 0;;
-							bool player = (obj->collider.layer & CollisionLayer::Player) != 0;;
-							bool enemy = (obj->collider.layer & CollisionLayer::Enemy) != 0;;
-							bool bullet = (obj->collider.layer & CollisionLayer::Bullets) != 0;;
+							bool world = (obj->collider.layer & CollisionLayer::World) != 0;
+							bool player = (obj->collider.layer & CollisionLayer::Player) != 0;
+							bool enemy = (obj->collider.layer & CollisionLayer::Enemy) != 0;
+							bool bullet = (obj->collider.layer & CollisionLayer::Bullets) != 0;
 
 							if (ImGui::Checkbox("World", &world)) {
 
@@ -1619,8 +1592,6 @@ void update_imgui_guizmo() {
 			if (obj)
 				DrawObjectAnimationButtons(*obj);
 		}
-
-		ImGui::Separator();
 
 		if (obj->hasMapping) {
 

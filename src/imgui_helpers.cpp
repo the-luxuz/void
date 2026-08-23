@@ -6,17 +6,17 @@ void UpdateAnimationImGui() {
 
     ImGui::Begin("Animation");
 
-    if (ImGui::BeginCombo("Clip", animationPlayer.current_animation >= 0 ? animations[animationPlayer.current_animation].name.c_str() : "None")) {
+    if (ImGui::BeginCombo("Clip", animationPreviewPlayer.current_animation >= 0 ? animations[animationPreviewPlayer.current_animation].name.c_str() : "None")) {
 
         for (int i = 0; i < static_cast<int>(animations.size()); ++i) {
 
-            bool selected = animationPlayer.current_animation == i;
+            bool selected = animationPreviewPlayer.current_animation == i;
 
             if (ImGui::Selectable( animations[i].name.c_str(), selected)) {
 
-                animationPlayer.current_animation = i;
-                animationPlayer.time = 0.0f;
-                animationPlayer.playing = false;
+                animationPreviewPlayer.current_animation = i;
+                animationPreviewPlayer.time = 0.0f;
+                animationPreviewPlayer.playing = false;
 
                 EvaluateCurrentAnimation();
             }
@@ -49,32 +49,42 @@ void UpdateAnimationImGui() {
 
         animations.push_back(std::move(clip));
 
-        animationPlayer.current_animation = static_cast<int>(animations.size()) - 1;
+        animationPreviewPlayer.current_animation = static_cast<int>(animations.size()) - 1;
 
-        animationPlayer.time = 0.0f;
-        animationPlayer.playing = false;
+        animationPreviewPlayer.time = 0.0f;
+        animationPreviewPlayer.playing = false;
     }
 
-    if (ImGui::Button(animationPlayer.playing ? "Pause" : "Play")) {
+    if (ImGui::Button(animationPreviewPlayer.playing ? "Pause" : "Play")) {
 
-        animationPlayer.playing = !animationPlayer.playing;
+        animationPreviewPlayer.playing = !animationPreviewPlayer.playing;
     }
 
     ImGui::SameLine();
 
     if (ImGui::Button("Stop")) {
 
-        animationPlayer.playing = false;
-        animationPlayer.time = 0.0f;
+        animationPreviewPlayer.playing = false;
+        animationPreviewPlayer.time = 0.0f;
 
         EvaluateCurrentAnimation();
     }
 
+    if (ImGui::Button("Play All")) {
+        PlayAllAnims();
+    }
+
+    ImGui::SameLine();
+
+    if (ImGui::Button("Stop All")) {
+        StopAllAnims();
+    }
+
     AnimationClip* clip = nullptr;
 
-    if (animationPlayer.current_animation >= 0 && animationPlayer.current_animation < static_cast<int>(animations.size())) {
+    if (animationPreviewPlayer.current_animation >= 0 && animationPreviewPlayer.current_animation < static_cast<int>(animations.size())) {
 
-        clip = &animations[animationPlayer.current_animation];
+        clip = &animations[animationPreviewPlayer.current_animation];
     }
 
     if (clip) {
@@ -87,29 +97,6 @@ void UpdateAnimationImGui() {
             canScroll = false;
 
         DrawAnimationTimeline(*clip);
-
-        /*float duration = clip->duration;
-
-        if (ImGui::DragFloat("Duration", &duration, 0.1f, 0.1f, 60.0f)) {
-
-            clip->duration = duration;
-
-            if (animationPlayer.time > clip->duration)
-                animationPlayer.time = clip->duration;
-
-            EvaluateCurrentAnimation();
-        }
-
-        ImGui::Text("Time: %.2f / %.2f", animationPlayer.time, clip->duration);
-
-        float time = animationPlayer.time;
-
-        if (ImGui::SliderFloat("##AnimationTime", &time, 0.0f, std::max(clip->duration, 0.01f), "%.2f s")) {
-
-            animationPlayer.time = time;
-
-            EvaluateCurrentAnimation();
-        }*/
     }
 
     ImGui::End();
@@ -120,22 +107,22 @@ void DrawObjectAnimationButtons(Object& obj) {
     if (!ImGui::CollapsingHeader("Animation##object"))
         return;
 
-    if (animationPlayer.current_animation < 0) {
+    if (animationPreviewPlayer.current_animation < 0) {
 
         ImGui::TextDisabled("Create/select an animation first.");
 
         return;
     }
 
-    AnimationClip& clip = animations[animationPlayer.current_animation];
+    AnimationClip& clip = animations[animationPreviewPlayer.current_animation];
 
-    ImGui::Text("Time: %.2f", animationPlayer.time);
+    ImGui::Text("Time: %.2f", animationPreviewPlayer.time);
 
     if (ImGui::Button("Key Position")) {
 
         AnimationTrack& track = GetOrCreateTrack(clip, AnimationTargetType::Object, obj.id, AnimationProperty::Position);
 
-        AddKey(track, animationPlayer.time, obj.position);
+        AddKey(track, animationPreviewPlayer.time, obj.position);
 
         RecalculateAnimationDuration(clip);
     }
@@ -146,7 +133,7 @@ void DrawObjectAnimationButtons(Object& obj) {
 
         AnimationTrack& track = GetOrCreateTrack(clip, AnimationTargetType::Object, obj.id, AnimationProperty::Rotation);
 
-        AddKey(track, animationPlayer.time, obj.rotation);
+        AddKey(track, animationPreviewPlayer.time, obj.rotation);
 
         RecalculateAnimationDuration(clip);
     }
@@ -157,7 +144,7 @@ void DrawObjectAnimationButtons(Object& obj) {
 
         AnimationTrack& track = GetOrCreateTrack(clip, AnimationTargetType::Object, obj.id, AnimationProperty::Scale);
 
-        AddKey(track, animationPlayer.time, obj.scale);
+        AddKey(track, animationPreviewPlayer.time, obj.scale);
 
         RecalculateAnimationDuration(clip);
     }
@@ -166,7 +153,7 @@ void DrawObjectAnimationButtons(Object& obj) {
 
         AnimationTrack& track = GetOrCreateTrack(clip, AnimationTargetType::Object, obj.id, AnimationProperty::Visible);
 
-        AddKey(track, animationPlayer.time, obj.visible);
+        AddKey(track, animationPreviewPlayer.time, obj.visible);
 
         RecalculateAnimationDuration(clip);
     }
@@ -175,7 +162,7 @@ void DrawObjectAnimationButtons(Object& obj) {
 
         AnimationTrack& track = GetOrCreateTrack(clip, AnimationTargetType::Object, obj.id, AnimationProperty::Texture);
 
-        AddKey(track, animationPlayer.time, obj.tex );
+        AddKey(track, animationPreviewPlayer.time, obj.tex );
 
         RecalculateAnimationDuration(clip);
     }
@@ -186,55 +173,55 @@ void DrawLightAnimationButtons(Light& light) {
     if (!ImGui::CollapsingHeader("Animation##light"))
         return;
 
-    if (animationPlayer.current_animation < 0) {
+    if (animationPreviewPlayer.current_animation < 0) {
 
         ImGui::TextDisabled("Create/select an animation first.");
 
         return;
     }
 
-    AnimationClip& clip = animations[animationPlayer.current_animation];
+    AnimationClip& clip = animations[animationPreviewPlayer.current_animation];
 
     if (ImGui::Button("Key Color")) {
 
         auto& track = GetOrCreateTrack(clip, AnimationTargetType::Light, light.id, AnimationProperty::Color);
 
-        AddKey(track, animationPlayer.time, light.col);
+        AddKey(track, animationPreviewPlayer.time, light.col);
     }
 
     if (ImGui::Button("Key Ambient")) {
 
         auto& track = GetOrCreateTrack(clip, AnimationTargetType::Light, light.id, AnimationProperty::Ambient);
 
-        AddKey(track, animationPlayer.time, light.ambient);
+        AddKey(track, animationPreviewPlayer.time, light.ambient);
     }
 
     if (ImGui::Button("Key Attenuation")) {
 
         auto& track = GetOrCreateTrack(clip, AnimationTargetType::Light, light.id, AnimationProperty::Attenuation);
 
-        AddKey(track, animationPlayer.time, light.att);
+        AddKey(track, animationPreviewPlayer.time, light.att);
     }
 
     if (ImGui::Button("Key Inner")) {
 
         auto& track = GetOrCreateTrack(clip, AnimationTargetType::Light, light.id, AnimationProperty::Inner);
 
-        AddKey(track, animationPlayer.time, light.inner);
+        AddKey(track, animationPreviewPlayer.time, light.inner);
     }
 
     if (ImGui::Button("Key Outer")) {
 
         auto& track = GetOrCreateTrack(clip, AnimationTargetType::Light, light.id, AnimationProperty::Outer);
 
-        AddKey(track, animationPlayer.time, light.outer);
+        AddKey(track, animationPreviewPlayer.time, light.outer);
     }
 
     if (ImGui::Button("Key Falloff")) {
 
         auto& track = GetOrCreateTrack(clip, AnimationTargetType::Light, light.id, AnimationProperty::Falloff);
 
-        AddKey(track, animationPlayer.time, light.falloff);
+        AddKey(track, animationPreviewPlayer.time, light.falloff);
     }
 
     RecalculateAnimationDuration(clip);
@@ -439,7 +426,7 @@ void DrawAnimationTimeline(AnimationClip& clip) {
     }
 
     float playheadX = TimelineTimeToX(
-        animationPlayer.time,
+        animationPreviewPlayer.time,
         rulerX,
         pixelsPerSecond,
         scrollTime
@@ -529,7 +516,7 @@ void DrawAnimationTimeline(AnimationClip& clip) {
                 animationEditor.selectedTrack = i;
                 animationEditor.selectedKey = j;
                 animationEditor.draggingKey = true;
-                animationPlayer.playing = false;
+                animationPreviewPlayer.playing = false;
 
                 float mouseTime = TimelineXToTime(
                     mousePos.x,
@@ -649,9 +636,9 @@ void DrawAnimationTimeline(AnimationClip& clip) {
         if (animationEditor.animationSnapEnable)
             mouseTime = Snap(mouseTime, animationEditor.animationSnap);
 
-        animationPlayer.time = glm::clamp(mouseTime, 0.0f, requiredTime);
+        animationPreviewPlayer.time = glm::clamp(mouseTime, 0.0f, requiredTime);
 
-        animationPlayer.playing = false;
+        animationPreviewPlayer.playing = false;
 
         EvaluateCurrentAnimation();
     }

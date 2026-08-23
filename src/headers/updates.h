@@ -52,6 +52,10 @@ void CollisionUpdate();
 //--------------------------------------------------------------------------
 // animations
 
+void UpdateAnimations(float dt);
+
+void UpdateAnimationPreview(float dt);
+
 void UpdateAnimation(float dt);
 
 //--------------------------------------------------------------------------

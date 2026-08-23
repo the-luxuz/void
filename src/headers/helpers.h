@@ -335,9 +335,17 @@ Light* FindLightByID(EntityID id);
 
 void ApplyTrack(const AnimationTrack& track, float time);
 
+void UpdateAnimationPlayer(AnimationPlayer& player, float dt);
+
+void EvaluateAnimationPlayer(AnimationPlayer& player);
+
 void EvaluateCurrentAnimation();
 
 std::string AnimationTrackTargetName(const AnimationTrack& track);
+
+void PlayAllAnims();
+
+void StopAllAnims();
 
 //--------------------------------------------------------------
 //snap

@@ -4,8 +4,13 @@
 // animations
 
 std::vector<AnimationClip> animations;
-AnimationPlayer animationPlayer;
 AnimationEditorState animationEditor;
+
+std::vector<AnimationPlayer> animationPlayers;
+
+AnimationPlayerID nextAnimationPlayerID = 1;
+
+AnimationPlayer animationPreviewPlayer;
 
 VideoPlayer videoPlayer;
 bool isCinematicActive = false;
@@ -268,6 +273,37 @@ int FindAnimations(std::string name, EntityID objId) {
                 return i;
             }
         }
+    }
+
+    return -1;
+}
+
+AnimationPlayerID PlayAnimation(int animationIndex) {
+
+    if (animationIndex < 0 || animationIndex >= static_cast<int>(animations.size())) {
+
+        return 0;
+    }
+
+    AnimationPlayer player;
+
+    player.id = nextAnimationPlayerID++;
+    player.current_animation = animationIndex;
+    player.time = 0.0f;
+    player.playing = true;
+    player.speed = 1.0f;
+
+    animationPlayers.push_back(player);
+
+    return player.id;
+}
+
+int FindAnimationByName(const std::string& name) {
+
+    for (int i = 0; i < static_cast<int>(animations.size()); ++i) {
+
+        if (animations[i].name == name)
+            return i;
     }
 
     return -1;

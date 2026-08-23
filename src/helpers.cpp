@@ -2846,22 +2846,65 @@ void ApplyTrack(const AnimationTrack& track, float time) {
 	}
 }
 
-void EvaluateCurrentAnimation() {
+void UpdateAnimationPlayer(AnimationPlayer& player, float dt) {
 
-	if (animationPlayer.current_animation < 0)
+	if (!player.playing)
 		return;
 
-	if (animationPlayer.current_animation >= static_cast<int>(animations.size()))
+	if (player.current_animation < 0)
 		return;
 
-	AnimationClip& clip = animations[animationPlayer.current_animation];
+	if (player.current_animation >= static_cast<int>(animations.size())) {
 
-	float evalTime = glm::clamp(animationPlayer.time, 0.0f, clip.duration);
+		player.playing = false;
+		return;
+	}
+
+	AnimationClip& clip =
+		animations[player.current_animation];
+
+	if (clip.duration <= 0.0f) {
+
+		EvaluateAnimationPlayer(player);
+		player.playing = false;
+		return;
+	}
+
+	player.time += dt * player.speed;
+
+	if (clip.loop) {
+
+		player.time = std::fmod(player.time, clip.duration);
+
+	} else if (player.time >= clip.duration) {
+		player.time = clip.duration;
+		player.playing = false;
+	}
+
+	EvaluateAnimationPlayer(player);
+}
+
+void EvaluateAnimationPlayer(AnimationPlayer& player) {
+
+	if (player.current_animation < 0)
+		return;
+
+	if (player.current_animation >= static_cast<int>(animations.size()))
+		return;
+
+	AnimationClip& clip = animations[player.current_animation];
+
+	float evalTime = glm::clamp(player.time, 0.0f, clip.duration);
 
 	for (const auto& track : clip.tracks) {
 
 		ApplyTrack(track, evalTime);
 	}
+}
+
+void EvaluateCurrentAnimation() {
+
+	EvaluateAnimationPlayer(animationPreviewPlayer);
 }
 
 std::string AnimationTrackTargetName(const AnimationTrack& track) {
@@ -2882,6 +2925,25 @@ std::string AnimationTrackTargetName(const AnimationTrack& track) {
 	}
 
 	return "null";
+}
+
+void PlayAllAnims() {
+	
+	for (int i = 0; i < animations.size(); i++) {
+		
+		PlayAnimation(i);
+	}
+}
+
+void StopAllAnims() {
+	
+	for (int i = 0; i < animationPlayers.size(); i++) {
+		
+		animationPlayers[i].playing = false;
+		animationPlayers[i].time = 0.0f;
+
+		EvaluateAnimationPlayer(animationPlayers[i]);
+	}
 }
 
 //--------------------------------------------------------------

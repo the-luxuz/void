@@ -585,7 +585,11 @@ struct AnimationClip {
 
 extern std::vector<AnimationClip> animations;
 
+using AnimationPlayerID = uint32_t;
+
 struct AnimationPlayer {
+
+    AnimationPlayerID id;
 
     int current_animation = -1;
 
@@ -620,7 +624,10 @@ struct AnimationEditorState {
 
 extern AnimationEditorState animationEditor;
 
-extern AnimationPlayer animationPlayer;
+extern std::vector<AnimationPlayer> animationPlayers;
+extern AnimationPlayerID nextAnimationPlayerID;
+
+extern AnimationPlayer animationPreviewPlayer;
 
 float InterpolateFloat(const AnimationKey& a, const AnimationKey& b, float time);
 
@@ -668,6 +675,10 @@ const char* AnimationPropertyName(AnimationProperty property);
 float TimelineTimeToX(float time, float startX, float pixelsPerSecond, float scrollTime);
 
 float TimelineXToTime(float x, float startX, float pixelsPerSecond, float scrollTime);
+
+AnimationPlayerID PlayAnimation(int animationIndex);
+
+int FindAnimationByName(const std::string& name);
 
 //--------------------------------------------------------------
 // events
@@ -720,14 +731,13 @@ int FindAnimations(std::string name, EntityID objId);
 
 struct PlayAnimationEvent : public Event {
 
-    PlayAnimationEvent(EntityID entity, const std::string& animation) : entity(entity), animation(animation) {}
+    PlayAnimationEvent(const std::string& animation) : animation(animation) {}
 
     EventType GetType() const override {
 
         return EventType::PlayAnimation;
     }
 
-    EntityID entity;
     std::string animation;
 };
 
@@ -768,18 +778,12 @@ struct EventManager {
         
                 PlayAnimationEvent& animEvent = static_cast<PlayAnimationEvent&>(event);
 
-                int animation_id = FindAnimations(animEvent.animation, animEvent.entity);
+                int animationIndex = FindAnimationByName(animEvent.animation);
 
-                if (animation_id >= 0) {
-                
-                    animationPlayer.current_animation = animation_id;
-
-                    animationPlayer.time = 0.0f;
-                    animationPlayer.playing = true;
-                }
+                if (animationIndex >= 0)
+                    PlayAnimation(animationIndex);
 
                 break;
-
             }
 
             case EventType::StartCinematic: {

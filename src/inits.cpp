@@ -398,7 +398,7 @@ void init() {
 
 	animations = std::move(par.anim);
 
-	animationPlayer = par.animPlayer;
+	animationPlayers = std::move(par.animPlayer);
 	animationEditor = par.animEditor;
 
 	nextEntityID = maxID + 1;
