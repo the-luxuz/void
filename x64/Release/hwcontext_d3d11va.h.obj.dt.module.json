@@ -1,0 +1,14 @@
+{
+    "version": 1,
+    "revision": 0,
+    "rules": [
+        {
+            "primary-output": "x64\\Release\\hwcontext_d3d11va.obj",
+            "outputs": [
+                "x64\\Release\\hwcontext_d3d11va.h.obj.dt.module.json",
+                "x64\\Release\\hwcontext_d3d11va.h.obj.dt.d.json"
+            ],
+            "requires": []
+        }
+    ]
+}

@@ -1,0 +1,14 @@
+{
+    "version": 1,
+    "revision": 0,
+    "rules": [
+        {
+            "primary-output": "x64\\Release\\glew.obj",
+            "outputs": [
+                "x64\\Release\\glew.h.obj.dt.module.json",
+                "x64\\Release\\glew.h.obj.dt.d.json"
+            ],
+            "requires": []
+        }
+    ]
+}
