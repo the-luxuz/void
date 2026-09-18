@@ -557,4 +557,80 @@ void init_(const char* settings, const char* scene) {
 
 		init();
 	}
+	else {
+		
+		st.win_name = "void";
+		st.win_mode = window_mode::WINDOWED;
+		st.w = 1280;
+		st.h = 720;
+		st.VSync = 0;
+		st.fov = 95;
+
+		avformat_network_init();
+
+		windowedSize = { st.w, st.h };
+
+		if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
+
+			std::cerr
+				<< "SDL_Init failed: "
+				<< SDL_GetError()
+				<< '\n';
+
+			return;
+		}
+
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+
+		window = SDL_CreateWindow(st.win_name.c_str(), st.w, st.h, SDL_WINDOW_OPENGL);
+
+		ApplyWindowMode(window);
+
+		context = SDL_GL_CreateContext(window);
+
+		if (!st.VSync)
+			SDL_GL_SetSwapInterval(0);
+		else
+			SDL_GL_SetSwapInterval(1);
+
+		glewExperimental = GL_TRUE;
+
+		GLenum err = glewInit();
+
+		if (err != GLEW_OK) {
+
+			std::cout << glewGetErrorString(err) << '\n';
+			return;
+		}
+
+		IMGUI_CHECKVERSION();
+		ImGui::CreateContext();
+
+		ImGuiIO& io = ImGui::GetIO();
+		(void)io;
+
+		io.ConfigWindowsMoveFromTitleBarOnly = true;
+
+		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+
+		ImGuiStyle& style = ImGui::GetStyle();
+
+		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+
+			style.WindowRounding = 0.0f;
+			style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+		}
+
+		ImGui::StyleColorsDark();
+
+		ImGui_ImplSDL3_InitForOpenGL(window, context);
+		ImGui_ImplOpenGL3_Init("#version 330");
+
+		create_programs();
+
+		init();
+	}
 }
