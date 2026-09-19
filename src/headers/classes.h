@@ -39,7 +39,7 @@ class TextureManager {
     static std::unordered_map<std::string, GLuint> textures;
 
   public:
-    static GLuint Get(const std::string &path);
+    static GLuint Get(const std::string &path, bool sRGB = false);
     static void Clear();
 };
 
@@ -221,8 +221,23 @@ struct Material {
     std::string normalPath;
     GLuint normalTexture = 0;
 
+    std::string roughnessPath;
+    GLuint roughnessTexture = 0;
+    std::string metallicPath;
+    GLuint metallicTexture = 0;
+    std::string emissionPath;
+    GLuint emissionTexture = 0;
+    std::string opacityPath;
+    GLuint opacityTexture = 0;
+
     // Kd del MTL
     glm::vec3 diffuse = glm::vec3(1.0f);
+    glm::vec3 specular = glm::vec3(0.5f);
+    glm::vec3 emission = glm::vec3(0.0f);
+    float shininess = 32.0f;
+    float opacity = 1.0f;
+    float roughness = 0.5f;
+    float metallic = 0.0f;
 };
 
 struct Submesh {
@@ -504,6 +519,10 @@ struct Shader_Uniform {
     GLint lightVP;
 
     GLint normalMap;
+    GLint roughnessMap;
+    GLint metallicMap;
+    GLint emissionMap;
+    GLint opacityMap;
 
     GLint numLights;
 
@@ -516,6 +535,14 @@ struct Shader_Uniform {
     GLint shininess;
 
     GLint hasNormalMap;
+    GLint hasRoughnessMap;
+    GLint hasMetallicMap;
+    GLint hasEmissionMap;
+    GLint hasOpacityMap;
+    GLint materialRoughness;
+    GLint materialMetallic;
+    GLint materialEmission;
+    GLint materialOpacity;
 
     GLint program_line_color;
 

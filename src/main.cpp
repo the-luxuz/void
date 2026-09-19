@@ -42,10 +42,14 @@ void update(SDL_Window *window, float dt) {
         if (currentViewMode == view_Mode::PLAY)
             player = search_obj_by_name("Player");
 
-        if (currentViewMode == view_Mode::PLAY && player)
+        if (currentViewMode == view_Mode::PLAY && player && !free_cam) {
+
             cameraPos = cam.cam_position;
-        else
+
+        } else {
+
             cameraPos = get_cam_pos();
+        }
 
         view = glm::lookAt(cameraPos, cam.cam_target, cam.cam_up);
 
@@ -126,15 +130,14 @@ void update(SDL_Window *window, float dt) {
 
             const bool *keyboard = SDL_GetKeyboardState(nullptr);
 
-            if (currentViewMode == view_Mode::PLAY && player) {
+            if (currentViewMode == view_Mode::PLAY && player && !free_cam) {
 
                 if (!io.WantCaptureKeyboard)
                     PlayerControl(keyboard, dt, *player);
 
-            } else if (!free_cam) {
-
-                free_cam = true;
+                UpdatePlayerCamera(*player);
             }
+
             //----------------------------------------------------
             // physics
 
@@ -156,15 +159,6 @@ void update(SDL_Window *window, float dt) {
 
             if (st.collision_active)
                 CollisionUpdate();
-
-            if (currentViewMode == view_Mode::PLAY && player) {
-
-                UpdatePlayerCamera(*player);
-
-            } else if (!free_cam) {
-
-                free_cam = true;
-            }
 
             //----------------------------------------------------
             // obj
@@ -634,9 +628,15 @@ int main(int argc, char *args[]) {
                 if (event.key.scancode == SDL_SCANCODE_SPACE && !io.WantCaptureKeyboard) {
 
                     if (currentViewMode == view_Mode::EDITOR) {
+
                         currentViewMode = view_Mode::PLAY;
+                        SDL_SetWindowRelativeMouseMode(window, true);
+
                     } else {
+
                         currentViewMode = view_Mode::EDITOR;
+                        SDL_SetWindowRelativeMouseMode(window, false);
+                        free_cam = false;
                     }
                 }
 
@@ -644,24 +644,45 @@ int main(int argc, char *args[]) {
 
             case SDL_EVENT_MOUSE_MOTION:
 
-                if ((SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_LCTRL])) {
+                if (currentViewMode == view_Mode::EDITOR || free_cam) {
+                    
+                    if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_LCTRL]) {
+                    
+                        SDL_SetWindowRelativeMouseMode(window, true);
 
-                    SDL_SetWindowRelativeMouseMode(window, true);
+                        cam.alpha += event.motion.xrel * mouseSensitivity;
 
-                    cam.alpha -= -(event.motion.xrel * mouseSensitivity);
-                    cam.beta -= event.motion.yrel * mouseSensitivity;
+                        cam.beta -= event.motion.yrel * mouseSensitivity;
 
-                    cam.beta = glm::clamp(cam.beta, 0.05f, glm::pi<float>() - 0.05f);
+                        cam.beta = glm::clamp(cam.beta, 0.05f, glm::pi<float>() - 0.05f);
+                    } 
+                } else {
+                
+                    if (SDL_GetWindowRelativeMouseMode(window)) {
+
+                        cam.alpha += event.motion.xrel * mouseSensitivity;
+                        cam.beta -= event.motion.yrel * mouseSensitivity;
+
+                        constexpr float maxPitch = glm::radians(89.0f);
+
+                        cam.beta = glm::clamp(cam.beta, -maxPitch, maxPitch);
+                    }
+
                 }
 
                 break;
 
             case SDL_EVENT_KEY_UP:
 
-                if (event.key.scancode == SDL_SCANCODE_LCTRL) {
+                if (event.key.scancode == SDL_SCANCODE_LCTRL && currentViewMode == view_Mode::EDITOR) {
 
                     SDL_SetWindowRelativeMouseMode(window, false);
-                    SDL_WarpMouseInWindow(window, st.w / 2.0f, st.h / 2.0f);
+                    //SDL_WarpMouseInWindow(window, st.w / 2.0f, st.h / 2.0f);
+                }
+
+                if (currentViewMode == view_Mode::PLAY && event.key.scancode == SDL_SCANCODE_J) {
+                
+                    free_cam = !free_cam;
                 }
 
                 break;
@@ -755,7 +776,7 @@ int main(int argc, char *args[]) {
 
         ImGuiIO &io = ImGui::GetIO();
 
-        if ((currentViewMode == view_Mode::PLAY && free_cam) || currentViewMode == view_Mode::EDITOR) {
+        if (free_cam || currentViewMode == view_Mode::EDITOR) {
 
             if (!io.WantCaptureKeyboard)
                 controls(keyboard, angle_speed, radius_speed, dt);

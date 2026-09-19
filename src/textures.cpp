@@ -139,7 +139,7 @@ void Load_Skybox(const std::string &path) {
 //--------------------------------------------------------------------------
 // OBJ texture
 
-GLuint LoadObjTexture(const std::string &path) {
+GLuint LoadObjTexture(const std::string &path, bool sRGB) {
 
     stbi_set_flip_vertically_on_load(true);
 
@@ -200,7 +200,13 @@ GLuint LoadObjTexture(const std::string &path) {
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
 
-    glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+    const GLenum internalFormat = channels == 4   ? (sRGB ? GL_SRGB8_ALPHA8 : GL_RGBA8)
+                                  : channels == 3 ? (sRGB ? GL_SRGB8 : GL_RGB8)
+                                                  : GL_R8;
+
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 
     glGenerateMipmap(GL_TEXTURE_2D);
 

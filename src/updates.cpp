@@ -320,84 +320,6 @@ void update_objects() {
         glUniformMatrix4fv(3, 1, GL_FALSE, glm::value_ptr(obj.mvp));
         glUniformMatrix4fv(4, 1, GL_FALSE, glm::value_ptr(obj.model));
 
-        if (obj.submeshes.empty()) {
-
-            // ------------------------------------------------------------
-            // OBJ normal / mesh normal sin materiales importados
-            // ------------------------------------------------------------
-
-            const GLuint albedoTexture = obj.obj_texture;
-
-            const GLuint normalTexture = obj.normalTexture;
-
-            const bool hasAlbedo = albedoTexture != 0;
-
-            const bool hasNormal = normalTexture != 0;
-
-            // Albedo
-            glActiveTexture(GL_TEXTURE0);
-
-            glBindTexture(GL_TEXTURE_2D, albedoTexture);
-
-            glUniform1i(shader_uniform.program_texture, 0);
-
-            glUniform1i(shader_uniform.useTexture, hasAlbedo);
-
-            glUniform3f(shader_uniform.color, 1.0f, 1.0f, 1.0f);
-
-            // Normal
-            glActiveTexture(GL_TEXTURE1);
-
-            glBindTexture(GL_TEXTURE_2D, normalTexture);
-
-            glUniform1i(shader_uniform.normalMap, 1);
-
-            glUniform1i(shader_uniform.hasNormalMap, hasNormal);
-
-            glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(obj.indices.size()), GL_UNSIGNED_INT, nullptr);
-        } else {
-
-            for (const Submesh &submesh : obj.submeshes) {
-
-                if (!IsBoundsVisible(obj.mvp, submesh.min, submesh.max))
-                    continue;
-
-                const GLuint albedoTexture = obj.obj_texture != 0 ? obj.obj_texture : submesh.material.albedoTexture;
-
-                const bool hasAlbedo = albedoTexture != 0;
-
-                glActiveTexture(GL_TEXTURE0);
-
-                glBindTexture(GL_TEXTURE_2D, albedoTexture);
-
-                glUniform1i(shader_uniform.program_texture, 0);
-
-                glUniform1i(shader_uniform.useTexture, hasAlbedo);
-
-                glUniform3fv(shader_uniform.color, 1, glm::value_ptr(submesh.material.diffuse));
-
-                const GLuint normalTexture =
-                    obj.normalTexture != 0 ? obj.normalTexture : submesh.material.normalTexture;
-
-                const bool hasNormal = normalTexture != 0;
-
-                glActiveTexture(GL_TEXTURE1);
-
-                glBindTexture(GL_TEXTURE_2D, normalTexture);
-
-                glUniform1i(shader_uniform.normalMap, 1);
-
-                glUniform1i(shader_uniform.hasNormalMap, hasNormal);
-
-                glDrawElements(
-                    GL_TRIANGLES, static_cast<GLsizei>(submesh.indexCount), GL_UNSIGNED_INT,
-                    reinterpret_cast<const void *>(static_cast<uintptr_t>(submesh.firstIndex) * sizeof(GLuint)));
-            }
-        }
-
-        // Volvemos a dejar la unidad activa en 0.
-        glActiveTexture(GL_TEXTURE0);
-
         if (obj.tiling) {
 
             glm::vec3 size = obj.max - obj.min;
@@ -418,77 +340,59 @@ void update_objects() {
 
         glUniform1i(shader_uniform.tiling, obj.tiling);
 
-        glUniform1i(shader_uniform.hasNormalMap, obj.hasNormalMap);
-
         glBindVertexArray(obj.vao);
 
         if (st.wireframe_active)
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
+        auto bindMaterial = [&](const Material &material) {
+            const GLuint albedo = obj.obj_texture != 0 ? obj.obj_texture : material.albedoTexture;
+            const GLuint normal = obj.normalTexture != 0 ? obj.normalTexture : material.normalTexture;
+
+            glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, albedo);
+            glActiveTexture(GL_TEXTURE1); glBindTexture(GL_TEXTURE_2D, normal);
+            glActiveTexture(GL_TEXTURE2 + MAX_LIGHTS); glBindTexture(GL_TEXTURE_2D, material.roughnessTexture);
+            glActiveTexture(GL_TEXTURE3 + MAX_LIGHTS); glBindTexture(GL_TEXTURE_2D, material.metallicTexture);
+            glActiveTexture(GL_TEXTURE4 + MAX_LIGHTS); glBindTexture(GL_TEXTURE_2D, material.emissionTexture);
+            glActiveTexture(GL_TEXTURE5 + MAX_LIGHTS); glBindTexture(GL_TEXTURE_2D, material.opacityTexture);
+
+            glUniform1i(shader_uniform.program_texture, 0);
+            glUniform1i(shader_uniform.normalMap, 1);
+            glUniform1i(shader_uniform.roughnessMap, 2 + MAX_LIGHTS);
+            glUniform1i(shader_uniform.metallicMap, 3 + MAX_LIGHTS);
+            glUniform1i(shader_uniform.emissionMap, 4 + MAX_LIGHTS);
+            glUniform1i(shader_uniform.opacityMap, 5 + MAX_LIGHTS);
+            glUniform1i(shader_uniform.useTexture, albedo != 0);
+            glUniform1i(shader_uniform.hasNormalMap, normal != 0);
+            glUniform1i(shader_uniform.hasRoughnessMap, material.roughnessTexture != 0);
+            glUniform1i(shader_uniform.hasMetallicMap, material.metallicTexture != 0);
+            glUniform1i(shader_uniform.hasEmissionMap, material.emissionTexture != 0);
+            glUniform1i(shader_uniform.hasOpacityMap, material.opacityTexture != 0);
+            glUniform3fv(shader_uniform.color, 1, glm::value_ptr(material.diffuse));
+            glUniform1f(shader_uniform.materialRoughness, material.roughness);
+            glUniform1f(shader_uniform.materialMetallic, material.metallic);
+            glUniform3fv(shader_uniform.materialEmission, 1, glm::value_ptr(material.emission));
+            glUniform1f(shader_uniform.materialOpacity, material.opacity);
+        };
+
         if (obj.submeshes.empty()) {
-
-            glUniform1i(shader_uniform.useTexture, obj.obj_texture != 0);
-            glUniform3f(shader_uniform.color, 1.0f, 1.0f, 1.0f);
-            if (currentTexture != obj.obj_texture) {
-
-                glBindTexture(GL_TEXTURE_2D, obj.obj_texture);
-                currentTexture = obj.obj_texture;
-            }
-
+            Material fallback{};
+            fallback.normalTexture = obj.normalTexture;
+            fallback.shininess = obj.shininess;
+            fallback.roughness = glm::clamp(std::sqrt(2.0f / (obj.shininess + 2.0f)), 0.04f, 1.0f);
+            bindMaterial(fallback);
             glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(obj.indices.size()), GL_UNSIGNED_INT, nullptr);
         } else {
-
             for (const Submesh &submesh : obj.submeshes) {
-
-                static bool first = true;
-
-                static int count = obj.submeshes.size();
-
-                if (first) {
-
-                    std::cout << "SUBMESH: " << submesh.material.name
-                              << " | albedo = " << submesh.material.albedoTexture
-                              << " | normal = " << submesh.material.normalTexture << '\n';
-
-                    count--;
-                    if (count == 0)
-                        first = false;
-                }
-
                 if (!IsBoundsVisible(obj.mvp, submesh.min, submesh.max))
                     continue;
-
-                GLuint albedoTexture = obj.obj_texture != 0 ? obj.obj_texture : submesh.material.albedoTexture;
-
-                bool hasAlbedo = albedoTexture != 0;
-
-                glActiveTexture(GL_TEXTURE0);
-
-                glBindTexture(GL_TEXTURE_2D, albedoTexture);
-
-                glUniform1i(shader_uniform.program_texture, 0);
-
-                glUniform1i(shader_uniform.useTexture, hasAlbedo);
-
-                glUniform3fv(shader_uniform.color, 1, glm::value_ptr(submesh.material.diffuse));
-
-                GLuint normalTexture = obj.normalTexture != 0 ? obj.normalTexture : submesh.material.normalTexture;
-
-                bool hasNormal = normalTexture != 0;
-
-                glActiveTexture(GL_TEXTURE1);
-
-                glBindTexture(GL_TEXTURE_2D, normalTexture);
-
-                glUniform1i(shader_uniform.normalMap, 1);
-
-                glUniform1i(shader_uniform.hasNormalMap, hasNormal);
-
-                glDrawElements(
-                    GL_TRIANGLES, static_cast<GLsizei>(submesh.indexCount), GL_UNSIGNED_INT,
+                bindMaterial(submesh.material);
+                glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(submesh.indexCount), GL_UNSIGNED_INT,
                     reinterpret_cast<const void *>(static_cast<uintptr_t>(submesh.firstIndex) * sizeof(GLuint)));
             }
         }
+
+        glActiveTexture(GL_TEXTURE0);
     }
 
     if (!st.wireframe_active)

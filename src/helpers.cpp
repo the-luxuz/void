@@ -207,9 +207,11 @@ bool load_scene_ok(const char *scene) {
 
     std::ifstream in(scene, std::ios::binary);
 
-    if (par.load_scene(in))
-        init();
+    if (!par.load_scene(in, &st, &cam))
+        return false;
 
+    camera_update = true;
+    init();
     return true;
 }
 
@@ -406,7 +408,8 @@ void Docking() {
 
                     std::ofstream out(outPath, std::ios::binary);
 
-                    par.save_scene(out, objects, lightObjects, lights);
+                    cam.cam_position = cameraPos;
+                    par.save_scene(out, objects, lightObjects, lights, st, cam);
 
                     save_outPath = outPath;
 
@@ -1262,7 +1265,7 @@ Light *GetSelectedLight() {
     return &lights[lightIndex];
 }
 
-GLuint TextureManager::Get(const std::string &path) {
+GLuint TextureManager::Get(const std::string &path, bool sRGB) {
 
     if (path.empty())
         return 0;
@@ -1279,14 +1282,15 @@ GLuint TextureManager::Get(const std::string &path) {
 
     texturePath = texturePath.lexically_normal();
 
-    const std::string key = texturePath.generic_string();
+    std::string key = texturePath.generic_string();
 
+    key += sRGB ? "|srgb" : "|linear";
     auto it = textures.find(key);
 
     if (it != textures.end())
         return it->second;
 
-    GLuint texture = LoadObjTexture(key);
+    GLuint texture = LoadObjTexture(texturePath.generic_string(), sRGB);
 
     if (texture != 0)
         textures[key] = texture;
@@ -1413,51 +1417,58 @@ void select_object(glm::vec3 &rayOrigin, glm::vec3 &rayDir) {
 
 void controls(const bool *keyboard, float angle_step, float radius_step, float dt) {
 
-    if (currentViewMode == view_Mode::EDITOR || free_cam) {
-
-        glm::vec3 cameraPos = get_cam_pos();
-
-        glm::vec3 forward = glm::normalize(cam.cam_target - cameraPos);
-
-        forward.y = 0.0f;
-
-        if (glm::length2(forward) > 0.0001f)
-            forward = glm::normalize(forward);
-
-        glm::vec3 right = glm::normalize(glm::cross(forward, glm::vec3(0, 1, 0)));
-
-        float speed = moveSpeed * (cam.radius * 0.09f);
-
-        if (keyboard[SDL_SCANCODE_W])
-            cam.cam_target += forward * speed * dt;
-
-        if (keyboard[SDL_SCANCODE_S])
-            cam.cam_target -= forward * speed * dt;
-
-        if (keyboard[SDL_SCANCODE_A])
-            cam.cam_target -= right * speed * dt;
-
-        if (keyboard[SDL_SCANCODE_D])
-            cam.cam_target += right * speed * dt;
-
-        cam.beta = glm::clamp(cam.beta, 0.01f, glm::pi<float>() - 0.01f);
-
-        cam.radius = std::max(cam.radius, 0.5f);
-
-        return;
-    }
+    glm::vec3 cameraPos = get_cam_pos();
+    
+    glm::vec3 forward = glm::normalize(cam.cam_target - cameraPos);
+    
+    forward.y = 0.0f;
+    
+    if (glm::length2(forward) > 0.0001f)
+        forward = glm::normalize(forward);
+    
+    glm::vec3 right = glm::normalize(glm::cross(forward, glm::vec3(0, 1, 0)));
+    
+    float speed = moveSpeed * (cam.radius * 0.09f);
+    
+    if (keyboard[SDL_SCANCODE_W])
+        cam.cam_target += forward * speed * dt;
+    
+    if (keyboard[SDL_SCANCODE_S])
+        cam.cam_target -= forward * speed * dt;
+    
+    if (keyboard[SDL_SCANCODE_A])
+        cam.cam_target -= right * speed * dt;
+    
+    if (keyboard[SDL_SCANCODE_D])
+        cam.cam_target += right * speed * dt;
+    
+    cam.beta = glm::clamp(cam.beta, 0.01f, glm::pi<float>() - 0.01f);
+    
+    cam.radius = std::max(cam.radius, 0.5f);
+    
 }
 
 void PlayerControl(const bool *keyboard, float dt, Object &player) {
 
-    // PLAY
-    // ---------------------------------------------------------
+    constexpr float maxPitch = glm::radians(89.0f);
 
-    glm::vec3 forward(cos(cam.alpha), 0.0f, sin(cam.alpha));
+    cam.beta = glm::clamp(cam.beta, -maxPitch, maxPitch);
+
+    const float cosPitch = std::cos(cam.beta);
+    const float sinPitch = std::sin(cam.beta);
+
+    const float cosYaw = std::cos(cam.alpha);
+    const float sinYaw = std::sin(cam.alpha);
+
+    glm::vec3 lookForward(cosPitch * cosYaw, sinPitch, cosPitch * sinYaw);
+
+    lookForward = glm::normalize(lookForward);
+
+    glm::vec3 forward(cosYaw, 0.0f, sinYaw);
 
     forward = glm::normalize(forward);
 
-    glm::vec3 right = glm::normalize(glm::cross(forward, glm::vec3(0, 1, 0)));
+    glm::vec3 right = glm::normalize(glm::cross(forward, glm::vec3(0.0f, 1.0f, 0.0f)));
 
     glm::vec3 moveDirection(0.0f);
 
@@ -1476,7 +1487,7 @@ void PlayerControl(const bool *keyboard, float dt, Object &player) {
     if (glm::length2(moveDirection) > 0.0001f)
         moveDirection = glm::normalize(moveDirection);
 
-    float moveForce = 100.0f;
+    constexpr float moveForce = 100.0f;
 
     player.physics.force += moveDirection * moveForce;
 }

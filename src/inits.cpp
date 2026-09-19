@@ -1,4 +1,5 @@
 #include "headers/inits.h"
+#include "headers/scene_hierarchy.h"
 
 #include <filesystem>
 #include <limits>
@@ -44,6 +45,10 @@ void init_uniforms() {
     shader_uniform.lightVP = glGetUniformLocation(program, "lightVP");
 
     shader_uniform.normalMap = glGetUniformLocation(program, "normalMap");
+    shader_uniform.roughnessMap = glGetUniformLocation(program, "roughnessMap");
+    shader_uniform.metallicMap = glGetUniformLocation(program, "metallicMap");
+    shader_uniform.emissionMap = glGetUniformLocation(program, "emissionMap");
+    shader_uniform.opacityMap = glGetUniformLocation(program, "opacityMap");
 
     shader_uniform.numLights = glGetUniformLocation(program, "numLights");
 
@@ -56,6 +61,14 @@ void init_uniforms() {
     shader_uniform.shininess = glGetUniformLocation(program, "shininess");
 
     shader_uniform.hasNormalMap = glGetUniformLocation(program, "hasNormalMap");
+    shader_uniform.hasRoughnessMap = glGetUniformLocation(program, "hasRoughnessMap");
+    shader_uniform.hasMetallicMap = glGetUniformLocation(program, "hasMetallicMap");
+    shader_uniform.hasEmissionMap = glGetUniformLocation(program, "hasEmissionMap");
+    shader_uniform.hasOpacityMap = glGetUniformLocation(program, "hasOpacityMap");
+    shader_uniform.materialRoughness = glGetUniformLocation(program, "materialRoughness");
+    shader_uniform.materialMetallic = glGetUniformLocation(program, "materialMetallic");
+    shader_uniform.materialEmission = glGetUniformLocation(program, "materialEmission");
+    shader_uniform.materialOpacity = glGetUniformLocation(program, "materialOpacity");
 
     // line shader uniforms
 
@@ -228,17 +241,13 @@ void init_obj(const char *objFile, Object &obj) {
         material.name = source.name;
 
         material.diffuse = {source.diffuse[0], source.diffuse[1], source.diffuse[2]};
-
-        std::cout << "\n========== MATERIAL ==========\n";
-        std::cout << "Name: " << source.name << '\n';
-
-        std::cout << "Kd: " << source.diffuse[0] << ", " << source.diffuse[1] << ", " << source.diffuse[2] << '\n';
-
-        std::cout << "Diffuse tex: " << source.diffuse_texname << '\n';
-
-        std::cout << "Bump tex: " << source.bump_texname << '\n';
-
-        std::cout << "Normal tex: " << source.normal_texname << '\n';
+        material.specular = {source.specular[0], source.specular[1], source.specular[2]};
+        material.emission = {source.emission[0], source.emission[1], source.emission[2]};
+        material.shininess = source.shininess;
+        material.opacity = source.dissolve;
+        material.roughness = source.roughness > 0.0f ? source.roughness :
+            glm::clamp(std::sqrt(2.0f / (source.shininess + 2.0f)), 0.04f, 1.0f);
+        material.metallic = glm::clamp(source.metallic, 0.0f, 1.0f);
 
         auto resolveMaterialTexture =
 
@@ -270,54 +279,29 @@ void init_obj(const char *objFile, Object &obj) {
             return resolved.lexically_normal();
         };
 
-        if (!source.diffuse_texname.empty()) {
+        auto loadTexture = [&](const std::string &reference, std::string &path, GLuint &texture, bool sRGB,
+                               const char *semantic) {
+            if (reference.empty())
+                return;
 
-            std::filesystem::path texturePath = resolveMaterialTexture(source.diffuse_texname);
-
-            std::cout << "Resolved albedo: " << texturePath.generic_string() << '\n';
-
-            std::cout << "Exists: " << std::filesystem::exists(texturePath) << '\n';
-
-            if (std::filesystem::exists(texturePath)) {
-
-                material.albedoPath = texturePath.generic_string();
-
-                material.albedoTexture = TextureManager::Get(material.albedoPath);
-
-                std::cout << "Albedo OpenGL ID: " << material.albedoTexture << '\n';
+            const std::filesystem::path resolved = resolveMaterialTexture(reference);
+            if (!std::filesystem::exists(resolved)) {
+                std::cout << "Material '" << source.name << "': missing " << semantic << " texture: "
+                          << resolved.generic_string() << '\n';
+                return;
             }
-        } else {
 
-            std::cout << "No map_Kd in this material." << '\n';
-        }
+            path = resolved.generic_string();
+            texture = TextureManager::Get(path, sRGB);
+        };
 
-        std::string normalReference;
-
-        if (!source.bump_texname.empty()) {
-
-            normalReference = source.bump_texname;
-        } else if (!source.normal_texname.empty()) {
-
-            normalReference = source.normal_texname;
-        }
-
-        if (!normalReference.empty()) {
-
-            std::filesystem::path normalPath = resolveMaterialTexture(normalReference);
-
-            std::cout << "Resolved normal: " << normalPath.generic_string() << '\n';
-
-            std::cout << "Exists: " << std::filesystem::exists(normalPath) << '\n';
-
-            if (std::filesystem::exists(normalPath)) {
-
-                material.normalPath = normalPath.generic_string();
-
-                material.normalTexture = TextureManager::Get(material.normalPath);
-
-                std::cout << "Normal OpenGL ID: " << material.normalTexture << '\n';
-            }
-        }
+        loadTexture(source.diffuse_texname, material.albedoPath, material.albedoTexture, true, "albedo");
+        loadTexture(!source.normal_texname.empty() ? source.normal_texname : source.bump_texname,
+                    material.normalPath, material.normalTexture, false, "normal");
+        loadTexture(source.roughness_texname, material.roughnessPath, material.roughnessTexture, false, "roughness");
+        loadTexture(source.metallic_texname, material.metallicPath, material.metallicTexture, false, "metallic");
+        loadTexture(source.emissive_texname, material.emissionPath, material.emissionTexture, true, "emission");
+        loadTexture(source.alpha_texname, material.opacityPath, material.opacityTexture, false, "opacity");
 
         return material;
     };
@@ -415,6 +399,34 @@ bool init_lights(Object &obj) {
     return true;
 }
 
+namespace {
+void RestoreMaterialTextures(Material& material) {
+
+    material.albedoTexture = TextureManager::Get(material.albedoPath, true);
+    material.normalTexture = TextureManager::Get(material.normalPath, false);
+    material.roughnessTexture = TextureManager::Get(material.roughnessPath, false);
+    material.metallicTexture = TextureManager::Get(material.metallicPath, false);
+    material.emissionTexture = TextureManager::Get(material.emissionPath, true);
+    material.opacityTexture = TextureManager::Get(material.opacityPath, false);
+}
+
+void RestoreSavedMaterials(Object& object, const std::vector<Material>& materials) {
+
+    if (materials.empty())
+        return;
+
+    if (materials.size() != object.submeshes.size()) {
+        std::cout << "Saved material count does not match OBJ submeshes for " << object.mesh << '\n';
+        return;
+    }
+
+    for (size_t i = 0; i < materials.size(); ++i) {
+        object.submeshes[i].material = materials[i];
+        RestoreMaterialTextures(object.submeshes[i].material);
+    }
+}
+} // namespace
+
 void init() {
 
     glEnable(GL_DEPTH_TEST);
@@ -479,6 +491,7 @@ void init() {
         obj.name = p.obj_name;
         obj.mesh = p.mesh;
         obj.tex = p.tex;
+        obj.norm_map = p.normal_map;
 
         obj.position = p.position;
         obj.rotation = p.rotation;
@@ -493,20 +506,17 @@ void init() {
         obj.max = p.max;
         obj.min = p.min;
 
-        obj.obj_texture = TextureManager::Get(obj.tex);
+        obj.obj_texture = TextureManager::Get(obj.tex, true);
 
         obj.original_vertices = obj.vertices;
         obj.original_indices = obj.indices;
 
         obj.shininess = p.shininess;
 
-        if (!p.normal_map.empty())
-            obj.normalTexture = TextureManager::Get(p.normal_map);
-        else
-            obj.normalTexture = 0;
+        obj.normalTexture = TextureManager::Get(obj.norm_map, false);
+        obj.hasNormalMap = obj.hasNormalMap && obj.normalTexture != 0;
 
-        if (!obj.norm_map.empty())
-            LoadNormalMap(obj);
+        RestoreSavedMaterials(obj, p.materials);
 
         obj.physics = p.physics;
         obj.hasPhysics = p.hasPhysics;
@@ -516,6 +526,7 @@ void init() {
 
         obj.hasMaterial = p.hasMaterial;
         obj.hasMapping = p.hasMapping;
+        obj.hasAnimation = p.hasAnimation;
 
         obj.tiling = p.tiling;
 
@@ -525,11 +536,20 @@ void init() {
 
         UpdateMapping(obj);
 
-        LoadNormalMap(obj);
         objects.push_back(std::move(obj));
     }
 
-    for (int i = 0; i < par.lights.size() && i < MAX_LIGHTS; i++) { // up to 8 lights
+    // Do not let a broken or outdated file create dangling/cyclic hierarchy links.
+    for (Object& object : objects) {
+        if (object.parentID != 0 &&
+            (!FindObjectByID(object.parentID) || object.parentID == object.id ||
+             IsDescendantOf(object.parentID, object.id))) {
+            object.parentID = 0;
+        }
+    }
+
+    const size_t loadedLightCount = std::min({par.lights.size(), par.lights_objects.size(), static_cast<size_t>(MAX_LIGHTS)});
+    for (size_t i = 0; i < loadedLightCount; ++i) {
 
         Light light;
 
@@ -538,9 +558,6 @@ void init() {
         if (init_lights(obj)) {
 
             light.id = par.lights[i].id;
-
-            maxID = std::max(maxID, light.id);
-            maxID = std::max(maxID, obj.id);
 
             light.name = par.lights[i].name;
 
@@ -571,15 +588,37 @@ void init() {
             else if (light.type == "SPOT")
                 light.typeID = 2;
 
-            obj.id = par.lights_objects[i].id;
+            const Parser::Transform& savedObject = par.lights_objects[i];
+            obj.id = savedObject.id;
+            obj.parentID = savedObject.parentID;
+            obj.name = savedObject.obj_name;
+            obj.mesh = savedObject.mesh;
+            obj.tex = savedObject.tex;
+            obj.norm_map = savedObject.normal_map;
+            obj.position = savedObject.position;
+            obj.rotation = savedObject.rotation;
+            obj.scale = savedObject.scale;
+            obj.min = savedObject.min;
+            obj.max = savedObject.max;
+            obj.shininess = savedObject.shininess;
+            obj.mapping = savedObject.mapping;
+            obj.coordType = savedObject.coordType;
+            obj.cyaxisType = savedObject.cyaxisType;
+            obj.physics = savedObject.physics;
+            obj.hasPhysics = savedObject.hasPhysics;
+            obj.collider = savedObject.collider;
+            obj.hasCollider = savedObject.hasCollider;
+            obj.hasMaterial = savedObject.hasMaterial;
+            obj.hasMapping = savedObject.hasMapping;
+            obj.hasAnimation = savedObject.hasAnimation;
+            obj.tiling = savedObject.tiling;
+            obj.visible = savedObject.visible;
+            obj.obj_texture = TextureManager::Get(obj.tex, true);
+            obj.normalTexture = TextureManager::Get(obj.norm_map, false);
+            obj.hasNormalMap = savedObject.hasNormalMap && obj.normalTexture != 0;
 
-            obj.name = light.name;
-
-            obj.position = light.pos;
-            obj.rotation = par.lights[i].rotation;
-            obj.scale = glm::vec3(20.f);
-
-            obj.visible = par.lights_objects[i].visible;
+            maxID = std::max(maxID, light.id);
+            maxID = std::max(maxID, obj.id);
 
             obj.model = GetModelMatrix(obj);
 
@@ -595,6 +634,10 @@ void init() {
 
     animationPlayers = std::move(par.animPlayer);
     animationEditor = par.animEditor;
+
+    nextAnimationPlayerID = 1;
+    for (const AnimationPlayer& player : animationPlayers)
+        nextAnimationPlayerID = std::max(nextAnimationPlayerID, player.id + 1);
 
     nextEntityID = maxID + 1;
 }

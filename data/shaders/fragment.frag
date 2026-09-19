@@ -31,9 +31,21 @@ uniform bool useTexture;
 uniform vec3 color;
 
 uniform sampler2D normalMap;
+uniform sampler2D roughnessMap;
+uniform sampler2D metallicMap;
+uniform sampler2D emissionMap;
+uniform sampler2D opacityMap;
 uniform sampler2D depthData[MAX_LIGHTS];
 
 uniform bool hasNormalMap;
+uniform bool hasRoughnessMap;
+uniform bool hasMetallicMap;
+uniform bool hasEmissionMap;
+uniform bool hasOpacityMap;
+uniform float materialRoughness;
+uniform float materialMetallic;
+uniform vec3 materialEmission;
+uniform float materialOpacity;
 
 uniform bool light_active;
 uniform bool normal_map_active;
@@ -70,7 +82,7 @@ out vec4 outputColor;
 in vec4 fragPosLight[MAX_LIGHTS];
 float shadow = 0.0;
 
-vec3 ShadePointLight(Light light, vec3 N, vec3 V, vec3 baseColor) {
+vec3 ShadePointLight(Light light, vec3 N, vec3 V, vec3 baseColor, float specPower, float metallic) {
 
     vec3 lightPosView = vec3(aView * vec4(light.position, 1.0));
 
@@ -85,15 +97,15 @@ vec3 ShadePointLight(Light light, vec3 N, vec3 V, vec3 baseColor) {
     float att = 1.0 / max(denom, 0.0001);
 
     vec3 R = reflect(-L, N);
-    float spec = pow(max(dot(V, R), 0.0), shininess);
+    float spec = pow(max(dot(V, R), 0.0), specPower);
 
     vec3 diffuse = diff * light.color * min(att, 1.0);
-    vec3 specular = spec * light.color * min(att, 1.0);
+    vec3 specular = spec * mix(vec3(0.04), baseColor, metallic) * light.color * min(att, 1.0);
 
     return (light.ambient * light.color * baseColor) + (1.0 - shadow) * ((diffuse * baseColor)  + specular);
 }
 
-vec3 ShadeDirLight(Light light, vec3 N, vec3 V, vec3 baseColor) {
+vec3 ShadeDirLight(Light light, vec3 N, vec3 V, vec3 baseColor, float specPower, float metallic) {
 
     vec3 dirView = normalize(mat3(aView) * light.direction);
 
@@ -102,15 +114,15 @@ vec3 ShadeDirLight(Light light, vec3 N, vec3 V, vec3 baseColor) {
     float diff = max(dot(N, L), 0.0);
 
     vec3 R = reflect(-L, N);
-    float spec = pow(max(dot(V, R), 0.0), shininess);
+    float spec = pow(max(dot(V, R), 0.0), specPower);
 
     vec3 diffuse = diff * light.color;
-    vec3 specular = spec * light.color;
+    vec3 specular = spec * mix(vec3(0.04), baseColor, metallic) * light.color;
 
     return (light.ambient * light.color * baseColor) + (1.0 - shadow) * ((diffuse * baseColor) + specular);
 }
 
-vec3 ShadeSpotLight(Light light, vec3 N, vec3 V, vec3 baseColor) {
+vec3 ShadeSpotLight(Light light, vec3 N, vec3 V, vec3 baseColor, float specPower, float metallic) {
 
     vec3 lightPosView = vec3(aView * vec4(light.position, 1.0));
 
@@ -146,11 +158,11 @@ vec3 ShadeSpotLight(Light light, vec3 N, vec3 V, vec3 baseColor) {
 
     vec3 R = reflect(-L, N);
 
-    float spec = pow(max(dot(V, R), 0.0), shininess);
+    float spec = pow(max(dot(V, R), 0.0), specPower);
 
     diffuse = diff * light.color * min(att, 1.0) * spotEff;
 
-    specular = spec * light.color * min(att, 1.0) * spotEff;
+    specular = spec * mix(vec3(0.04), baseColor, metallic) * light.color * min(att, 1.0) * spotEff;
 
     return (light.ambient * light.color * baseColor) + (1.0 - shadow) * ((diffuse * baseColor) + specular);
 }
@@ -239,9 +251,26 @@ void main() {
         if (alpha < 0.1)
             discard;
 
-        baseColor =
-            texColor.rgb;
+        baseColor = texColor.rgb * color;
     }
+
+    float roughness = clamp(materialRoughness, 0.04, 1.0);
+    if (hasRoughnessMap)
+        roughness = clamp(texture(roughnessMap, tiledUV).r, 0.04, 1.0);
+
+    float metallic = clamp(materialMetallic, 0.0, 1.0);
+    if (hasMetallicMap)
+        metallic = clamp(texture(metallicMap, tiledUV).r, 0.0, 1.0);
+
+    vec3 emission = materialEmission;
+    if (hasEmissionMap)
+        emission *= texture(emissionMap, tiledUV).rgb;
+
+    alpha *= materialOpacity;
+    if (hasOpacityMap)
+        alpha *= texture(opacityMap, tiledUV).r;
+    if (alpha < 0.1)
+        discard;
 
 
     // ------------------------------------------------------------
@@ -298,7 +327,7 @@ void main() {
 
     if (!light_active) {
 
-        outputColor = vec4(baseColor, alpha);
+        outputColor = vec4(baseColor + emission, alpha);
 
         return;
     }
@@ -307,7 +336,8 @@ void main() {
     // ------------------------------------------------------------
     // light
 
-    vec3 result = vec3(0.0);
+    vec3 result = emission;
+    float specPower = mix(256.0, 2.0, roughness);
 
 
     for (int i = 0; i < numLights; i++) {
@@ -376,7 +406,7 @@ void main() {
                     lights[i],
                     finalNormal,
                     V,
-                    baseColor
+                    baseColor, specPower, metallic
                 );
         }
         else if (lights[i].type == 1) {
@@ -385,7 +415,7 @@ void main() {
                     lights[i],
                     finalNormal,
                     V,
-                    baseColor
+                    baseColor, specPower, metallic
                 );
         }
         else if (lights[i].type == 2) {
@@ -394,7 +424,7 @@ void main() {
                     lights[i],
                     finalNormal,
                     V,
-                    baseColor
+                    baseColor, specPower, metallic
                 );
         }
     }

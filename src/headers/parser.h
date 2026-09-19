@@ -4,141 +4,147 @@
 #include <GL/GL.h>
 #include <SDL3/SDL.h>
 #include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtx/quaternion.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/quaternion.hpp>
 
-#include <string>
 #include <iostream>
+#include <string>
 
-#include <fstream>
 #include <array>
+#include <fstream>
 #include <vector>
 
-#include "local.h"
 #include "classes.h"
+#include "local.h"
 
 struct Parser {
-		
-	bool load(const char* settings_name, const char* scene_name, Settings& st, camera& cam, std::vector<Object>& scene);
-	void save(const char* settings_name, const char* scene_name, Settings& st, camera& cam, const std::vector<Object>& scene, const std::vector<Object>& scene_lgh_obj, const std::vector<::Light>& scene_lgh);
 
-	void load_settings(std::ifstream& in, Settings& st, camera& cam);
-	void save_settings(std::ofstream& out, Settings& st, camera& cam);
+    bool load(const char *settings_name, const char *scene_name, Settings &st, camera &cam, std::vector<Object> &scene);
+    void save(const char *settings_name, const char *scene_name, Settings &st, camera &cam,
+              const std::vector<Object> &scene, const std::vector<Object> &scene_lgh_obj,
+              const std::vector<::Light> &scene_lgh);
 
-	bool load_scene(std::ifstream& in);
-	void save_scene(std::ofstream& out, const std::vector<Object>& scene, const std::vector<Object>& scene_lgh_obj, const std::vector<::Light>& scene_lgh);
+    void load_settings(std::ifstream &in, Settings &st, camera &cam);
+    void save_settings(std::ofstream &out, Settings &st, camera &cam);
 
-	void WriteString(std::ofstream& out, const std::string& str);
-	void ReadString(std::ifstream& in, std::string& str);
+    bool load_scene(std::ifstream &in, Settings *sceneSettings = nullptr, camera *sceneCamera = nullptr);
+    void save_scene(std::ofstream &out, const std::vector<Object> &scene, const std::vector<Object> &scene_lgh_obj,
+                    const std::vector<::Light> &scene_lgh, const Settings &sceneSettings, const camera &sceneCamera);
 
-	template<typename T>
+    void WriteString(std::ofstream &out, const std::string &str);
+    void ReadString(std::ifstream &in, std::string &str);
 
-	void Write(std::ofstream& out, const T& t) {
+    template <typename T>
 
-		out.write(reinterpret_cast<const char*>(&t), sizeof(t));
-	}
+    void Write(std::ofstream &out, const T &t) {
 
-	template<typename M>
+        out.write(reinterpret_cast<const char *>(&t), sizeof(t));
+    }
 
-	void Read(std::ifstream& in, M& m) {
+    template <typename M>
 
-		in.read(reinterpret_cast<char*>(&m), sizeof(m));
-	}
+    void Read(std::ifstream &in, M &m) {
 
-	void WriteAnimationValue(std::ofstream& out, const AnimationValue& value);
+        in.read(reinterpret_cast<char *>(&m), sizeof(m));
+    }
 
-	void ReadAnimationValue(std::ifstream& in, AnimationValue& value);
+    void WriteAnimationValue(std::ofstream &out, const AnimationValue &value);
 
-	void WriteAnimationKey(std::ofstream& out, const AnimationKey& key);
+    void ReadAnimationValue(std::ifstream &in, AnimationValue &value);
 
-	void ReadAnimationKey(std::ifstream& in, AnimationKey& key);
+    void WriteAnimationKey(std::ofstream &out, const AnimationKey &key);
 
-	void WriteAnimationTrack(std::ofstream& out, const AnimationTrack& track);
+    void ReadAnimationKey(std::ifstream &in, AnimationKey &key);
 
-	void ReadAnimationTrack(std::ifstream& in, AnimationTrack& track);
+    void WriteAnimationTrack(std::ofstream &out, const AnimationTrack &track);
 
-	void WriteAnimationClip(std::ofstream& out, const AnimationClip& clip);
+    void ReadAnimationTrack(std::ifstream &in, AnimationTrack &track);
 
-	void ReadAnimationClip(std::ifstream& in, AnimationClip& clip);
+    void WriteAnimationClip(std::ofstream &out, const AnimationClip &clip);
 
-	std::string skybox;
+    void ReadAnimationClip(std::ifstream &in, AnimationClip &clip);
 
-	struct Transform {
+    void WriteMaterial(std::ofstream &out, const Material &material);
+    void ReadMaterial(std::ifstream &in, Material &material);
 
-		EntityID id;
-		EntityID parentID = 0;
+    std::string skybox;
 
-		std::string obj_name;
+    struct Transform {
 
-		std::string mesh;
+        EntityID id;
+        EntityID parentID = 0;
 
-		std::string tex;
+        std::string obj_name;
 
-		std::string normal_map = "data/textures/brick_normal_map.png";
-		bool hasNormalMap = false;
-		
-		glm::vec3 position;
-		glm::quat rotation;
-		glm::vec3 scale;
+        std::string mesh;
 
-		glm::vec3 min, max;
+        std::string tex;
 
-		TextureMapping mapping = TextureMapping::UV;
-		coord_types coordType = coord_types::XZ;
-		cylinder_axis cyaxisType = cylinder_axis::Y;
+        std::string normal_map = "data/textures/brick_normal_map.png";
+        bool hasNormalMap = false;
 
-		float shininess;
+        glm::vec3 position;
+        glm::quat rotation;
+        glm::vec3 scale;
 
-		Physics physics;
-		bool hasPhysics = false;
+        glm::vec3 min, max;
 
-		Collider collider;
-		bool hasCollider = false;
+        TextureMapping mapping = TextureMapping::UV;
+        coord_types coordType = coord_types::XZ;
+        cylinder_axis cyaxisType = cylinder_axis::Y;
 
-		bool hasMaterial = true;
+        float shininess;
 
-		bool hasMapping = true;
+        Physics physics;
+        bool hasPhysics = false;
 
-		bool hasAnimation = true;
+        Collider collider;
+        bool hasCollider = false;
 
-		bool tiling = false;
+        bool hasMaterial = true;
 
-		bool visible = true;
-	};
+        bool hasMapping = true;
 
-	std::vector<Transform> objects;
+        bool hasAnimation = true;
 
-	struct Light {
+        bool tiling = false;
 
-		EntityID id;
+        bool visible = true;
 
-		std::string name;
+        std::vector<Material> materials;
+    };
 
-		glm::vec3 pos;
-		glm::vec3 dir;
-		glm::vec3 col;
-		glm::vec3 att;
+    std::vector<Transform> objects;
 
-		glm::quat rotation;
+    struct Light {
 
-		float amb;
-		float inner;
-		float outer;
-		float falloff;
-		float bias;
-		float pcf;
+        EntityID id;
 
-		std::string type = "POINT";
+        std::string name;
 
-		bool hasAnimation = true;
+        glm::vec3 pos;
+        glm::vec3 dir;
+        glm::vec3 col;
+        glm::vec3 att;
 
-	};
+        glm::quat rotation;
 
-	std::vector<Light> lights;
-	std::vector<Transform> lights_objects;
+        float amb;
+        float inner;
+        float outer;
+        float falloff;
+        float bias;
+        float pcf;
 
-	std::vector<AnimationClip> anim;
-	std::vector<AnimationPlayer> animPlayer;
-	AnimationEditorState animEditor;
+        std::string type = "POINT";
 
+        bool hasAnimation = true;
+    };
+
+    std::vector<Light> lights;
+    std::vector<Transform> lights_objects;
+
+    std::vector<AnimationClip> anim;
+    std::vector<AnimationPlayer> animPlayer;
+    AnimationEditorState animEditor;
 };
