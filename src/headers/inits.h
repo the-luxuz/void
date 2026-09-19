@@ -31,6 +31,7 @@ void init_skybox(const char* skyboxFile, bool create_vaos);
 void init_camera();
 
 void init_obj(const char* objFile, Object& obj);
+void PrepareImportedObject(Object& obj);
 
 bool init_lights(Object& obj);
 

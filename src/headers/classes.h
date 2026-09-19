@@ -3,10 +3,10 @@
 #include "local.h"
 #include "video_player.h"
 
+#include <algorithm>
 #include <glm/gtx/quaternion.hpp>
 #include <unordered_map>
 #include <variant>
-#include <algorithm>
 
 using EntityID = uint64_t;
 
@@ -38,10 +38,9 @@ class TextureManager {
 
     static std::unordered_map<std::string, GLuint> textures;
 
-public:
-    static GLuint Get(const std::string& path);
+  public:
+    static GLuint Get(const std::string &path);
     static void Clear();
-
 };
 
 struct VideoQuad {
@@ -52,16 +51,9 @@ struct VideoQuad {
 
     float vertices[16] = {
         // position     // uv
-        -1.0f, -1.0f,   0.0f, 1.0f,
-         1.0f, -1.0f,   1.0f, 1.0f,
-         1.0f,  1.0f,   1.0f, 0.0f,
-        -1.0f,  1.0f,   0.0f, 0.0f
-    };
+        -1.0f, -1.0f, 0.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, -1.0f, 1.0f, 0.0f, 0.0f};
 
-    unsigned int indices[6] = {
-        0, 1, 2,
-        2, 3, 0
-    };
+    unsigned int indices[6] = {0, 1, 2, 2, 3, 0};
 };
 
 struct Program {
@@ -72,7 +64,7 @@ struct Program {
     GLint textureLoc;
 };
 
-enum  class window_mode {
+enum class window_mode {
     WINDOWED,
     WINDOWED_BORDERLESS,
     FULLSCREEN
@@ -85,7 +77,7 @@ enum class ColliderType {
     AABB
 };
 
-enum CollisionLayer{
+enum CollisionLayer {
     World = 1 << 0,
     Player = 1 << 1,
     Enemy = 1 << 2,
@@ -107,8 +99,8 @@ struct Collider {
 
     ColliderType type = ColliderType::AABB;
 
-	uint32_t layer = CollisionLayer::World;        // layer of the object, used for collision filtering
-	uint32_t mask = CollisionLayer::World;    // with which layers it can collide
+    uint32_t layer = CollisionLayer::World; // layer of the object, used for collision filtering
+    uint32_t mask = CollisionLayer::World;  // with which layers it can collide
 
     bool isTrigger = false;
 
@@ -116,7 +108,7 @@ struct Collider {
     float radius;
 
     // AABB
-    //glm::vec3 halfExtents = glm::vec3(0.5f);
+    // glm::vec3 halfExtents = glm::vec3(0.5f);
 };
 
 struct Vertex {
@@ -129,7 +121,6 @@ struct Vertex {
 
     glm::vec3 tangent;
     glm::vec3 bitangent;
-
 };
 
 struct Physics {
@@ -154,6 +145,7 @@ struct ObjectState {
     glm::vec3 position;
     glm::quat rotation;
     glm::vec3 scale;
+    EntityID parentID = 0;
 
     std::string name;
     std::string mesh;
@@ -174,8 +166,8 @@ struct ObjectState {
 
     float shininess;
 
-	Physics physics;
-	bool hasPhysics;
+    Physics physics;
+    bool hasPhysics;
 
     Collider collider;
     bool hasCollider = false;
@@ -210,12 +202,35 @@ struct LightState {
     GLuint typeID;
 
     bool hasAnimation = true;
-
 };
 
 struct LineVertex {
 
     glm::vec3 position;
+};
+
+struct Material {
+
+    std::string name;
+
+    // Albedo / diffuse
+    std::string albedoPath;
+    GLuint albedoTexture = 0;
+
+    // Normal / bump
+    std::string normalPath;
+    GLuint normalTexture = 0;
+
+    // Kd del MTL
+    glm::vec3 diffuse = glm::vec3(1.0f);
+};
+
+struct Submesh {
+    GLuint firstIndex = 0;
+    GLuint indexCount = 0;
+    Material material;
+    glm::vec3 min = glm::vec3(0.0f);
+    glm::vec3 max = glm::vec3(0.0f);
 };
 
 struct Settings {
@@ -242,12 +257,15 @@ struct Settings {
 
     bool physics_active = true;
 
-	bool collision_active = true;
+    bool collision_active = true;
 };
 
 struct camera {
 
-    camera() : fov(90), nearPlane(.1f), farPlane(5000.0f), cam_position(100, 100, 100), cam_target(0, 0, 0), cam_up(0, 1, 0) {}
+    camera()
+        : fov(90), nearPlane(.5f), farPlane(5000.0f), cam_position(100, 100, 100), cam_target(0, 0, 0),
+          cam_up(0, 1, 0) {
+    }
 
     float fov;
 
@@ -259,7 +277,6 @@ struct camera {
     glm::vec3 cam_position;
     glm::vec3 cam_target;
     glm::vec3 cam_up;
-
 };
 
 struct Object {
@@ -292,6 +309,7 @@ struct Object {
 
     std::vector<Vertex> vertices;
     std::vector<GLuint> indices;
+    std::vector<Submesh> submeshes;
 
     std::vector<LineVertex> normalLines;
 
@@ -305,6 +323,12 @@ struct Object {
     glm::vec3 position;
     glm::quat rotation;
     glm::vec3 scale;
+    // Zero means this object is a root node.  Transforms are local to the
+    // parent whenever one is assigned.
+    EntityID parentID = 0;
+    // Calculated only for a newly imported asset. Saved scene transforms keep
+    // using their serialized scale.
+    float importScale = 1.0f;
 
     std::string mesh; // has the .obj path
 
@@ -333,7 +357,7 @@ struct Object {
     bool hasPhysics = false;
 
     Collider collider;
-	bool hasCollider = false;
+    bool hasCollider = false;
 
     bool hasMaterial = true;
 
@@ -381,13 +405,12 @@ struct Light {
     bool hasAnimation = true;
 };
 
+inline LightState CaptureLightState(const Light &l) {
 
-inline LightState CaptureLightState(const Light& l) {
-
-    return { l.col, l.att, l.ambient, l.inner, l.outer, l.falloff, l.bias, l.pcf, l.type, l.typeID, l.hasAnimation };
+    return {l.col, l.att, l.ambient, l.inner, l.outer, l.falloff, l.bias, l.pcf, l.type, l.typeID, l.hasAnimation};
 }
 
-inline void ApplyLightState(Light& l, const LightState& s) {
+inline void ApplyLightState(Light &l, const LightState &s) {
 
     l.col = s.col;
     l.att = s.att;
@@ -408,38 +431,42 @@ inline void ApplyLightState(Light& l, const LightState& s) {
     l.hasAnimation = s.hasAnimation;
 }
 
-inline ObjectState CaptureState(const Object& o) {
+inline ObjectState CaptureState(const Object &o) {
 
-    return { o.position, o.rotation, o.scale, o.name, o.mesh, o.obj_texture, o.tex, o.min, o.max, o.mapping, o.coordType, o.cyaxisType, o.normalTexture, o.norm_map, o.hasNormalMap, o.shininess, o.physics, o.hasPhysics, o.collider, o.hasCollider, o.hasMaterial, o.hasMapping, o.hasAnimation, o.tiling, o.visible };
+    return {o.position,    o.rotation,     o.scale,        o.parentID, o.name,       o.mesh,       o.obj_texture,
+            o.tex,         o.min,          o.max,          o.mapping,  o.coordType,  o.cyaxisType, o.normalTexture,
+            o.norm_map,    o.hasNormalMap, o.shininess,    o.physics,  o.hasPhysics, o.collider,   o.hasCollider,
+            o.hasMaterial, o.hasMapping,   o.hasAnimation, o.tiling,   o.visible};
 }
 
-inline void ApplyState(Object& o, const ObjectState& s) {
+inline void ApplyState(Object &o, const ObjectState &s) {
 
     o.position = s.position;
     o.rotation = s.rotation;
     o.scale = s.scale;
+    o.parentID = s.parentID;
 
-	o.name = s.name;
-	o.mesh = s.mesh;
+    o.name = s.name;
+    o.mesh = s.mesh;
 
-	o.obj_texture = s.obj_texture;
-	o.tex = s.tex;
+    o.obj_texture = s.obj_texture;
+    o.tex = s.tex;
 
-	o.min = s.min;
-	o.max = s.max;
+    o.min = s.min;
+    o.max = s.max;
 
-	o.mapping = s.mapping;
-	o.coordType = s.coordType;
-	o.cyaxisType = s.cyaxisType;
+    o.mapping = s.mapping;
+    o.coordType = s.coordType;
+    o.cyaxisType = s.cyaxisType;
 
-	o.normalTexture = s.normalTexture;
-	o.norm_map = s.norm_map;
-	o.hasNormalMap = s.hasNormalMap;
+    o.normalTexture = s.normalTexture;
+    o.norm_map = s.norm_map;
+    o.hasNormalMap = s.hasNormalMap;
 
-	o.shininess = s.shininess;
+    o.shininess = s.shininess;
 
-	o.physics = s.physics;
-	o.hasPhysics = s.hasPhysics;
+    o.physics = s.physics;
+    o.hasPhysics = s.hasPhysics;
 
     o.collider = s.collider;
     o.hasCollider = s.hasCollider;
@@ -458,7 +485,7 @@ struct Shader_Uniform {
 
     GLint grid_MVP;
 
-	GLint program_texture;
+    GLint program_texture;
 
     GLint depthdata[MAX_LIGHTS];
 
@@ -474,49 +501,48 @@ struct Shader_Uniform {
     GLint light_outer[MAX_LIGHTS];
     GLint light_falloff[MAX_LIGHTS];
 
-	GLint lightVP;
+    GLint lightVP;
 
-	GLint normalMap;
+    GLint normalMap;
 
-	GLint numLights;
+    GLint numLights;
 
-	GLint light_active;
-	GLint normal_map_active;
-	GLint shadow_active;
+    GLint light_active;
+    GLint normal_map_active;
+    GLint shadow_active;
 
-	GLint cameraPos;
+    GLint cameraPos;
 
-	GLint shininess;
+    GLint shininess;
 
-	GLint hasNormalMap;
+    GLint hasNormalMap;
 
     GLint program_line_color;
 
     GLint skybox_view;
 
-	GLint skybox_projection;
+    GLint skybox_projection;
 
-	GLint is_hdr;
+    GLint is_hdr;
 
-	GLint program_skybox_skybox;
+    GLint program_skybox_skybox;
 
-	GLint color;
+    GLint color;
 
-	GLint useTexture;
+    GLint useTexture;
 
-	GLint textureTiling;
+    GLint textureTiling;
 
-	GLint mapping;
+    GLint mapping;
 
-	GLint min;
-	GLint max;
+    GLint min;
+    GLint max;
 
     GLint worldSize;
 
     GLint tiling;
 
-	bool class_uniforms_initialized = false;
-
+    bool class_uniforms_initialized = false;
 };
 
 //--------------------------------------------------------------
@@ -629,26 +655,27 @@ extern AnimationPlayerID nextAnimationPlayerID;
 
 extern AnimationPlayer animationPreviewPlayer;
 
-float InterpolateFloat(const AnimationKey& a, const AnimationKey& b, float time);
+float InterpolateFloat(const AnimationKey &a, const AnimationKey &b, float time);
 
-glm::vec3 InterpolateVec3(const AnimationKey& a, const AnimationKey& b, float time);
+glm::vec3 InterpolateVec3(const AnimationKey &a, const AnimationKey &b, float time);
 
-glm::quat InterpolateQuat(const AnimationKey& a, const AnimationKey& b, float time);
+glm::quat InterpolateQuat(const AnimationKey &a, const AnimationKey &b, float time);
 
-const AnimationKey* GetPrevKey(const AnimationTrack& track, float time);
+const AnimationKey *GetPrevKey(const AnimationTrack &track, float time);
 
-const AnimationKey* GetNextKey(const AnimationTrack& track, float time);
+const AnimationKey *GetNextKey(const AnimationTrack &track, float time);
 
-AnimationTrack* FindTrack(AnimationClip& clip, AnimationTargetType targetType, EntityID targetID, AnimationProperty property);
+AnimationTrack *FindTrack(AnimationClip &clip, AnimationTargetType targetType, EntityID targetID,
+                          AnimationProperty property);
 
-AnimationTrack& GetOrCreateTrack(AnimationClip& clip, AnimationTargetType targetType, EntityID targetID, AnimationProperty property);
+AnimationTrack &GetOrCreateTrack(AnimationClip &clip, AnimationTargetType targetType, EntityID targetID,
+                                 AnimationProperty property);
 
-void RecalculateAnimationDuration(AnimationClip& clip);
+void RecalculateAnimationDuration(AnimationClip &clip);
 
-template<typename T>
-void AddKey(AnimationTrack& track, float time, const T& value) {
+template <typename T> void AddKey(AnimationTrack &track, float time, const T &value) {
 
-    for (AnimationKey& key : track.keys) {
+    for (AnimationKey &key : track.keys) {
 
         if (std::abs(key.time - time) < 0.0001f) {
 
@@ -658,19 +685,15 @@ void AddKey(AnimationTrack& track, float time, const T& value) {
         }
     }
 
-    track.keys.push_back({ time, AnimationValue(value) });
+    track.keys.push_back({time, AnimationValue(value)});
 
-    std::sort(track.keys.begin(), track.keys.end(), [](const AnimationKey& a, const AnimationKey& b) {
-
-        return a.time < b.time;
-
-        }
-    );
+    std::sort(track.keys.begin(), track.keys.end(),
+              [](const AnimationKey &a, const AnimationKey &b) { return a.time < b.time; });
 }
 
-AnimationValue EvaluateTrack(const AnimationTrack& track, float time);
+AnimationValue EvaluateTrack(const AnimationTrack &track, float time);
 
-const char* AnimationPropertyName(AnimationProperty property);
+const char *AnimationPropertyName(AnimationProperty property);
 
 float TimelineTimeToX(float time, float startX, float pixelsPerSecond, float scrollTime);
 
@@ -678,7 +701,7 @@ float TimelineXToTime(float x, float startX, float pixelsPerSecond, float scroll
 
 AnimationPlayerID PlayAnimation(int animationIndex);
 
-int FindAnimationByName(const std::string& name);
+int FindAnimationByName(const std::string &name);
 
 //--------------------------------------------------------------
 // events
@@ -701,9 +724,10 @@ struct Event {
     virtual EventType GetType() const = 0;
 };
 
-struct PlaySoundEvent : public Event{
+struct PlaySoundEvent : public Event {
 
-    PlaySoundEvent(std::string p, float v) : path(p), volume(v) {}
+    PlaySoundEvent(std::string p, float v) : path(p), volume(v) {
+    }
 
     EventType GetType() const override {
         return EventType::PlaySound;
@@ -716,7 +740,7 @@ struct PlaySoundEvent : public Event{
 int FindAnimations(std::string name, EntityID objId);
 
 //
-//struct StopSoundEvent : public Event{
+// struct StopSoundEvent : public Event{
 //
 //    StopSoundEvent(std::string p, float v) : path(p), volume(v)
 //    {}
@@ -731,7 +755,8 @@ int FindAnimations(std::string name, EntityID objId);
 
 struct PlayAnimationEvent : public Event {
 
-    PlayAnimationEvent(const std::string& animation) : animation(animation) {}
+    PlayAnimationEvent(const std::string &animation) : animation(animation) {
+    }
 
     EventType GetType() const override {
 
@@ -743,7 +768,8 @@ struct PlayAnimationEvent : public Event {
 
 struct PlayCinematicEvent : public Event {
 
-    PlayCinematicEvent(const std::string& p) : path(p) {}
+    PlayCinematicEvent(const std::string &p) : path(p) {
+    }
 
     EventType GetType() const override {
 
@@ -760,49 +786,48 @@ struct EventManager {
         events.push_back(std::move(event));
     }
 
-    void HandleEvent(Event& event) {
+    void HandleEvent(Event &event) {
 
         switch (event.GetType()) {
 
-            case EventType::PlaySound: {
-        
-                PlaySoundEvent& soundEvent = static_cast<PlaySoundEvent&>(event);
+        case EventType::PlaySound: {
 
-                // missing
+            PlaySoundEvent &soundEvent = static_cast<PlaySoundEvent &>(event);
 
-                break;
+            // missing
 
-            }
+            break;
+        }
 
-            case EventType::PlayAnimation: {
-        
-                PlayAnimationEvent& animEvent = static_cast<PlayAnimationEvent&>(event);
+        case EventType::PlayAnimation: {
 
-                int animationIndex = FindAnimationByName(animEvent.animation);
+            PlayAnimationEvent &animEvent = static_cast<PlayAnimationEvent &>(event);
 
-                if (animationIndex >= 0)
-                    PlayAnimation(animationIndex);
+            int animationIndex = FindAnimationByName(animEvent.animation);
 
-                break;
-            }
+            if (animationIndex >= 0)
+                PlayAnimation(animationIndex);
 
-            case EventType::StartCinematic: {
+            break;
+        }
 
-                PlayCinematicEvent& cinematicEvent = static_cast<PlayCinematicEvent&>(event);
+        case EventType::StartCinematic: {
 
-                videoPlayer.Open(cinematicEvent.path.c_str());
-                videoPlayer.Play();
+            PlayCinematicEvent &cinematicEvent = static_cast<PlayCinematicEvent &>(event);
 
-                isCinematicActive = true;
+            videoPlayer.Open(cinematicEvent.path.c_str());
+            videoPlayer.Play();
 
-                break;
-            }
+            isCinematicActive = true;
+
+            break;
+        }
         }
     }
 
     void Dispatch() {
 
-        for (auto& event : events) {
+        for (auto &event : events) {
 
             HandleEvent(*event);
         }
@@ -810,8 +835,7 @@ struct EventManager {
         events.clear();
     }
 
-private:
-
+  private:
     std::vector<std::unique_ptr<Event>> events;
 };
 

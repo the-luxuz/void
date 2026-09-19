@@ -66,6 +66,7 @@ struct Parser {
 	struct Transform {
 
 		EntityID id;
+		EntityID parentID = 0;
 
 		std::string obj_name;
 

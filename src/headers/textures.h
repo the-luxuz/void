@@ -1,9 +1,9 @@
 #pragma once
 
-#include "local.h"
-#include "tinyexr.h"
 #include "classes.h"
+#include "local.h"
 #include "stb_image.h"
+#include "tinyexr.h"
 
 #include <filesystem>
 #include <iostream>
@@ -29,19 +29,19 @@ extern GLuint skybox_texture;
 //--------------------------------------------------------------------------
 // EXR and HDR texture
 
-GLuint LoadEXRTexture(const std::string& path);
+GLuint LoadEXRTexture(const std::string &path);
 
-GLuint LoadHDRTexture(const std::string& path);
+GLuint LoadHDRTexture(const std::string &path);
 
 //--------------------------------------------------------------------------
 // Skybox
 
-void Load_Skybox(const std::string& path);
+void Load_Skybox(const std::string &path);
 
 //--------------------------------------------------------------------------
 // OBJ texture
 
-GLuint LoadObjTexture(const std::string& path);
+GLuint LoadObjTexture(const std::string &path);
 
 //--------------------------------------------------------------------------
 // Viewport and viewport depth texture
@@ -54,4 +54,4 @@ void Create_depth_tex(int width, int height, int i);
 //--------------------------------------------------------------------------
 // Normal map
 
-void LoadNormalMap(Object& obj);
+void LoadNormalMap(Object &obj);

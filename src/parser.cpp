@@ -1,5 +1,9 @@
 #include "parser.h"
 
+namespace {
+constexpr uint32_t SceneMagic = 0x564F4944; // "VOID"
+constexpr uint32_t SceneVersion = 2;
+}
 
 void Parser::WriteAnimationValue(std::ofstream& out, const AnimationValue& value) {
 
@@ -287,14 +291,17 @@ void Parser::save_scene(std::ofstream& out, const std::vector<Object>& scene, co
     uint32_t lightCount = scene_lgh.size();
     uint32_t animCount = animations.size();
 
-    Write(out, count);
+	Write(out, SceneMagic);
+	Write(out, SceneVersion);
+	Write(out, count);
     Write(out, lightObjCount);
     Write(out, lightCount);
     Write(out, animCount);
 
-    for (auto& obj : scene) {
+	for (auto& obj : scene) {
 
-        Write(out, obj.id);
+		Write(out, obj.id);
+		Write(out, obj.parentID);
 
         WriteString(out, obj.name);
         WriteString(out, obj.mesh);
@@ -439,7 +446,18 @@ void Parser::save_scene(std::ofstream& out, const std::vector<Object>& scene, co
 
 bool Parser::load_scene(std::ifstream& in) {
     
-    uint32_t count;
+	uint32_t header;
+	uint32_t sceneVersion = 1;
+	Read(in, header);
+	if (header == SceneMagic) {
+		Read(in, sceneVersion);
+	}
+	else {
+		// Version 1 scenes started directly with the object count.
+		in.seekg(0, std::ios::beg);
+	}
+
+	uint32_t count;
     uint32_t lightObjCount;
     uint32_t lightCount;
     uint32_t animCount;
@@ -459,9 +477,13 @@ bool Parser::load_scene(std::ifstream& in) {
     lights.resize(lightCount);
     anim.resize(animCount);
 
-    for (auto& obj : objects) {
+	for (auto& obj : objects) {
 
-        Read(in, obj.id);
+		Read(in, obj.id);
+		if (sceneVersion >= 2)
+			Read(in, obj.parentID);
+		else
+			obj.parentID = 0;
 
         if (obj.id == 0)
             obj.id = GenerateEntityID();

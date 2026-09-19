@@ -165,6 +165,7 @@
     <ClCompile Include="..\src\main.cpp" />
     <ClCompile Include="..\src\parser.cpp" />
     <ClCompile Include="..\src\programs.cpp" />
+    <ClCompile Include="..\src\scene_hierarchy.cpp" />
     <ClCompile Include="..\src\textures.cpp" />
     <ClCompile Include="..\src\tinyobjloader.cpp" />
     <ClCompile Include="..\src\updates.cpp" />
@@ -182,6 +183,7 @@
     <ClInclude Include="..\src\headers\local.h" />
     <ClInclude Include="..\src\headers\parser.h" />
     <ClInclude Include="..\src\headers\programs.h" />
+    <ClInclude Include="..\src\headers\scene_hierarchy.h" />
     <ClInclude Include="..\src\headers\textures.h" />
     <ClInclude Include="..\src\headers\tiny_obj_loader.h" />
     <ClInclude Include="..\src\headers\updates.h" />

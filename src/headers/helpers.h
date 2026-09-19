@@ -1,11 +1,12 @@
 #pragma once
 
+#include "classes.h"
+#include "inits.h"
 #include "local.h"
 #include "parser.h"
-#include "classes.h"
 #include "programs.h"
+#include "scene_hierarchy.h"
 #include "textures.h"
-#include "inits.h"
 
 //--------------------------------------------------------------------------
 // global variables
@@ -120,14 +121,14 @@ extern int render_modes;
 
 // tools
 enum class Tools {
-	TRANSLATE,
-	ROTATE,
-	SCALE
+    TRANSLATE,
+    ROTATE,
+    SCALE
 };
 
 enum class view_Mode {
-	EDITOR,
-	PLAY
+    EDITOR,
+    PLAY
 };
 
 extern view_Mode currentViewMode;
@@ -149,7 +150,7 @@ extern SDL_AudioSpec spec;
 //--------------------------------------------------------------------------
 // Load scene in the good way
 
-bool load_scene_ok(const char* scene);
+bool load_scene_ok(const char *scene);
 
 //--------------------------------------------------------------------------
 // ImGui docking
@@ -163,26 +164,26 @@ void Docking();
 
 void ResizeViewport(int width, int height);
 
-void ApplyWindowMode(SDL_Window* window);
+void ApplyWindowMode(SDL_Window *window);
 
 //--------------------------------------------------------------------------
 // Mapping
 
-void FixCylinder(Object& obj);
+void FixCylinder(Object &obj);
 
-void FixSphere(Object& obj);
+void FixSphere(Object &obj);
 
-void RestoreOriginalUV(Object& obj);
+void RestoreOriginalUV(Object &obj);
 
-void GeneratePlanarUV(Object& obj, coord_types coordType);
+void GeneratePlanarUV(Object &obj, coord_types coordType);
 
-void GenerateCubeUV(Object& obj);
+void GenerateCubeUV(Object &obj);
 
-void GenerateCylindricalUV(Object& obj, cylinder_axis axis);
+void GenerateCylindricalUV(Object &obj, cylinder_axis axis);
 
-void GenerateSphericalUV(Object& obj);
+void GenerateSphericalUV(Object &obj);
 
-void UpdateMapping(Object& obj);
+void UpdateMapping(Object &obj);
 
 //--------------------------------------------------------------------------
 // Reload folder
@@ -192,7 +193,7 @@ void ReloadFolder();
 //--------------------------------------------------------------------------
 // Obj names
 
-std::string GenerateObjectName(const std::string& baseName);
+std::string GenerateObjectName(const std::string &baseName);
 
 //--------------------------------------------------------------------------
 // Reload textures path
@@ -213,32 +214,31 @@ void GenSkybox();
 
 glm::vec3 get_cam_pos();
 
-Object* GetSelectedObject();
+Object *GetSelectedObject();
 
-Light* GetSelectedLight();
-
-glm::mat4 GetModelMatrix(Object& obj);
+Light *GetSelectedLight();
 
 //--------------------------------------------------------------------------
 // Ray-AABB intersection test
 
-bool RayVsAABB(const glm::vec3& rayOrigin, const glm::vec3& rayDir, const glm::vec3& boxMin, const glm::vec3& boxMax, float& t);
+bool RayVsAABB(const glm::vec3 &rayOrigin, const glm::vec3 &rayDir, const glm::vec3 &boxMin, const glm::vec3 &boxMax,
+               float &t);
 
-void BuildRay(float mouseX, float mouseY, glm::vec3& rayOrigin, glm::vec3& rayDir);
+void BuildRay(float mouseX, float mouseY, glm::vec3 &rayOrigin, glm::vec3 &rayDir);
 
 //--------------------------------------------------------------------------
 // Select obj
 
-void select_object(glm::vec3& rayOrigin, glm::vec3& rayDir);
+void select_object(glm::vec3 &rayOrigin, glm::vec3 &rayDir);
 
 //--------------------------------------------------------------------------
 // Controls
 
-void controls(const bool* keyboard, float angle_step, float radius_step, float dt);
+void controls(const bool *keyboard, float angle_step, float radius_step, float dt);
 
-void PlayerControl(const bool* keyboard, float dt, Object& player);
+void PlayerControl(const bool *keyboard, float dt, Object &player);
 
-void UpdatePlayerCamera(Object& player);
+void UpdatePlayerCamera(Object &player);
 
 //--------------------------------------------------------------------------
 // Grid
@@ -248,73 +248,73 @@ void Create_Grid();
 //--------------------------------------------------------------------------
 // Lines
 
-void Build_Normals(Object& obj);
+void Build_Normals(Object &obj);
 
-void Build_TBN(Object& obj);
+void Build_TBN(Object &obj);
 
-void CreateLineBuffer(GLuint& vao, GLuint& vbo, const std::vector<LineVertex>& data);
+void CreateLineBuffer(GLuint &vao, GLuint &vbo, const std::vector<LineVertex> &data);
 
-void Calculate_Average_Normals(Object& obj);
+void Calculate_Average_Normals(Object &obj);
 
-void Calculate_Average_TBN(Object& obj);
+void Calculate_Average_TBN(Object &obj);
 
-glm::vec3 Compute_Normal(const glm::vec3& a, const glm::vec3& b, const glm::vec3& c);
+glm::vec3 Compute_Normal(const glm::vec3 &a, const glm::vec3 &b, const glm::vec3 &c);
 
 //--------------------------------------------------------------------------
 // Vertex and triangle helpers
 
-void Add_Vertex(Object& obj, const Vertex& v);
+void Add_Vertex(Object &obj, const Vertex &v);
 
-void Add_Vertex(Light& lgh, const Vertex& v);
+void Add_Vertex(Light &lgh, const Vertex &v);
 
-void Add_Tri(Object& obj, const Vertex& in_v0, const Vertex& in_v1, const Vertex& in_v2);
+void Add_Tri(Object &obj, const Vertex &in_v0, const Vertex &in_v1, const Vertex &in_v2);
 
-void Add_Tri(Light& lgh, const  Vertex& in_v0, const  Vertex& in_v1, const  Vertex& in_v2);
+void Add_Tri(Light &lgh, const Vertex &in_v0, const Vertex &in_v1, const Vertex &in_v2);
 
 //--------------------------------------------------------------------------
 // Create Lights
 
-void CreateLight(const std::string& type);
+void CreateLight(const std::string &type);
 
 //--------------------------------------------------------------------------
 // Clean buffers and objects
 
 void clean();
-void DestroyBuffers(Object& obj);
+void DestroyBuffers(Object &obj);
 
 //--------------------------------------------------------------------------
 // Mesh replacement
 
-void ReplaceMesh(Object& obj, const std::string& path);
+void ReplaceMesh(Object &obj, const std::string &path);
 
 //--------------------------------------------------------------------------
 // Undo/Redo
 
-void HandleInspectorUndo(Object& obj);
+void HandleInspectorUndo(Object &obj);
 
-void HandleInspectorUndo(Light& light, Object& lightObj);
+void HandleInspectorUndo(Light &light, Object &lightObj);
 
 //--------------------------------------------------------------------------
 // Physics
 
-void AddForce(Object& obj, const glm::vec3& force);
+void AddForce(Object &obj, const glm::vec3 &force);
 
 //--------------------------------------------------------------------------
 // Collisions
 
-bool CanCollide(const Object& a, const Object& b);
+bool CanCollide(const Object &a, const Object &b);
 
-Contact Sphere_vs_Sphere(const Object& a, const Object& b);
-Contact Sphere_vs_Plane(const Object& a, const Object& b);
-Contact Sphere_vs_AABB(const Object& a, const Object& b);
-Contact AABB_vs_AABB(const Object& a, const Object& b);
-Contact AABB_vs_Plane(const Object& a, const Object& b);
+Contact Sphere_vs_Sphere(const Object &a, const Object &b);
+Contact Sphere_vs_Plane(const Object &a, const Object &b);
+Contact Sphere_vs_AABB(const Object &a, const Object &b);
+Contact AABB_vs_AABB(const Object &a, const Object &b);
+Contact AABB_vs_Plane(const Object &a, const Object &b);
 
-void PositionalCorrection(Object& a, Object& b, Contact& c);
+void PositionalCorrection(Object &a, Object &b, Contact &c);
 
-void ResolveVelocity(Object& a, Object& b, Contact& contact);
+void ResolveVelocity(Object &a, Object &b, Contact &contact);
 
-float GetWorldRadius(const Object& obj);
+float GetWorldRadius(const Object &obj);
 
 //--------------------------------------------------------------------------
 
@@ -322,32 +322,32 @@ void save_scene_state();
 
 void load_scene_state();
 
-Object* search_obj_by_name(const char* name);
+Object *search_obj_by_name(const char *name);
 
-glm::vec2 TextureTiling(Object& obj, glm::vec3 worldSize);
+glm::vec2 TextureTiling(Object &obj, glm::vec3 worldSize);
 
 //--------------------------------------------------------------
 // animations
 
-Object* FindObjectByID(EntityID id);
+Light *FindLightByID(EntityID id);
 
-Light* FindLightByID(EntityID id);
+void ApplyTrack(const AnimationTrack &track, float time);
 
-void ApplyTrack(const AnimationTrack& track, float time);
+void UpdateAnimationPlayer(AnimationPlayer &player, float dt);
 
-void UpdateAnimationPlayer(AnimationPlayer& player, float dt);
-
-void EvaluateAnimationPlayer(AnimationPlayer& player);
+void EvaluateAnimationPlayer(AnimationPlayer &player);
 
 void EvaluateCurrentAnimation();
 
-std::string AnimationTrackTargetName(const AnimationTrack& track);
+std::string AnimationTrackTargetName(const AnimationTrack &track);
 
 void PlayAllAnims();
 
 void StopAllAnims();
 
 //--------------------------------------------------------------
-//snap
+// snap
 
 float Snap(float time, float step);
+
+void BuildImportedTBN(Object &obj);

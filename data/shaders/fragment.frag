@@ -157,120 +157,175 @@ vec3 ShadeSpotLight(Light light, vec3 N, vec3 V, vec3 baseColor) {
 
 void main() {
 
-    vec4 texColor;
-    vec3 baseColor;
+    // ------------------------------------------------------------
+    // uv
 
     vec2 tiledUV;
 
-    if(tiling) {
-    
+    if (tiling) {
+
         vec2 mappedUV;
-        vec2 tiling;
+        vec2 tilingValue;
 
         vec3 p = localPos;
         vec3 Na = normalize(localNormal);
 
-        vec3 normalizedPos = (p - objMin) / (objMax - objMin);
+        vec3 size =
+            max(
+                objMax - objMin,
+                vec3(0.000001)
+            );
+
+        vec3 normalizedPos =
+            (p - objMin) / size;
 
         vec3 absN = abs(Na);
 
         if (mapping == 2) {
 
-            if (absN.x >= absN.y && absN.x >= absN.z) {
+            if (absN.x >= absN.y &&
+                absN.x >= absN.z) {
 
-                // YZ
                 mappedUV = normalizedPos.zy;
-                tiling = worldSize.zy;
+                tilingValue = worldSize.zy;
 
             }
-            else if (absN.y >= absN.x && absN.y >= absN.z) {
+            else if (absN.y >= absN.x &&
+                     absN.y >= absN.z) {
 
-                // XZ
                 mappedUV = normalizedPos.xz;
-                tiling = worldSize.xz;
+                tilingValue = worldSize.xz;
 
             }
             else {
 
-                // XY
                 mappedUV = normalizedPos.xy;
-                tiling = worldSize.xy;
+                tilingValue = worldSize.xy;
             }
 
         }
         else {
 
             mappedUV = uv;
-            tiling = textureTiling;
+            tilingValue = textureTiling;
         }
 
-        tiledUV = mappedUV * tiling;
-
-    }else{
-        tiledUV = uv;
-    }
-
-    if (useTexture) {
-
-        texColor = texture(tex, tiledUV);
-
-        if (texColor.a < 0.1)
-            discard;
-
-        baseColor = texColor.rgb;
-
-    } else {
-        baseColor = color;
-    }
-
-    if(!useTexture){
-    
-        outputColor = vec4(baseColor, 1.0);
-        return;
-    }
-
-    vec3 T = normalize(tangent);
-    vec3 N = normalize(normal);
-
-    T = normalize(T - N * dot(N, T));
-
-    vec3 B = normalize(cross(N, T));
-
-    mat3 TBN = mat3(T, B, N);
-
-    vec3 finalNormal;
-
-    if(hasNormalMap && normal_map_active) {
-
-        vec3 normalTS = texture(normalMap, tiledUV).xyz;
-        normalTS = normalTS * 2.0 - 1.0;
-        finalNormal = normalize(TBN * normalTS);
+        tiledUV =
+            mappedUV * tilingValue;
     }
     else {
 
-        finalNormal = normalize(N);
+        tiledUV = uv;
     }
+
+
+    // ------------------------------------------------------------
+    // albedo
+
+    vec3 baseColor = color;
+
+    float alpha = 1.0;
+
+    if (useTexture) {
+
+        vec4 texColor =
+            texture(
+                tex,
+                tiledUV
+            );
+
+        alpha = texColor.a;
+
+        if (alpha < 0.1)
+            discard;
+
+        baseColor =
+            texColor.rgb;
+    }
+
+
+    // ------------------------------------------------------------
+    // normal
+
+    vec3 N =
+        normalize(normal);
+
+    vec3 finalNormal =
+        N;
+
+
+    if (hasNormalMap &&
+        normal_map_active) {
+
+        vec3 T =
+            normalize(tangent);
+
+        T =
+            normalize(
+                T - N * dot(N, T)
+            );
+
+        vec3 B =
+            normalize(
+                cross(N, T)
+            );
+
+        mat3 TBN =
+            mat3(T, B, N);
+
+
+        vec3 normalTS =
+            texture(
+                normalMap,
+                tiledUV
+            ).xyz;
+
+        normalTS =
+            normalTS * 2.0 - 1.0;
+
+        finalNormal =
+            normalize(
+                TBN * normalTS
+            );
+    }
+
+
+    // ------------------------------------------------------------
+    // cam
 
     vec3 V = normalize(-fragPos);
 
-    vec3 result = vec3(0.0);
 
-    if(!light_active){
-        
-        outputColor = vec4(baseColor, 1.0);
+    if (!light_active) {
+
+        outputColor = vec4(baseColor, alpha);
+
         return;
     }
 
+
+    // ------------------------------------------------------------
+    // light
+
+    vec3 result = vec3(0.0);
+
+
     for (int i = 0; i < numLights; i++) {
 
-        if(shadow_active){
-        
+        if (shadow_active) {
+
             shadow = 0.0;
 
             vec3 proj = fragPosLight[i].xyz / fragPosLight[i].w;
-            vec3 norm_proj = proj * 0.5 + 0.5;
 
-            if(norm_proj.x >= 0.0 && norm_proj.x <= 1.0 && norm_proj.y >= 0.0 && norm_proj.y <= 1.0 && norm_proj.z <= 1.0) {
+            vec3 norm_proj =
+                proj * 0.5 + 0.5;
+
+            if (norm_proj.x >= 0.0 &&
+                norm_proj.x <= 1.0 &&
+                norm_proj.y >= 0.0 &&
+                norm_proj.y <= 1.0 &&
+                norm_proj.z <= 1.0) {
 
                 float currentDepth = norm_proj.z;
 
@@ -278,29 +333,72 @@ void main() {
 
                 int radius = int(lights[i].pcf);
 
-                for(int x = -radius; x <= radius; x++) { // like doing the blur
+                for ( int x = -radius; x <= radius; x++) {
 
-                    for(int y = -radius; y <= radius; y++) {
+                    for (int y = -radius; y <= radius; y++) {
 
-                        float depth = texture(depthData[i], norm_proj.xy + vec2(x,y) * texelSize).r;
+                        float depth =
+                            texture(
+                                depthData[i],
+                                norm_proj.xy +
+                                vec2(x, y) *
+                                texelSize
+                            ).r;
 
-                        if(currentDepth - lights[i].bias > depth)
+                        if (
+                            currentDepth -
+                            lights[i].bias >
+                            depth
+                        ) {
+
                             shadow += 1.0;
+                        }
                     }
                 }
 
-                float samples = float(pow((2 * radius + 1), 2));
-                shadow /= samples;
+                float samples =
+                    float(
+                        pow(
+                            2 * radius + 1,
+                            2
+                        )
+                    );
+
+                shadow /=
+                    samples;
             }
         }
 
-        if (lights[i].type == 0)
-            result += ShadePointLight(lights[i], finalNormal, V, baseColor);
-        else if (lights[i].type == 1)
-            result += ShadeDirLight(lights[i], finalNormal, V, baseColor);
-        else if (lights[i].type == 2)
-            result += ShadeSpotLight(lights[i], finalNormal, V, baseColor);
+
+        if (lights[i].type == 0) {
+
+            result += ShadePointLight(
+                    lights[i],
+                    finalNormal,
+                    V,
+                    baseColor
+                );
+        }
+        else if (lights[i].type == 1) {
+
+            result += ShadeDirLight(
+                    lights[i],
+                    finalNormal,
+                    V,
+                    baseColor
+                );
+        }
+        else if (lights[i].type == 2) {
+
+            result += ShadeSpotLight(
+                    lights[i],
+                    finalNormal,
+                    V,
+                    baseColor
+                );
+        }
     }
 
-    outputColor = vec4(result, 1.0);
+
+    outputColor = vec4(result, alpha);
 }
