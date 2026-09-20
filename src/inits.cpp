@@ -6,15 +6,6 @@
 #include <unordered_map>
 
 //--------------------------------------------------------------------------
-// global variables
-
-// window and context
-SDL_Window *window;
-SDL_GLContext context;
-
-Shader_Uniform shader_uniform;
-
-//--------------------------------------------------------------------------
 // init functions
 
 void init_uniforms() {
@@ -57,8 +48,6 @@ void init_uniforms() {
     shader_uniform.shadow_active = glGetUniformLocation(program, "shadow_active");
 
     shader_uniform.cameraPos = glGetUniformLocation(program, "cameraPos");
-
-    shader_uniform.shininess = glGetUniformLocation(program, "shininess");
 
     shader_uniform.hasNormalMap = glGetUniformLocation(program, "hasNormalMap");
     shader_uniform.hasRoughnessMap = glGetUniformLocation(program, "hasRoughnessMap");

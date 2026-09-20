@@ -302,17 +302,17 @@ struct Object {
     GLuint vbo = 0;
     GLuint ebo = 0;
 
-    GLuint normalVAO;
-    GLuint normalVBO;
+    GLuint normalVAO = 0;
+    GLuint normalVBO = 0;
 
-    GLuint normalTBVAO;
-    GLuint normalTBVBO;
+    GLuint normalTBVAO = 0;
+    GLuint normalTBVBO = 0;
 
-    GLuint tangentVAO;
-    GLuint tangentVBO;
+    GLuint tangentVAO = 0;
+    GLuint tangentVBO = 0;
 
-    GLuint bitangentVAO;
-    GLuint bitangentVBO;
+    GLuint bitangentVAO = 0;
+    GLuint bitangentVBO = 0;
 
     std::string name;
 
@@ -335,9 +335,9 @@ struct Object {
     std::vector<Vertex> original_vertices;
     std::vector<GLuint> original_indices;
 
-    glm::vec3 position;
-    glm::quat rotation;
-    glm::vec3 scale;
+    glm::vec3 position = glm::vec3(0.0f);
+    glm::quat rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+    glm::vec3 scale = glm::vec3(1.0f);
     // Zero means this object is a root node.  Transforms are local to the
     // parent whenever one is assigned.
     EntityID parentID = 0;
@@ -532,8 +532,6 @@ struct Shader_Uniform {
 
     GLint cameraPos;
 
-    GLint shininess;
-
     GLint hasNormalMap;
     GLint hasRoughnessMap;
     GLint hasMetallicMap;
@@ -636,7 +634,7 @@ struct AnimationClip {
     std::vector<AnimationTrack> tracks;
 };
 
-extern std::vector<AnimationClip> animations;
+inline std::vector<AnimationClip> animations;
 
 using AnimationPlayerID = uint32_t;
 
@@ -675,12 +673,12 @@ struct AnimationEditorState {
     bool animationSnapEnable = true;
 };
 
-extern AnimationEditorState animationEditor;
+inline AnimationEditorState animationEditor;
 
-extern std::vector<AnimationPlayer> animationPlayers;
-extern AnimationPlayerID nextAnimationPlayerID;
+inline std::vector<AnimationPlayer> animationPlayers;
+inline AnimationPlayerID nextAnimationPlayerID = 1;
 
-extern AnimationPlayer animationPreviewPlayer;
+inline AnimationPlayer animationPreviewPlayer;
 
 float InterpolateFloat(const AnimationKey &a, const AnimationKey &b, float time);
 
@@ -733,8 +731,8 @@ int FindAnimationByName(const std::string &name);
 //--------------------------------------------------------------
 // events
 
-extern VideoPlayer videoPlayer;
-extern bool isCinematicActive;
+inline VideoPlayer videoPlayer;
+inline bool isCinematicActive = false;
 
 enum class EventType {
     PlaySound,
@@ -866,4 +864,4 @@ struct EventManager {
     std::vector<std::unique_ptr<Event>> events;
 };
 
-extern EventManager eventManager;
+inline EventManager eventManager;

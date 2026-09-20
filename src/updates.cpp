@@ -2,18 +2,6 @@
 
 #include <cstring>
 
-//--------------------------------------------------------------------------
-// global variables
-
-// current mesh, texture and operation for ImGuizmo
-int currentMesh = 0;
-GLuint currentTexture = 0;
-ImGuizmo::OPERATION currentOperation = ImGuizmo::TRANSLATE;
-
-// snap imguizmo
-bool useSnap;
-float *snap;
-
 // texture manager
 std::unordered_map<std::string, GLuint> TextureManager::textures;
 
@@ -148,7 +136,8 @@ void update_depthmap() {
 
     //--------------------------------------------------------------------
 
-    for (int i = 0; i < lightObjects.size(); i++) {
+    const size_t shadowLightCount = std::min({lights.size(), lightObjects.size(), static_cast<size_t>(MAX_LIGHTS)});
+    for (size_t i = 0; i < shadowLightCount; ++i) {
 
         lights[i].dir = glm::normalize(lightObjects[i].rotation * glm::vec3(0.0f, -1.0f, 0.0f));
 
@@ -246,14 +235,12 @@ void update_objects() {
 
     glUniform1i(shader_uniform.program_texture, 0);
 
-    int numLights = lights.size(); // maximum of 8 lights
+    const int numLights = static_cast<int>(std::min({lights.size(), lightObjects.size(), static_cast<size_t>(MAX_LIGHTS)}));
 
-    for (int i = 0; i < lightObjects.size(); i++) {
+    for (int i = 0; i < numLights; ++i) {
 
-        glActiveTexture(GL_TEXTURE2 + i);
+            glActiveTexture(GL_TEXTURE2 + static_cast<GLenum>(i));
         glBindTexture(GL_TEXTURE_2D, depth_texture[i]);
-
-        std::string idx = std::to_string(i);
 
         if (!shader_uniform.class_uniforms_initialized) {
 
@@ -276,7 +263,8 @@ void update_objects() {
         glUniform1f(shader_uniform.light_falloff[i], lights[i].falloff);
     }
 
-    glUniformMatrix4fv(shader_uniform.lightVP, numLights, GL_FALSE, glm::value_ptr(lightVP[0]));
+    if (numLights > 0)
+        glUniformMatrix4fv(shader_uniform.lightVP, numLights, GL_FALSE, glm::value_ptr(lightVP[0]));
 
     glUniform1i(shader_uniform.normalMap, 1);
 
@@ -309,8 +297,6 @@ void update_objects() {
 
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         }
-
-        glUniform1f(shader_uniform.shininess, obj.shininess);
 
         glm::mat4 model = GetModelMatrix(obj);
 
@@ -345,23 +331,30 @@ void update_objects() {
         if (st.wireframe_active)
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
+        constexpr GLint AlbedoTextureUnit = 0;
+        constexpr GLint NormalTextureUnit = 1;
+        constexpr GLint RoughnessTextureUnit = 2 + MAX_LIGHTS;
+        constexpr GLint MetallicTextureUnit = 3 + MAX_LIGHTS;
+        constexpr GLint EmissionTextureUnit = 4 + MAX_LIGHTS;
+        constexpr GLint OpacityTextureUnit = 5 + MAX_LIGHTS;
+
         auto bindMaterial = [&](const Material &material) {
             const GLuint albedo = obj.obj_texture != 0 ? obj.obj_texture : material.albedoTexture;
             const GLuint normal = obj.normalTexture != 0 ? obj.normalTexture : material.normalTexture;
 
-            glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, albedo);
-            glActiveTexture(GL_TEXTURE1); glBindTexture(GL_TEXTURE_2D, normal);
-            glActiveTexture(GL_TEXTURE2 + MAX_LIGHTS); glBindTexture(GL_TEXTURE_2D, material.roughnessTexture);
-            glActiveTexture(GL_TEXTURE3 + MAX_LIGHTS); glBindTexture(GL_TEXTURE_2D, material.metallicTexture);
-            glActiveTexture(GL_TEXTURE4 + MAX_LIGHTS); glBindTexture(GL_TEXTURE_2D, material.emissionTexture);
-            glActiveTexture(GL_TEXTURE5 + MAX_LIGHTS); glBindTexture(GL_TEXTURE_2D, material.opacityTexture);
+            glActiveTexture(GL_TEXTURE0 + AlbedoTextureUnit); glBindTexture(GL_TEXTURE_2D, albedo);
+            glActiveTexture(GL_TEXTURE0 + NormalTextureUnit); glBindTexture(GL_TEXTURE_2D, normal);
+            glActiveTexture(GL_TEXTURE0 + RoughnessTextureUnit); glBindTexture(GL_TEXTURE_2D, material.roughnessTexture);
+            glActiveTexture(GL_TEXTURE0 + MetallicTextureUnit); glBindTexture(GL_TEXTURE_2D, material.metallicTexture);
+            glActiveTexture(GL_TEXTURE0 + EmissionTextureUnit); glBindTexture(GL_TEXTURE_2D, material.emissionTexture);
+            glActiveTexture(GL_TEXTURE0 + OpacityTextureUnit); glBindTexture(GL_TEXTURE_2D, material.opacityTexture);
 
-            glUniform1i(shader_uniform.program_texture, 0);
-            glUniform1i(shader_uniform.normalMap, 1);
-            glUniform1i(shader_uniform.roughnessMap, 2 + MAX_LIGHTS);
-            glUniform1i(shader_uniform.metallicMap, 3 + MAX_LIGHTS);
-            glUniform1i(shader_uniform.emissionMap, 4 + MAX_LIGHTS);
-            glUniform1i(shader_uniform.opacityMap, 5 + MAX_LIGHTS);
+            glUniform1i(shader_uniform.program_texture, AlbedoTextureUnit);
+            glUniform1i(shader_uniform.normalMap, NormalTextureUnit);
+            glUniform1i(shader_uniform.roughnessMap, RoughnessTextureUnit);
+            glUniform1i(shader_uniform.metallicMap, MetallicTextureUnit);
+            glUniform1i(shader_uniform.emissionMap, EmissionTextureUnit);
+            glUniform1i(shader_uniform.opacityMap, OpacityTextureUnit);
             glUniform1i(shader_uniform.useTexture, albedo != 0);
             glUniform1i(shader_uniform.hasNormalMap, normal != 0);
             glUniform1i(shader_uniform.hasRoughnessMap, material.roughnessTexture != 0);
@@ -375,7 +368,7 @@ void update_objects() {
             glUniform1f(shader_uniform.materialOpacity, material.opacity);
         };
 
-        if (obj.submeshes.empty()) {
+        if (!obj.hasMaterial || obj.submeshes.empty()) {
             Material fallback{};
             fallback.normalTexture = obj.normalTexture;
             fallback.shininess = obj.shininess;
@@ -425,7 +418,8 @@ void update_objects() {
         }
     }
 
-    for (int i = 0; i < lightObjects.size(); i++) {
+    const size_t drawableLightCount = std::min(lights.size(), lightObjects.size());
+    for (size_t i = 0; i < drawableLightCount; ++i) {
 
         if (currentViewMode == view_Mode::PLAY && !lightObjects[i].visible)
             continue;

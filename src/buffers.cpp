@@ -71,35 +71,25 @@ void buffer(Object& objects) {
 
 void CreateNormalBuffers(Object& obj) {
 
-	if (obj.normalTBVAO) {
-	
-		glGenVertexArrays(1, &obj.normalTBVAO);
-		glGenBuffers(1, &obj.normalTBVBO);
-		CreateLineBuffer(obj.normalTBVAO, obj.normalTBVBO, obj.normalLinesTBN);
-	}
+	auto createLineBufferIfNeeded = [](GLuint& vao, GLuint& vbo, const std::vector<LineVertex>& lines) {
+		if (lines.empty())
+			return;
 
-	if (obj.tangentVAO) {
+		if (vao == 0)
+			glGenVertexArrays(1, &vao);
+		if (vbo == 0)
+			glGenBuffers(1, &vbo);
 
-		glGenVertexArrays(1, &obj.tangentVAO);
-		glGenBuffers(1, &obj.tangentVBO);
-		CreateLineBuffer(obj.tangentVAO, obj.tangentVBO, obj.tangentLines);
-	}
+		CreateLineBuffer(vao, vbo, lines);
+	};
 
-	if (obj.bitangentVAO) {
-
-		glGenVertexArrays(1, &obj.bitangentVAO);
-		glGenBuffers(1, &obj.bitangentVBO);
-		CreateLineBuffer(obj.bitangentVAO, obj.bitangentVBO, obj.bitangentLines);
-	}
+	createLineBufferIfNeeded(obj.normalTBVAO, obj.normalTBVBO, obj.normalLinesTBN);
+	createLineBufferIfNeeded(obj.tangentVAO, obj.tangentVBO, obj.tangentLines);
+	createLineBufferIfNeeded(obj.bitangentVAO, obj.bitangentVBO, obj.bitangentLines);
 }
 
 void UpdateLineBuffers(Object& obj) {
-
-	CreateLineBuffer(obj.normalTBVAO, obj.normalTBVBO, obj.normalLinesTBN);
-
-	CreateLineBuffer(obj.tangentVAO, obj.tangentVBO, obj.tangentLines);
-
-	CreateLineBuffer(obj.bitangentVAO, obj.bitangentVBO, obj.bitangentLines);
+	CreateNormalBuffers(obj);
 }
 
 void UpdateMeshBuffers(Object& obj) {

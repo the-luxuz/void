@@ -6,16 +6,16 @@
 // global variables
 
 // programs
-extern GLuint program;
-extern GLuint program_line;
-extern GLuint program_grid;
-extern GLuint program_depth;
-extern GLuint program_skybox;
-extern GLuint program_videoplayer;
-extern GLuint program_hdrToCubemap;
+inline GLuint program = 0;
+inline GLuint program_line = 0;
+inline GLuint program_grid = 0;
+inline GLuint program_depth = 0;
+inline GLuint program_skybox = 0;
+inline GLuint program_videoplayer = 0;
+inline GLuint program_hdrToCubemap = 0;
 
 //depth framebuffer
-extern GLuint depthFBO[8];
+inline GLuint depthFBO[MAX_LIGHTS]{};
 
 //--------------------------------------------------------------------------
 // Helper create shader

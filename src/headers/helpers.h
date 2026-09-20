@@ -8,116 +8,119 @@
 #include "scene_hierarchy.h"
 #include "textures.h"
 
-//--------------------------------------------------------------------------
-// global variables
-
 // structures
-extern camera cam;
-extern Parser par;
-extern Settings st;
+inline camera cam;
+inline Parser par;
+inline Settings st;
 
 // buffers
-extern GLuint viewportFBO;
-extern GLuint dynamic_cubemap;
+inline GLuint viewportFBO = 0;
+inline GLuint dynamic_cubemap = 0;
 
-extern GLuint envCubemap;
+inline GLuint envCubemap = 0;
 
-extern GLuint captureFBO;
-extern GLuint captureRBO;
+inline GLuint captureFBO = 0;
+inline GLuint captureRBO = 0;
 
-extern GLuint gridVAO;
-extern GLuint gridVBO;
+inline GLuint gridVAO = 0;
+inline GLuint gridVBO = 0;
 
-extern GLuint skyVAO;
-extern GLuint skyVBO;
+inline GLuint skyVAO = 0;
+inline GLuint skyVBO = 0;
 
-extern GLuint skyboxVAO;
-extern GLuint skyboxVBO;
+inline GLuint skyboxVAO = 0;
+inline GLuint skyboxVBO = 0;
 
 // viewport
-extern ImVec2 viewportPos;
-extern ImVec2 viewportSize;
+inline ImVec2 viewportPos{};
+inline ImVec2 viewportSize{};
 
 // vectors
-extern std::vector<Object> objects;
-extern std::vector<Light> lights;
-extern std::vector<Object> lightObjects;
+inline std::vector<Object> objects;
+inline std::vector<Light> lights;
+inline std::vector<Object> lightObjects;
 
-extern std::vector<Object> saved_objects;
-extern std::vector<Object> saved_light_objects;
-extern std::vector<Light> saved_lights;
+inline std::vector<Object> saved_objects;
+inline std::vector<Object> saved_light_objects;
+inline std::vector<Light> saved_lights;
 
 // light view-proj matrices
-extern glm::mat4 lightVP[MAX_LIGHTS];
+inline glm::mat4 lightVP[MAX_LIGHTS]{};
 
-extern glm::mat4 view;
-extern glm::mat4 projection;
+inline glm::mat4 view{1.0f};
+inline glm::mat4 projection{1.0f};
 
 // selected object and ray casting
-extern int selectedObject;
+inline int selectedObject = -1;
 
-extern glm::vec3 rayOrigin;
-extern glm::vec3 rayDir;
+inline glm::vec3 rayOrigin{};
+inline glm::vec3 rayDir{};
 
 // movement
-extern float moveSpeed;
-extern float mouseSensitivity;
+inline float moveSpeed = 10.0f;
+inline float mouseSensitivity = 0.005f;
 
 // skybox
-extern glm::mat4 captureProjection;
-extern glm::mat4 captureViews[];
+inline glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
+inline glm::mat4 captureViews[] = {
+    glm::lookAt(glm::vec3(0), glm::vec3(1, 0, 0), glm::vec3(0, -1, 0)),
+    glm::lookAt(glm::vec3(0), glm::vec3(-1, 0, 0), glm::vec3(0, -1, 0)),
+    glm::lookAt(glm::vec3(0), glm::vec3(0, 1, 0), glm::vec3(0, 0, 1)),
+    glm::lookAt(glm::vec3(0), glm::vec3(0, -1, 0), glm::vec3(0, 0, -1)),
+    glm::lookAt(glm::vec3(0), glm::vec3(0, 0, 1), glm::vec3(0, -1, 0)),
+    glm::lookAt(glm::vec3(0), glm::vec3(0, 0, -1), glm::vec3(0, -1, 0))};
 
 // grid
-extern const float STEP;
-extern const float cellSize;
-extern int gridVertexCount;
+inline constexpr float STEP = 25.0f;
+inline constexpr float cellSize = 90.0f;
+inline int gridVertexCount = 0;
 
 // folder and textures
-extern std::string dirPath;
+inline std::string dirPath = "data/textures";
 
-extern std::filesystem::path rootFolder;
-extern std::filesystem::path currentFolder;
+inline std::filesystem::path rootFolder = "../data";
+inline std::filesystem::path currentFolder = rootFolder;
 
-extern std::vector<std::filesystem::path> pathTextures;
+inline std::vector<std::filesystem::path> pathTextures;
 
-extern bool reloadFolder;
-extern std::filesystem::path newFolder;
-extern std::vector<std::filesystem::directory_entry> folderEntries;
+inline bool reloadFolder = false;
+inline std::filesystem::path newFolder;
+inline std::vector<std::filesystem::directory_entry> folderEntries;
 
-extern std::string save_outPath;
+inline std::string save_outPath;
 
 // unordered mapo names
-extern std::unordered_map<std::string, int> objectNameCounters;
+inline std::unordered_map<std::string, int> objectNameCounters;
 
 // undo/redo
-extern Object objCopy;
-extern Light lightCopy;
+inline Object objCopy;
+inline Light lightCopy;
 
-extern bool hasObjectCopy;
-extern bool hasLightCopy;
+inline bool hasObjectCopy = false;
+inline bool hasLightCopy = false;
 
-extern ObjectState prevState;
-extern LightState prevLightState;
+inline ObjectState prevState;
+inline LightState prevLightState;
 
 // camera pos
-extern glm::vec3 cameraPos;
+inline glm::vec3 cameraPos{};
 
 // windowed size
-extern glm::ivec2 windowedSize;
+inline glm::ivec2 windowedSize{};
 
 // flags
-extern bool dont_reload_cam;
+inline bool dont_reload_cam = false;
 
-extern bool face_normal;
+inline bool face_normal = false;
 
-extern bool normals_appear;
+inline bool normals_appear = false;
 
-extern bool shadow_map_render;
+inline bool shadow_map_render = true;
 
-extern bool quit;
+inline bool quit = false;
 
 // render modes
-extern int render_modes;
+inline int render_modes = 0;
 
 // tools
 enum class Tools {
@@ -131,21 +134,21 @@ enum class view_Mode {
     PLAY
 };
 
-extern view_Mode currentViewMode;
+inline view_Mode currentViewMode = view_Mode::EDITOR;
 
-extern view_Mode prevViewMode;
+inline view_Mode prevViewMode = currentViewMode;
 
-extern Tools currentTool;
+inline Tools currentTool = Tools::TRANSLATE;
 
-extern bool camera_update;
+inline bool camera_update = true;
 
-extern bool free_cam;
+inline bool free_cam = false;
 
-extern bool viewport_scroll_active;
+inline bool viewport_scroll_active = false;
 
-extern VideoQuad videoQuad;
+inline VideoQuad videoQuad;
 
-extern SDL_AudioSpec spec;
+inline SDL_AudioSpec spec{};
 
 //--------------------------------------------------------------------------
 // Load scene in the good way
@@ -155,7 +158,7 @@ bool load_scene_ok(const char *scene);
 //--------------------------------------------------------------------------
 // ImGui docking
 
-extern bool animationWindow;
+inline bool animationWindow = false;
 
 void Docking();
 

@@ -18,7 +18,8 @@ float totalTime = 0.0f;
 
 static float fps = 0.0f;
 
-const float fixedDt = 1.0f / 60.0f;
+constexpr float fixedDt = 1.0f / 60.0f;
+constexpr int maxSimulationStepsPerFrame = 6;
 
 Object *player = nullptr;
 
@@ -128,38 +129,6 @@ void update(SDL_Window *window, float dt) {
 
             io.ConfigFlags &= ~ImGuiConfigFlags_ViewportsEnable;
 
-            const bool *keyboard = SDL_GetKeyboardState(nullptr);
-
-            if (currentViewMode == view_Mode::PLAY && player && !free_cam) {
-
-                if (!io.WantCaptureKeyboard)
-                    PlayerControl(keyboard, dt, *player);
-
-                UpdatePlayerCamera(*player);
-            }
-
-            //----------------------------------------------------
-            // physics
-
-            static float accumulator = 0.0f;
-
-            if (st.physics_active) {
-
-                accumulator += dt;
-
-                while (accumulator >= fixedDt) {
-
-                    PhysicsUpdate(fixedDt);
-                    accumulator -= fixedDt;
-                }
-            }
-
-            //----------------------------------------------------
-            // col
-
-            if (st.collision_active)
-                CollisionUpdate();
-
             //----------------------------------------------------
             // obj
 
@@ -172,11 +141,6 @@ void update(SDL_Window *window, float dt) {
 
             //----------------------------------------------------
         }
-
-        //--------------------------------------------------------------------------
-        // animations
-
-        UpdateAnimation(dt);
 
         //----------------------------------------------------
         // imgui / imguizmo
@@ -291,6 +255,7 @@ int main(int argc, char *args[]) {
     init_("../data/settings.bin", "../data/scene/scene.bin");
 
     Uint64 lastCounter = SDL_GetPerformanceCounter();
+    float simulationAccumulator = 0.0f;
 
     while (!quit) {
 
@@ -772,17 +737,50 @@ int main(int argc, char *args[]) {
             }
         }
 
+        simulationAccumulator += dt;
+
         const bool *keyboard = SDL_GetKeyboardState(nullptr);
 
         ImGuiIO &io = ImGui::GetIO();
 
-        if (free_cam || currentViewMode == view_Mode::EDITOR) {
+        int simulationSteps = 0;
 
-            if (!io.WantCaptureKeyboard)
-                controls(keyboard, angle_speed, radius_speed, dt);
+        while (simulationAccumulator >= fixedDt && simulationSteps < maxSimulationStepsPerFrame) {
+
+            if (!isCinematicActive) {
+
+                if ((free_cam || currentViewMode == view_Mode::EDITOR) && !io.WantCaptureKeyboard)
+                    controls(keyboard, angle_speed, radius_speed, fixedDt);
+
+                if (currentViewMode == view_Mode::PLAY) {
+
+                    player = search_obj_by_name("Player");
+
+                    if (player && !free_cam && !io.WantCaptureKeyboard) {
+
+                        PlayerControl(keyboard, fixedDt, *player);
+                        UpdatePlayerCamera(*player);
+                    }
+
+                    if (st.physics_active)
+                        PhysicsUpdate(fixedDt);
+                    if (st.collision_active)
+                        CollisionUpdate();
+                }
+
+                UpdateAnimation(fixedDt);
+            }
+
+            simulationAccumulator -= fixedDt;
+            ++simulationSteps;
         }
 
-        totalTime += 1.0f / fps;
+        // Do not try to catch up indefinitely after a breakpoint, minimize,
+        // or prolonged hitch. The cap preserves application responsiveness.
+        if (simulationSteps == maxSimulationStepsPerFrame)
+            simulationAccumulator = 0.0f;
+
+        totalTime += dt;
 
         update(window, dt);
     }

@@ -51,8 +51,6 @@ uniform bool light_active;
 uniform bool normal_map_active;
 uniform bool shadow_active;
 
-uniform float shininess;
-
 uniform mat4 aView;
 
 uniform vec2 textureTiling;

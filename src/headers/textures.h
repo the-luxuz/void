@@ -12,19 +12,19 @@
 // global variables
 
 // hdr check flag
-extern bool is_hdr;
+inline bool is_hdr = false;
 
 // viewport
-extern GLuint viewport_texture;
+inline GLuint viewport_texture = 0;
 
-extern int viewport_width;
-extern int viewport_height;
+inline int viewport_width = 512;
+inline int viewport_height = 512;
 
 // depth map
-extern GLuint depth_texture[MAX_LIGHTS];
+inline GLuint depth_texture[MAX_LIGHTS]{};
 
 // skybox
-extern GLuint skybox_texture;
+inline GLuint skybox_texture = 0;
 
 //--------------------------------------------------------------------------
 // EXR and HDR texture

@@ -1,22 +1,5 @@
 #include "headers/classes.h"
 
-//--------------------------------------------------------------
-// animations
-
-std::vector<AnimationClip> animations;
-AnimationEditorState animationEditor;
-
-std::vector<AnimationPlayer> animationPlayers;
-
-AnimationPlayerID nextAnimationPlayerID = 1;
-
-AnimationPlayer animationPreviewPlayer;
-
-VideoPlayer videoPlayer;
-bool isCinematicActive = false;
-
-EventManager eventManager;
-
 EntityID GenerateEntityID() {
 
     return nextEntityID++;

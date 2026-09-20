@@ -11,13 +11,13 @@
 // global variables
 
 // current mesh, texture and operation for ImGuizmo
-extern int currentMesh;
-extern GLuint currentTexture;
-extern ImGuizmo::OPERATION currentOperation;
+inline int currentMesh = 0;
+inline GLuint currentTexture = 0;
+inline ImGuizmo::OPERATION currentOperation = ImGuizmo::TRANSLATE;
 
 // snap imguizmo
-extern bool useSnap;
-extern float* snap;
+inline bool useSnap = false;
+inline float* snap = nullptr;
 
 //--------------------------------------------------------------------------
 // Update Grid

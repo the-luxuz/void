@@ -1,142 +1,7 @@
 #include "headers/helpers.h"
 
-//--------------------------------------------------------------------------
-// global variables
-
-// structures
-camera cam;
-Parser par;
-Settings st;
-
-// buffers
-GLuint viewportFBO;
-GLuint dynamic_cubemap;
-
-GLuint envCubemap;
-
-GLuint captureFBO;
-GLuint captureRBO;
-
-GLuint gridVAO;
-GLuint gridVBO;
-
-GLuint skyVAO;
-GLuint skyVBO;
-
-GLuint skyboxVAO;
-GLuint skyboxVBO;
-
-// viewport
-ImVec2 viewportPos;
-ImVec2 viewportSize;
-
-// vectors
-std::vector<Object> objects;
-std::vector<Light> lights;
-std::vector<Object> lightObjects;
-
-std::vector<Object> saved_objects;
-std::vector<Object> saved_light_objects;
-std::vector<Light> saved_lights;
-
-// light view-proj matrices
-glm::mat4 lightVP[MAX_LIGHTS];
-
-glm::mat4 view;
-glm::mat4 projection;
-
-// selected object and ray casting
-int selectedObject = -1;
-
-glm::vec3 rayOrigin;
-glm::vec3 rayDir;
-
-// movement
-float moveSpeed = 10.0f;
-float mouseSensitivity = 0.005f;
-
-// skybox
-glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
-glm::mat4 captureViews[] = {
-
-    glm::lookAt(glm::vec3(0), glm::vec3(1, 0, 0), glm::vec3(0, -1, 0)),
-    glm::lookAt(glm::vec3(0), glm::vec3(-1, 0, 0), glm::vec3(0, -1, 0)),
-    glm::lookAt(glm::vec3(0), glm::vec3(0, 1, 0), glm::vec3(0, 0, 1)),
-    glm::lookAt(glm::vec3(0), glm::vec3(0, -1, 0), glm::vec3(0, 0, -1)),
-    glm::lookAt(glm::vec3(0), glm::vec3(0, 0, 1), glm::vec3(0, -1, 0)),
-    glm::lookAt(glm::vec3(0), glm::vec3(0, 0, -1), glm::vec3(0, -1, 0))};
-
-// grid
-const float STEP = 25.0f;
-const float cellSize = 90.0f;
-int gridVertexCount;
-
-// folder and textures
-std::string dirPath = "data/textures";
-
-std::filesystem::path rootFolder = "../data";
-std::filesystem::path currentFolder = rootFolder;
-
-std::vector<std::filesystem::path> pathTextures;
-
-bool reloadFolder = false;
-std::filesystem::path newFolder;
-std::vector<std::filesystem::directory_entry> folderEntries;
-
-std::string save_outPath = "";
-
-// unordered mapo names
-std::unordered_map<std::string, int> objectNameCounters;
-
-// undo/redo
-Object objCopy;
-Light lightCopy;
-
-bool hasObjectCopy;
-bool hasLightCopy;
-
-ObjectState prevState;
-LightState prevLightState;
-
-// camera pos
-glm::vec3 cameraPos;
-
-// windowed size
-glm::ivec2 windowedSize;
-
-// flags
-bool dont_reload_cam = false;
-
-bool face_normal = false;
-
-bool normals_appear;
-
-bool shadow_map_render = true;
-
-bool quit = false;
-
-// render modes
-int render_modes = 0;
-
-view_Mode currentViewMode = view_Mode::EDITOR;
-
-view_Mode prevViewMode = currentViewMode;
-
-// tools
-Tools currentTool = Tools::TRANSLATE;
-
-// docking
+// Kept local because it is only consumed by this translation unit.
 static bool showGraphicsSettings = false;
-
-bool camera_update = true;
-
-bool free_cam = false;
-
-bool viewport_scroll_active = false;
-
-VideoQuad videoQuad;
-
-SDL_AudioSpec spec{};
 
 //--------------------------------------------------------------------------
 // Load scene in the good way
@@ -217,8 +82,6 @@ bool load_scene_ok(const char *scene) {
 
 //--------------------------------------------------------------------------
 // ImGui docking
-
-bool animationWindow = false;
 
 void Docking() {
 
@@ -1450,19 +1313,15 @@ void controls(const bool *keyboard, float angle_step, float radius_step, float d
 
 void PlayerControl(const bool *keyboard, float dt, Object &player) {
 
+    if (!player.hasPhysics || player.physics.isStatic)
+        return;
+
     constexpr float maxPitch = glm::radians(89.0f);
 
     cam.beta = glm::clamp(cam.beta, -maxPitch, maxPitch);
 
-    const float cosPitch = std::cos(cam.beta);
-    const float sinPitch = std::sin(cam.beta);
-
     const float cosYaw = std::cos(cam.alpha);
     const float sinYaw = std::sin(cam.alpha);
-
-    glm::vec3 lookForward(cosPitch * cosYaw, sinPitch, cosPitch * sinYaw);
-
-    lookForward = glm::normalize(lookForward);
 
     glm::vec3 forward(cosYaw, 0.0f, sinYaw);
 
@@ -1487,9 +1346,27 @@ void PlayerControl(const bool *keyboard, float dt, Object &player) {
     if (glm::length2(moveDirection) > 0.0001f)
         moveDirection = glm::normalize(moveDirection);
 
-    constexpr float moveForce = 100.0f;
+    constexpr float maxMoveSpeed = 6000.0f;
+    constexpr float acceleration = 6000.0f;
+    constexpr float deceleration = 8400.0f;
 
-    player.physics.force += moveDirection * moveForce;
+    glm::vec3 horizontalVelocity(player.physics.velocity.x, 0.0f, player.physics.velocity.z);
+
+    const glm::vec3 targetVelocity = moveDirection * maxMoveSpeed;
+
+    const float maxVelocityChange = (glm::length2(moveDirection) > 0.0f ? acceleration : deceleration) * dt;
+
+    const glm::vec3 velocityDelta = targetVelocity - horizontalVelocity;
+
+    const float deltaLength = glm::length(velocityDelta);
+
+    if (deltaLength <= maxVelocityChange)
+        horizontalVelocity = targetVelocity;
+    else if (deltaLength > 0.0f)
+        horizontalVelocity += velocityDelta * (maxVelocityChange / deltaLength);
+
+    player.physics.velocity.x = horizontalVelocity.x;
+    player.physics.velocity.z = horizontalVelocity.z;
 }
 
 void UpdatePlayerCamera(Object &player) {

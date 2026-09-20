@@ -10,10 +10,10 @@
 // global variables
 
 // window and context
-extern SDL_Window* window;
-extern SDL_GLContext context;
+inline SDL_Window* window = nullptr;
+inline SDL_GLContext context = nullptr;
 
-extern Shader_Uniform shader_uniform;
+inline Shader_Uniform shader_uniform{};
 
 //--------------------------------------------------------------------------
 // init functions

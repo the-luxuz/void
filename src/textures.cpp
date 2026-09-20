@@ -2,24 +2,8 @@
 
 #include "headers/textures.h"
 
-//--------------------------------------------------------------------------
-// global variables
-
-// hdr check flag
-bool is_hdr = false;
-
-// viewport
-GLuint viewport_texture;
-GLuint viewportDepthTexture;
-
-int viewport_width = 512;
-int viewport_height = 512;
-
-// depth map
-GLuint depth_texture[MAX_LIGHTS];
-
-// skybox
-GLuint skybox_texture;
+// This attachment is private to the viewport implementation.
+static GLuint viewportDepthTexture = 0;
 
 //--------------------------------------------------------------------------
 // EXR and HDR texture
