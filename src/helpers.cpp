@@ -1239,6 +1239,9 @@ void select_object(glm::vec3 &rayOrigin, glm::vec3 &rayDir) {
 
         Object &obj = objects[i];
 
+        if (IsEmptyObject(obj))
+            continue;
+
         glm::vec3 worldMin;
         glm::vec3 worldMax;
         GetWorldBounds(obj, worldMin, worldMax);
@@ -1664,6 +1667,24 @@ void Add_Tri(Light &lgh, const Vertex &in_v0, const Vertex &in_v1, const Vertex 
 
 //--------------------------------------------------------------------------
 // Create Lights
+
+Object CreateEmptyObject() {
+
+    Object empty;
+    empty.id = GenerateEntityID();
+    empty.name = GenerateObjectName("Empty");
+    empty.type = "Empty";
+    empty.position = glm::vec3(0.0f);
+    empty.rotation = glm::identity<glm::quat>();
+    empty.scale = glm::vec3(1.0f);
+    empty.hasMaterial = false;
+    empty.hasMapping = false;
+    empty.hasPhysics = false;
+    empty.hasCollider = false;
+    empty.hasAnimation = true;
+    empty.visible = true;
+    return empty;
+}
 
 void CreateLight(const std::string &type) {
 

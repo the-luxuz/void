@@ -277,6 +277,8 @@ void Add_Tri(Light &lgh, const Vertex &in_v0, const Vertex &in_v1, const Vertex 
 //--------------------------------------------------------------------------
 // Create Lights
 
+Object CreateEmptyObject();
+
 void CreateLight(const std::string &type);
 
 //--------------------------------------------------------------------------

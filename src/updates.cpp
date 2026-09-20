@@ -279,6 +279,9 @@ void update_objects() {
 
     for (Object &obj : objects) {
 
+        if (IsEmptyObject(obj))
+            continue;
+
         if (currentViewMode == view_Mode::PLAY && !obj.visible)
             continue;
 
@@ -401,6 +404,9 @@ void update_objects() {
     if (normals_appear) {
 
         for (auto &obj : objects) {
+
+            if (IsEmptyObject(obj))
+                continue;
 
             glUniformMatrix4fv(3, 1, GL_FALSE, glm::value_ptr(obj.mvp));
 
@@ -997,6 +1003,14 @@ void update_imgui_guizmo() {
         ImGui::EndDragDropTarget();
     }
 
+    if (ImGui::Button("+ Empty")) {
+
+        objects.push_back(CreateEmptyObject());
+        selectedObject = static_cast<int>(objects.size()) - 1;
+    }
+
+    ImGui::Separator();
+
     for (Object &object : objects) {
 
         if (object.parentID == 0 || !FindObjectByID(object.parentID))
@@ -1072,6 +1086,7 @@ void update_imgui_guizmo() {
     if (selectedObject != -1 && selectedObject < (int)objects.size()) {
 
         Object *obj = GetSelectedObject();
+        const bool isEmpty = obj && IsEmptyObject(*obj);
 
         if (ImGui::CollapsingHeader("General")) {
 
@@ -1103,7 +1118,7 @@ void update_imgui_guizmo() {
 
         //------------------------------------------------------------
 
-        if (obj->hasPhysics) {
+        if (!isEmpty && obj->hasPhysics) {
 
             ImGui::Separator();
 
@@ -1159,7 +1174,7 @@ void update_imgui_guizmo() {
 
         static const char *colliderTypes[] = {"None", "Plane", "Sphere", "AABB"};
 
-        if (obj->hasCollider) {
+        if (!isEmpty && obj->hasCollider) {
 
             ImGui::Separator();
 
@@ -1565,7 +1580,7 @@ void update_imgui_guizmo() {
             }
         }
 
-        if (obj->hasMaterial) {
+        if (!isEmpty && obj->hasMaterial) {
 
             ImGui::Separator();
 
@@ -1632,7 +1647,14 @@ void update_imgui_guizmo() {
 
         ImGui::Separator();
 
-        if (ImGui::CollapsingHeader("Mesh")) {
+        if (isEmpty) {
+
+            ImGui::Separator();
+            ImGui::TextUnformatted("Empty object: transform-only hierarchy parent.");
+            ImGui::TextUnformatted("Drag scene objects onto it in Hierarchy to parent them.");
+        }
+
+        if (!isEmpty && ImGui::CollapsingHeader("Mesh")) {
 
             ImGui::TextWrapped("%s", obj->mesh.c_str());
 
@@ -1674,7 +1696,7 @@ void update_imgui_guizmo() {
 
         ImGui::Separator();
 
-        if (ImGui::CollapsingHeader("Bounds")) {
+        if (!isEmpty && ImGui::CollapsingHeader("Bounds")) {
 
             ImGui::DragFloat3("Min", &obj->min.x, 0.1f);
             HandleInspectorUndo(*obj);
@@ -1689,7 +1711,7 @@ void update_imgui_guizmo() {
                 DrawObjectAnimationButtons(*obj);
         }
 
-        if (obj->hasMapping) {
+        if (!isEmpty && obj->hasMapping) {
 
             ImGui::Separator();
 
@@ -1780,7 +1802,7 @@ void update_imgui_guizmo() {
 
         ImGui::Separator();
 
-        if (ImGui::BeginCombo("Add Module", "Modules")) {
+        if (!isEmpty && ImGui::BeginCombo("Add Module", "Modules")) {
 
             bool material = obj->hasMaterial;
             bool collision = obj->hasCollider;

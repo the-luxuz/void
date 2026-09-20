@@ -468,9 +468,11 @@ void init() {
 
         Object obj;
 
-        init_obj(p.mesh.c_str(), obj);
-
-        buffer(obj);
+        const bool isEmpty = p.mesh.empty();
+        if (!isEmpty) {
+            init_obj(p.mesh.c_str(), obj);
+            buffer(obj);
+        }
 
         obj.id = p.id;
         obj.parentID = p.parentID;
@@ -505,7 +507,8 @@ void init() {
         obj.normalTexture = TextureManager::Get(obj.norm_map, false);
         obj.hasNormalMap = obj.hasNormalMap && obj.normalTexture != 0;
 
-        RestoreSavedMaterials(obj, p.materials);
+        if (!isEmpty)
+            RestoreSavedMaterials(obj, p.materials);
 
         obj.physics = p.physics;
         obj.hasPhysics = p.hasPhysics;
@@ -523,7 +526,8 @@ void init() {
 
         obj.model = GetModelMatrix(obj);
 
-        UpdateMapping(obj);
+        if (!isEmpty)
+            UpdateMapping(obj);
 
         objects.push_back(std::move(obj));
     }

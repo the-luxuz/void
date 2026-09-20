@@ -338,11 +338,9 @@ struct Object {
     glm::vec3 position = glm::vec3(0.0f);
     glm::quat rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
     glm::vec3 scale = glm::vec3(1.0f);
-    // Zero means this object is a root node.  Transforms are local to the
-    // parent whenever one is assigned.
+
     EntityID parentID = 0;
-    // Calculated only for a newly imported asset. Saved scene transforms keep
-    // using their serialized scale.
+
     float importScale = 1.0f;
 
     std::string mesh; // has the .obj path
@@ -384,6 +382,10 @@ struct Object {
 
     bool visible = true;
 };
+
+inline bool IsEmptyObject(const Object &object) {
+    return object.mesh.empty() && object.vertices.empty();
+}
 
 struct Light {
 
