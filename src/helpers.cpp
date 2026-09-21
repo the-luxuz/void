@@ -1308,7 +1308,7 @@ void controls(const bool *keyboard, float angle_step, float radius_step, float d
     if (keyboard[SDL_SCANCODE_D])
         cam.cam_target += right * speed * dt;
     
-    cam.beta = glm::clamp(cam.beta, 0.01f, glm::pi<float>() - 0.01f);
+    cam.beta = glm::clamp(cam.beta, 0.01f, glm::pi<float>() - 0.1f);
     
     cam.radius = std::max(cam.radius, 0.5f);
     

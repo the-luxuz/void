@@ -628,9 +628,16 @@ int main(int argc, char *args[]) {
                         cam.alpha += event.motion.xrel * mouseSensitivity;
                         cam.beta -= event.motion.yrel * mouseSensitivity;
 
-                        constexpr float maxPitch = glm::radians(89.0f);
+                        if (free_cam || !player) {
 
-                        cam.beta = glm::clamp(cam.beta, -maxPitch, maxPitch);
+                            cam.beta = glm::clamp(cam.beta, 0.05f, glm::pi<float>() - 0.05f);
+                            
+                        } else {
+                        
+                            constexpr float maxPitch = glm::radians(89.0f);
+
+                            cam.beta = glm::clamp(cam.beta, -maxPitch, maxPitch);
+                        }
                     }
 
                 }
@@ -760,6 +767,10 @@ int main(int argc, char *args[]) {
 
                         PlayerControl(keyboard, fixedDt, *player);
                         UpdatePlayerCamera(*player);
+
+                    } else if (!player) {
+
+                        controls(keyboard, angle_speed, radius_speed, fixedDt);
                     }
 
                     if (st.physics_active)
