@@ -99,6 +99,7 @@ struct Parser {
         bool hasPhysics = false;
 
         Collider collider;
+        ColliderTransform colliderTransform;
         bool hasCollider = false;
 
         bool hasMaterial = true;

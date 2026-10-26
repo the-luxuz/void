@@ -1,5 +1,8 @@
 #define TINYOBJLOADER_IMPLEMENTATION
-
+#define _CRT_SECURE_NO_WARNINGS
+#define CGLTF_IMPLEMENTATION
+#include "cgltf.h"
+#undef _CRT_SECURE_NO_WARNINGS
 #define _CRTDBG_MAP_ALLOC
 #include <crtdbg.h>
 #include <cstdlib>
@@ -232,20 +235,6 @@ void update(SDL_Window *window, float dt) {
     glUseProgram(0);
 
     SDL_GL_SwapWindow(window);
-}
-
-void Rebuild() {
-
-    for (int i = 0; i < objects.size(); i++) {
-
-        Object &obj = objects[i];
-
-        // Build_Normals(obj);
-        Build_TBN(obj);
-
-        UpdateMeshBuffers(obj);
-        UpdateLineBuffers(obj);
-    }
 }
 
 int main(int argc, char *args[]) {

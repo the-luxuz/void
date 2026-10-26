@@ -180,53 +180,40 @@ void main() {
         vec3 p = localPos;
         vec3 Na = normalize(localNormal);
 
-        vec3 size =
-            max(
-                objMax - objMin,
-                vec3(0.000001)
-            );
+        vec3 size = max(objMax - objMin, vec3(0.000001));
 
-        vec3 normalizedPos =
-            (p - objMin) / size;
+        vec3 normalizedPos = (p - objMin) / size;
 
         vec3 absN = abs(Na);
 
         if (mapping == 2) {
 
-            if (absN.x >= absN.y &&
-                absN.x >= absN.z) {
+            if (absN.x >= absN.y && absN.x >= absN.z) {
 
                 mappedUV = normalizedPos.zy;
                 tilingValue = worldSize.zy;
 
-            }
-            else if (absN.y >= absN.x &&
-                     absN.y >= absN.z) {
+            } else if (absN.y >= absN.x && absN.y >= absN.z) {
 
                 mappedUV = normalizedPos.xz;
                 tilingValue = worldSize.xz;
 
-            }
-            else {
+            } else {
 
                 mappedUV = normalizedPos.xy;
                 tilingValue = worldSize.xy;
             }
 
-        }
-        else {
+        } else {
 
             mappedUV = uv;
             tilingValue = textureTiling;
         }
 
-        tiledUV =
-            mappedUV * tilingValue;
+        tiledUV = mappedUV * tilingValue;
     }
-    else {
-
+    else
         tiledUV = uv;
-    }
 
 
     // ------------------------------------------------------------
@@ -238,11 +225,7 @@ void main() {
 
     if (useTexture) {
 
-        vec4 texColor =
-            texture(
-                tex,
-                tiledUV
-            );
+        vec4 texColor = texture(tex, tiledUV);
 
         alpha = texColor.a;
 
@@ -253,20 +236,25 @@ void main() {
     }
 
     float roughness = clamp(materialRoughness, 0.04, 1.0);
+
     if (hasRoughnessMap)
         roughness = clamp(texture(roughnessMap, tiledUV).r, 0.04, 1.0);
 
     float metallic = clamp(materialMetallic, 0.0, 1.0);
+
     if (hasMetallicMap)
         metallic = clamp(texture(metallicMap, tiledUV).r, 0.0, 1.0);
 
     vec3 emission = materialEmission;
+
     if (hasEmissionMap)
         emission *= texture(emissionMap, tiledUV).rgb;
 
     alpha *= materialOpacity;
+
     if (hasOpacityMap)
         alpha *= texture(opacityMap, tiledUV).r;
+
     if (alpha < 0.1)
         discard;
 
@@ -274,46 +262,27 @@ void main() {
     // ------------------------------------------------------------
     // normal
 
-    vec3 N =
-        normalize(normal);
+    vec3 N = normalize(normal);
 
-    vec3 finalNormal =
-        N;
+    vec3 finalNormal = N;
 
 
-    if (hasNormalMap &&
-        normal_map_active) {
+    if (hasNormalMap && normal_map_active) {
 
-        vec3 T =
-            normalize(tangent);
+        vec3 T = normalize(tangent);
 
-        T =
-            normalize(
-                T - N * dot(N, T)
-            );
+        T = normalize(T - N * dot(N, T));
 
-        vec3 B =
-            normalize(
-                cross(N, T)
-            );
+        vec3 B = normalize(cross(N, T));
 
-        mat3 TBN =
-            mat3(T, B, N);
+        mat3 TBN = mat3(T, B, N);
 
 
-        vec3 normalTS =
-            texture(
-                normalMap,
-                tiledUV
-            ).xyz;
+        vec3 normalTS = texture(normalMap, tiledUV).xyz;
 
-        normalTS =
-            normalTS * 2.0 - 1.0;
+        normalTS = normalTS * 2.0 - 1.0;
 
-        finalNormal =
-            normalize(
-                TBN * normalTS
-            );
+        finalNormal = normalize(TBN * normalTS);
     }
 
 
@@ -346,14 +315,9 @@ void main() {
 
             vec3 proj = fragPosLight[i].xyz / fragPosLight[i].w;
 
-            vec3 norm_proj =
-                proj * 0.5 + 0.5;
+            vec3 norm_proj = proj * 0.5 + 0.5;
 
-            if (norm_proj.x >= 0.0 &&
-                norm_proj.x <= 1.0 &&
-                norm_proj.y >= 0.0 &&
-                norm_proj.y <= 1.0 &&
-                norm_proj.z <= 1.0) {
+            if (norm_proj.x >= 0.0 && norm_proj.x <= 1.0 && norm_proj.y >= 0.0 && norm_proj.y <= 1.0 && norm_proj.z <= 1.0) {
 
                 float currentDepth = norm_proj.z;
 
@@ -365,66 +329,28 @@ void main() {
 
                     for (int y = -radius; y <= radius; y++) {
 
-                        float depth =
-                            texture(
-                                depthData[i],
-                                norm_proj.xy +
-                                vec2(x, y) *
-                                texelSize
-                            ).r;
+                        float depth = texture(depthData[i], norm_proj.xy + vec2(x, y) * texelSize).r;
 
-                        if (
-                            currentDepth -
-                            lights[i].bias >
-                            depth
-                        ) {
-
+                        if (currentDepth - lights[i].bias > depth )
                             shadow += 1.0;
-                        }
                     }
                 }
 
-                float samples =
-                    float(
-                        pow(
-                            2 * radius + 1,
-                            2
-                        )
-                    );
+                float samples = float(pow(2 * radius + 1, 2));
 
-                shadow /=
-                    samples;
+                shadow /= samples;
             }
         }
 
 
-        if (lights[i].type == 0) {
+        if (lights[i].type == 0)
+            result += ShadePointLight(lights[i], finalNormal, V, baseColor, specPower, metallic);
+        else if (lights[i].type == 1)
 
-            result += ShadePointLight(
-                    lights[i],
-                    finalNormal,
-                    V,
-                    baseColor, specPower, metallic
-                );
-        }
-        else if (lights[i].type == 1) {
+            result += ShadeDirLight(lights[i], finalNormal, V, baseColor, specPower, metallic);
+        else if (lights[i].type == 2)
 
-            result += ShadeDirLight(
-                    lights[i],
-                    finalNormal,
-                    V,
-                    baseColor, specPower, metallic
-                );
-        }
-        else if (lights[i].type == 2) {
-
-            result += ShadeSpotLight(
-                    lights[i],
-                    finalNormal,
-                    V,
-                    baseColor, specPower, metallic
-                );
-        }
+            result += ShadeSpotLight(lights[i], finalNormal, V, baseColor, specPower, metallic);
     }
 
 

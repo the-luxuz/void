@@ -6,6 +6,7 @@
 #include "inits.h"
 #include "buffers.h"
 #include "imgui_helpers.h"
+#include "editor/Editor.h"
 
 //--------------------------------------------------------------------------
 // global variables
@@ -13,11 +14,7 @@
 // current mesh, texture and operation for ImGuizmo
 inline int currentMesh = 0;
 inline GLuint currentTexture = 0;
-inline ImGuizmo::OPERATION currentOperation = ImGuizmo::TRANSLATE;
 
-// snap imguizmo
-inline bool useSnap = false;
-inline float* snap = nullptr;
 
 //--------------------------------------------------------------------------
 // Update Grid

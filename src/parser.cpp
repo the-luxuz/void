@@ -1,10 +1,12 @@
 #include "parser.h"
 
 namespace {
+
 constexpr uint32_t SceneMagic = 0x564F4944; // "VOID"
-constexpr uint32_t SceneVersion = 3;
+constexpr uint32_t SceneVersion = 4;
 constexpr uint32_t MaxSceneObjects = 100000;
 constexpr uint32_t MaxAnimationKeys = 1000000;
+
 } // namespace
 
 void Parser::WriteAnimationValue(std::ofstream &out, const AnimationValue &value) {
@@ -249,9 +251,7 @@ void Parser::ReadString(std::ifstream &in, std::string &str) {
         in.read(str.data(), len);
 }
 
-void Parser::save(const char *settings_name, const char *scene_name, Settings &st, camera &cam,
-                  const std::vector<Object> &scene, const std::vector<Object> &scene_lgh_obj,
-                  const std::vector<::Light> &scene_lgh) {
+void Parser::save(const char *settings_name, const char *scene_name, Settings &st, camera &cam, const std::vector<Object> &scene, const std::vector<Object> &scene_lgh_obj, const std::vector<::Light> &scene_lgh) {
 
     std::ofstream out(settings_name, std::ios::binary);
     std::ofstream out_scene(scene_name, std::ios::binary);
@@ -264,8 +264,7 @@ void Parser::save(const char *settings_name, const char *scene_name, Settings &s
     save_scene(out_scene, scene, scene_lgh_obj, scene_lgh, st, cam);
 }
 
-bool Parser::load(const char *settings_name, const char *scene_name, Settings &st, camera &cam,
-                  std::vector<Object> &scene) {
+bool Parser::load(const char *settings_name, const char *scene_name, Settings &st, camera &cam, std::vector<Object> &scene) {
 
     std::ifstream in(settings_name, std::ios::binary);
     std::ifstream in_scene(scene_name, std::ios::binary);
@@ -333,11 +332,10 @@ void Parser::load_settings(std::ifstream &in, Settings &st, camera &cam) {
     Read(in, cam.radius);
 }
 
-void Parser::save_scene(std::ofstream &out, const std::vector<Object> &scene, const std::vector<Object> &scene_lgh_obj,
-                        const std::vector<::Light> &scene_lgh, const Settings &sceneSettings,
-                        const camera &sceneCamera) {
+void Parser::save_scene(std::ofstream &out, const std::vector<Object> &scene, const std::vector<Object> &scene_lgh_obj, const std::vector<::Light> &scene_lgh, const Settings &sceneSettings, const camera &sceneCamera) {
 
     uint32_t count = scene.size();
+
     const uint32_t lightCount = static_cast<uint32_t>(std::min(scene_lgh_obj.size(), scene_lgh.size()));
     const uint32_t lightObjCount = lightCount;
     const uint32_t animCount = static_cast<uint32_t>(animations.size());
@@ -410,6 +408,9 @@ void Parser::save_scene(std::ofstream &out, const std::vector<Object> &scene, co
 
         Write(out, obj.collider);
         Write(out, obj.hasCollider);
+        Write(out, obj.colliderTransform.offset);
+        Write(out, obj.colliderTransform.rotation);
+        Write(out, obj.colliderTransform.size);
 
         Write(out, obj.hasMaterial);
         Write(out, obj.hasMapping);
@@ -421,7 +422,9 @@ void Parser::save_scene(std::ofstream &out, const std::vector<Object> &scene, co
         Write(out, obj.visible);
 
         const uint32_t materialCount = static_cast<uint32_t>(obj.submeshes.size());
+
         Write(out, materialCount);
+
         for (const Submesh &submesh : obj.submeshes)
             WriteMaterial(out, submesh.material);
     }
@@ -460,6 +463,9 @@ void Parser::save_scene(std::ofstream &out, const std::vector<Object> &scene, co
 
         Write(out, scene_lgh_obj[i].collider);
         Write(out, scene_lgh_obj[i].hasCollider);
+        Write(out, scene_lgh_obj[i].colliderTransform.offset);
+        Write(out, scene_lgh_obj[i].colliderTransform.rotation);
+        Write(out, scene_lgh_obj[i].colliderTransform.size);
 
         Write(out, scene_lgh_obj[i].hasMaterial);
         Write(out, scene_lgh_obj[i].hasMapping);
@@ -598,8 +604,7 @@ bool Parser::load_scene(std::ifstream &in, Settings *sceneSettings, camera *scen
     Read(in, lightCount);
     Read(in, animCount);
 
-    if (!in || count > MaxSceneObjects || lightObjCount > MaxSceneObjects || lightCount > MAX_LIGHTS ||
-        animCount > MaxSceneObjects)
+    if (!in || count > MaxSceneObjects || lightObjCount > MaxSceneObjects || lightCount > MAX_LIGHTS || animCount > MaxSceneObjects)
         return false;
 
     objects.clear();
@@ -649,6 +654,14 @@ bool Parser::load_scene(std::ifstream &in, Settings *sceneSettings, camera *scen
         Read(in, obj.hasPhysics);
         Read(in, obj.collider);
         Read(in, obj.hasCollider);
+
+        if (sceneVersion >= 4) {
+
+            Read(in, obj.colliderTransform.offset);
+            Read(in, obj.colliderTransform.rotation);
+            Read(in, obj.colliderTransform.size);
+        }
+
         Read(in, obj.hasMaterial);
         Read(in, obj.hasMapping);
         Read(in, obj.hasAnimation);
@@ -663,6 +676,7 @@ bool Parser::load_scene(std::ifstream &in, Settings *sceneSettings, camera *scen
             if (!in || materialCount > MaxSceneObjects) {
 
                 in.setstate(std::ios::failbit);
+
                 return false;
             }
 
@@ -678,6 +692,7 @@ bool Parser::load_scene(std::ifstream &in, Settings *sceneSettings, camera *scen
 
         if (sceneVersion >= 3)
             Read(in, obj.parentID);
+
         if (obj.id == 0)
             obj.id = GenerateEntityID();
 
@@ -691,8 +706,11 @@ bool Parser::load_scene(std::ifstream &in, Settings *sceneSettings, camera *scen
 
         Read(in, obj.position);
         Read(in, obj.scale);
+
         glm::vec3 euler{};
+
         Read(in, euler);
+
         obj.rotation = glm::quat(glm::radians(euler));
 
         Read(in, obj.min);
@@ -706,6 +724,14 @@ bool Parser::load_scene(std::ifstream &in, Settings *sceneSettings, camera *scen
         Read(in, obj.hasPhysics);
         Read(in, obj.collider);
         Read(in, obj.hasCollider);
+
+        if (sceneVersion >= 4) {
+
+            Read(in, obj.colliderTransform.offset);
+            Read(in, obj.colliderTransform.rotation);
+            Read(in, obj.colliderTransform.size);
+        }
+
         Read(in, obj.hasMaterial);
         Read(in, obj.hasMapping);
         Read(in, obj.hasAnimation);
@@ -726,8 +752,11 @@ bool Parser::load_scene(std::ifstream &in, Settings *sceneSettings, camera *scen
         Read(in, lgh.dir);
         Read(in, lgh.col);
         Read(in, lgh.att);
+
         glm::vec3 euler{};
+
         Read(in, euler);
+
         lgh.rotation = glm::quat(glm::radians(euler));
 
         Read(in, lgh.amb);
@@ -746,6 +775,7 @@ bool Parser::load_scene(std::ifstream &in, Settings *sceneSettings, camera *scen
     if (sceneVersion >= 3) {
 
         uint32_t playerCount = 0;
+
         Read(in, playerCount);
 
         if (!in || playerCount > MaxSceneObjects)

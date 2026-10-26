@@ -2101,14 +2101,12 @@ Contact Sphere_vs_AABB(const Object &sphere, const Object &box) {
 
     Contact contact{};
 
-    glm::vec3 half = glm::abs(box.scale);
-
-    glm::vec3 min = box.position - half;
-    glm::vec3 max = box.position + half;
-
-    glm::vec3 closest = glm::clamp(sphere.position, min, max);
-
-    glm::vec3 delta = closest - sphere.position;
+    const glm::quat inverseRotation = glm::inverse(box.rotation);
+    const glm::vec3 localCenter = inverseRotation * (sphere.position - box.position);
+    const glm::vec3 half = glm::abs(box.scale);
+    const glm::vec3 closestLocal = glm::clamp(localCenter, -half, half);
+    const glm::vec3 closest = box.position + box.rotation * closestLocal;
+    const glm::vec3 delta = closest - sphere.position;
 
     float dist2 = glm::dot(delta, delta);
 
@@ -2143,39 +2141,55 @@ Contact AABB_vs_AABB(const Object &a, const Object &b) {
 
     glm::vec3 halfA = glm::abs(a.scale);
     glm::vec3 halfB = glm::abs(b.scale);
+    const glm::vec3 axesA[3] = {a.rotation * glm::vec3(1, 0, 0), a.rotation * glm::vec3(0, 1, 0),
+                                a.rotation * glm::vec3(0, 0, 1)};
+    const glm::vec3 axesB[3] = {b.rotation * glm::vec3(1, 0, 0), b.rotation * glm::vec3(0, 1, 0),
+                                b.rotation * glm::vec3(0, 0, 1)};
+    const glm::vec3 delta = b.position - a.position;
+    float minOverlap = FLT_MAX;
+    glm::vec3 minAxis(1.0f, 0.0f, 0.0f);
 
-    glm::vec3 delta = b.position - a.position;
+    auto testAxis = [&](const glm::vec3 &axis) {
+        const float axisLength2 = glm::length2(axis);
+        if (axisLength2 < 1e-8f)
+            return true;
 
-    float overlapX = halfA.x + halfB.x - std::abs(delta.x);
-    if (overlapX <= 0.0f)
-        return contact;
+        const glm::vec3 normalizedAxis = axis / std::sqrt(axisLength2);
+        float radiusA = 0.0f;
+        float radiusB = 0.0f;
+        for (int i = 0; i < 3; ++i) {
+            radiusA += halfA[i] * std::abs(glm::dot(normalizedAxis, axesA[i]));
+            radiusB += halfB[i] * std::abs(glm::dot(normalizedAxis, axesB[i]));
+        }
 
-    float overlapY = halfA.y + halfB.y - std::abs(delta.y);
-    if (overlapY <= 0.0f)
-        return contact;
+        const float distance = glm::dot(delta, normalizedAxis);
+        const float overlap = radiusA + radiusB - std::abs(distance);
+        if (overlap <= 0.0f)
+            return false;
 
-    float overlapZ = halfA.z + halfB.z - std::abs(delta.z);
-    if (overlapZ <= 0.0f)
-        return contact;
+        if (overlap < minOverlap) {
+            minOverlap = overlap;
+            minAxis = distance >= 0.0f ? normalizedAxis : -normalizedAxis;
+        }
 
-    contact.hit = true;
+        return true;
+    };
 
-    if (overlapX < overlapY && overlapX < overlapZ) {
-
-        contact.penetration = overlapX;
-        contact.normal = glm::vec3(delta.x > 0 ? 1.f : -1.f, 0, 0);
-
-    } else if (overlapY < overlapZ) {
-
-        contact.penetration = overlapY;
-        contact.normal = glm::vec3(0, delta.y > 0 ? 1.f : -1.f, 0);
-
-    } else {
-
-        contact.penetration = overlapZ;
-        contact.normal = glm::vec3(0, 0, delta.z > 0 ? 1.f : -1.f);
+    for (int i = 0; i < 3; ++i) {
+        if (!testAxis(axesA[i]) || !testAxis(axesB[i]))
+            return contact;
     }
 
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            if (!testAxis(glm::cross(axesA[i], axesB[j])))
+                return contact;
+        }
+    }
+
+    contact.hit = true;
+    contact.normal = minAxis;
+    contact.penetration = minOverlap;
     contact.point = (a.position + b.position) * 0.5f;
 
     return contact;
@@ -2185,11 +2199,13 @@ Contact AABB_vs_Plane(const Object &box, const Object &plane) {
 
     Contact contact{};
 
-    glm::quat invRotation = glm::inverse(plane.rotation);
-
-    glm::vec3 localCenter = invRotation * (box.position - plane.position);
-
-    glm::vec3 half = glm::abs(box.scale);
+    const glm::quat invRotation = glm::inverse(plane.rotation);
+    const glm::vec3 localCenter = invRotation * (box.position - plane.position);
+    const glm::vec3 half = glm::abs(box.scale);
+    const glm::vec3 boxAxes[3] = {box.rotation * glm::vec3(1, 0, 0), box.rotation * glm::vec3(0, 1, 0),
+                                  box.rotation * glm::vec3(0, 0, 1)};
+    const glm::vec3 planeAxes[3] = {plane.rotation * glm::vec3(1, 0, 0), plane.rotation * glm::vec3(0, 1, 0),
+                                    plane.rotation * glm::vec3(0, 0, 1)};
 
     float halfWidth = std::abs(plane.scale.x);
     float halfDepth = std::abs(plane.scale.z);
@@ -2197,18 +2213,29 @@ Contact AABB_vs_Plane(const Object &box, const Object &plane) {
     glm::vec3 closestPointLocal = localCenter;
 
     closestPointLocal.x = glm::clamp(localCenter.x, -halfWidth, halfWidth);
+    closestPointLocal.y = 0.0f;
     closestPointLocal.z = glm::clamp(localCenter.z, -halfDepth, halfDepth);
 
-    if (std::abs(localCenter.x) > halfWidth + half.x)
+    const float projectedHalfX = half.x * std::abs(glm::dot(boxAxes[0], planeAxes[0])) +
+                                 half.y * std::abs(glm::dot(boxAxes[1], planeAxes[0])) +
+                                 half.z * std::abs(glm::dot(boxAxes[2], planeAxes[0]));
+    const float projectedHalfY = half.x * std::abs(glm::dot(boxAxes[0], planeAxes[1])) +
+                                 half.y * std::abs(glm::dot(boxAxes[1], planeAxes[1])) +
+                                 half.z * std::abs(glm::dot(boxAxes[2], planeAxes[1]));
+    const float projectedHalfZ = half.x * std::abs(glm::dot(boxAxes[0], planeAxes[2])) +
+                                 half.y * std::abs(glm::dot(boxAxes[1], planeAxes[2])) +
+                                 half.z * std::abs(glm::dot(boxAxes[2], planeAxes[2]));
+
+    if (std::abs(localCenter.x) > halfWidth + projectedHalfX)
         return contact;
 
-    if (std::abs(localCenter.z) > halfDepth + half.z)
+    if (std::abs(localCenter.z) > halfDepth + projectedHalfZ)
         return contact;
 
     float distance = localCenter.y;
 
-    float minY = localCenter.y - half.y;
-    float maxY = localCenter.y + half.y;
+    float minY = localCenter.y - projectedHalfY;
+    float maxY = localCenter.y + projectedHalfY;
 
     if (minY > 0.0f || maxY < 0.0f)
         return contact;
@@ -2221,9 +2248,9 @@ Contact AABB_vs_Plane(const Object &box, const Object &plane) {
     contact.normal = worldNormal;
 
     if (localCenter.y >= 0.0f)
-        contact.penetration = half.y - localCenter.y;
+        contact.penetration = projectedHalfY - localCenter.y;
     else
-        contact.penetration = half.y + localCenter.y;
+        contact.penetration = projectedHalfY + localCenter.y;
 
     glm::vec3 worldPoint = plane.position + plane.rotation * closestPointLocal;
 
@@ -2253,11 +2280,17 @@ void PositionalCorrection(Object &a, Object &b, Contact &c) {
 
     glm::vec3 correction = c.normal * percent * std::max(c.penetration - slop, 0.0f) / totalInvMass;
 
-    if (!pa.isStatic)
-        a.position -= correction * invMassA;
+    if (!pa.isStatic) {
+        glm::mat4 worldMatrix = GetModelMatrix(a);
+        worldMatrix[3] -= glm::vec4(correction * invMassA, 0.0f);
+        SetObjectWorldMatrix(a, worldMatrix);
+    }
 
-    if (!pb.isStatic)
-        b.position += correction * invMassB;
+    if (!pb.isStatic) {
+        glm::mat4 worldMatrix = GetModelMatrix(b);
+        worldMatrix[3] += glm::vec4(correction * invMassB, 0.0f);
+        SetObjectWorldMatrix(b, worldMatrix);
+    }
 }
 
 void ResolveVelocity(Object &a, Object &b, Contact &c) {
@@ -2520,7 +2553,7 @@ void ApplyTrack(const AnimationTrack &track, float time) {
             const std::string &path = std::get<std::string>(value);
 
             obj->tex = path;
-            obj->obj_texture = TextureManager::Get(path);
+            obj->obj_texture = TextureManager::Get(path, false);
 
             break;
         }

@@ -156,11 +156,14 @@ void init_camera() {
 void init_obj(const char *objFile, Object &obj) {
 
     tinyobj::attrib_t attrib;
+
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
+
     std::string err;
 
     const std::filesystem::path objectPath(objFile);
+
     const std::string materialDirectory = objectPath.parent_path().generic_string() + "/";
 
     bool success = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, objFile, materialDirectory.c_str());
@@ -176,6 +179,7 @@ void init_obj(const char *objFile, Object &obj) {
     obj.submeshes.clear();
 
     struct VertexKey {
+
         int position;
         int texcoord;
         int normal;
@@ -184,42 +188,50 @@ void init_obj(const char *objFile, Object &obj) {
     };
 
     struct VertexKeyHash {
+
         size_t operator()(const VertexKey &key) const {
+
             size_t hash = std::hash<int>{}(key.position);
+
             hash ^= std::hash<int>{}(key.texcoord) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
             hash ^= std::hash<int>{}(key.normal) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+
             return hash;
         }
     };
 
     std::unordered_map<VertexKey, GLuint, VertexKeyHash> vertexLookup;
+
     auto addVertex = [&](const tinyobj::index_t &index) {
+
         const VertexKey key{index.vertex_index, index.texcoord_index, index.normal_index};
+
         if (const auto found = vertexLookup.find(key); found != vertexLookup.end())
             return found->second;
 
         Vertex vertex{};
-        vertex.position = {attrib.vertices[3 * index.vertex_index + 0], attrib.vertices[3 * index.vertex_index + 1],
-                           attrib.vertices[3 * index.vertex_index + 2]};
 
-        if (index.texcoord_index >= 0) {
-            vertex.uv = {attrib.texcoords[2 * index.texcoord_index + 0],
-                         attrib.texcoords[2 * index.texcoord_index + 1]};
-        }
+        vertex.position = {attrib.vertices[3 * index.vertex_index + 0], attrib.vertices[3 * index.vertex_index + 1], attrib.vertices[3 * index.vertex_index + 2]};
+
+        if (index.texcoord_index >= 0)
+            vertex.uv = {attrib.texcoords[2 * index.texcoord_index + 0], attrib.texcoords[2 * index.texcoord_index + 1]};
+
         vertex.originalUV = vertex.uv;
 
-        if (index.normal_index >= 0) {
-            vertex.normal = {attrib.normals[3 * index.normal_index + 0], attrib.normals[3 * index.normal_index + 1],
-                             attrib.normals[3 * index.normal_index + 2]};
-        }
+        if (index.normal_index >= 0)
+            vertex.normal = {attrib.normals[3 * index.normal_index + 0], attrib.normals[3 * index.normal_index + 1], attrib.normals[3 * index.normal_index + 2]};
 
         const GLuint vertexIndex = static_cast<GLuint>(obj.vertices.size());
+
         obj.vertices.push_back(vertex);
+
         vertexLookup.emplace(key, vertexIndex);
+
         return vertexIndex;
     };
 
     auto createMaterial = [&](int materialId) {
+
         Material material{};
 
         if (materialId < 0 || materialId >= static_cast<int>(materials.size()))
@@ -234,13 +246,11 @@ void init_obj(const char *objFile, Object &obj) {
         material.emission = {source.emission[0], source.emission[1], source.emission[2]};
         material.shininess = source.shininess;
         material.opacity = source.dissolve;
-        material.roughness = source.roughness > 0.0f ? source.roughness :
-            glm::clamp(std::sqrt(2.0f / (source.shininess + 2.0f)), 0.04f, 1.0f);
+        material.roughness = source.roughness > 0.0f ? source.roughness : glm::clamp(std::sqrt(2.0f / (source.shininess + 2.0f)), 0.04f, 1.0f);
         material.metallic = glm::clamp(source.metallic, 0.0f, 1.0f);
 
-        auto resolveMaterialTexture =
+        auto resolveMaterialTexture = [&](const std::string &reference) -> std::filesystem::path {
 
-            [&](const std::string &reference) -> std::filesystem::path {
             if (reference.empty())
                 return {};
 
@@ -274,9 +284,10 @@ void init_obj(const char *objFile, Object &obj) {
                 return;
 
             const std::filesystem::path resolved = resolveMaterialTexture(reference);
+
             if (!std::filesystem::exists(resolved)) {
-                std::cout << "Material '" << source.name << "': missing " << semantic << " texture: "
-                          << resolved.generic_string() << '\n';
+
+                std::cout << "Material '" << source.name << "': missing " << semantic << " texture: "  << resolved.generic_string() << '\n';
                 return;
             }
 
@@ -284,12 +295,11 @@ void init_obj(const char *objFile, Object &obj) {
             texture = TextureManager::Get(path, sRGB);
         };
 
-        loadTexture(source.diffuse_texname, material.albedoPath, material.albedoTexture, true, "albedo");
-        loadTexture(!source.normal_texname.empty() ? source.normal_texname : source.bump_texname,
-                    material.normalPath, material.normalTexture, false, "normal");
+        loadTexture(source.diffuse_texname, material.albedoPath, material.albedoTexture, false, "albedo");
+        loadTexture(!source.normal_texname.empty() ? source.normal_texname : source.bump_texname, material.normalPath, material.normalTexture, false, "normal");
         loadTexture(source.roughness_texname, material.roughnessPath, material.roughnessTexture, false, "roughness");
         loadTexture(source.metallic_texname, material.metallicPath, material.metallicTexture, false, "metallic");
-        loadTexture(source.emissive_texname, material.emissionPath, material.emissionTexture, true, "emission");
+        loadTexture(source.emissive_texname, material.emissionPath, material.emissionTexture, false, "emission");
         loadTexture(source.alpha_texname, material.opacityPath, material.opacityTexture, false, "opacity");
 
         return material;
@@ -302,15 +312,23 @@ void init_obj(const char *objFile, Object &obj) {
     std::vector<bool> materialLoaded(materials.size(), false);
 
     for (const auto &shape : shapes) {
+
         const auto &indices = shape.mesh.indices;
+
         int activeMaterialId = std::numeric_limits<int>::min();
+
         Submesh *activeSubmesh = nullptr;
 
         for (size_t face = 0; face * 3 + 2 < indices.size(); ++face) {
+
             const int materialId = face < shape.mesh.material_ids.size() ? shape.mesh.material_ids[face] : -1;
+
             if (materialId != activeMaterialId) {
+
                 Submesh submesh{};
+
                 submesh.firstIndex = static_cast<GLuint>(obj.indices.size());
+
                 if (materialId >= 0 && materialId < static_cast<int>(materials.size())) {
 
                     const size_t index = static_cast<size_t>(materialId);
@@ -344,7 +362,7 @@ void init_obj(const char *objFile, Object &obj) {
 
     BuildImportedTBN(obj);
 
-    for (const Vertex &v : obj.vertices) {
+    for (Vertex &v : obj.vertices) {
 
         min = glm::min(min, v.position);
         max = glm::max(max, v.position);
@@ -365,18 +383,21 @@ void PrepareImportedObject(Object &obj) {
 
     const glm::vec3 center = (obj.min + obj.max) * 0.5f;
     const glm::vec3 sourceSize = obj.max - obj.min;
+
     const float largestDimension = std::max(sourceSize.x, std::max(sourceSize.y, sourceSize.z));
 
     for (Vertex &vertex : obj.vertices)
         vertex.position -= center;
 
     for (Submesh &submesh : obj.submeshes) {
+
         submesh.min -= center;
         submesh.max -= center;
     }
 
     obj.min -= center;
     obj.max -= center;
+
     obj.importScale = largestDimension > 0.0001f ? 100.0f / largestDimension : 1.0f;
     obj.collider.radius *= obj.importScale;
 }
@@ -389,31 +410,36 @@ bool init_lights(Object &obj) {
 }
 
 namespace {
-void RestoreMaterialTextures(Material& material) {
 
-    material.albedoTexture = TextureManager::Get(material.albedoPath, true);
-    material.normalTexture = TextureManager::Get(material.normalPath, false);
-    material.roughnessTexture = TextureManager::Get(material.roughnessPath, false);
-    material.metallicTexture = TextureManager::Get(material.metallicPath, false);
-    material.emissionTexture = TextureManager::Get(material.emissionPath, true);
-    material.opacityTexture = TextureManager::Get(material.opacityPath, false);
-}
+    void RestoreMaterialTextures(Material& material) {
 
-void RestoreSavedMaterials(Object& object, const std::vector<Material>& materials) {
-
-    if (materials.empty())
-        return;
-
-    if (materials.size() != object.submeshes.size()) {
-        std::cout << "Saved material count does not match OBJ submeshes for " << object.mesh << '\n';
-        return;
+        material.albedoTexture = TextureManager::Get(material.albedoPath, false);
+        material.normalTexture = TextureManager::Get(material.normalPath, false);
+        material.roughnessTexture = TextureManager::Get(material.roughnessPath, false);
+        material.metallicTexture = TextureManager::Get(material.metallicPath, false);
+        material.emissionTexture = TextureManager::Get(material.emissionPath, false);
+        material.opacityTexture = TextureManager::Get(material.opacityPath, false);
     }
 
-    for (size_t i = 0; i < materials.size(); ++i) {
-        object.submeshes[i].material = materials[i];
-        RestoreMaterialTextures(object.submeshes[i].material);
+    void RestoreSavedMaterials(Object& object, const std::vector<Material>& materials) {
+
+        if (materials.empty())
+            return;
+
+        if (materials.size() != object.submeshes.size()) {
+
+            std::cout << "Saved material count does not match OBJ submeshes for " << object.mesh << '\n';
+
+            return;
+        }
+
+        for (size_t i = 0; i < materials.size(); ++i) {
+
+            object.submeshes[i].material = materials[i];
+
+            RestoreMaterialTextures(object.submeshes[i].material);
+        }
     }
-}
 } // namespace
 
 void init() {
@@ -497,7 +523,7 @@ void init() {
         obj.max = p.max;
         obj.min = p.min;
 
-        obj.obj_texture = TextureManager::Get(obj.tex, true);
+        obj.obj_texture = TextureManager::Get(obj.tex, false);
 
         obj.original_vertices = obj.vertices;
         obj.original_indices = obj.indices;
@@ -514,6 +540,7 @@ void init() {
         obj.hasPhysics = p.hasPhysics;
 
         obj.collider = p.collider;
+        obj.colliderTransform = p.colliderTransform;
         obj.hasCollider = p.hasCollider;
 
         obj.hasMaterial = p.hasMaterial;
@@ -532,16 +559,14 @@ void init() {
         objects.push_back(std::move(obj));
     }
 
-    // Do not let a broken or outdated file create dangling/cyclic hierarchy links.
     for (Object& object : objects) {
-        if (object.parentID != 0 &&
-            (!FindObjectByID(object.parentID) || object.parentID == object.id ||
-             IsDescendantOf(object.parentID, object.id))) {
+
+        if (object.parentID != 0 && (!FindObjectByID(object.parentID) || object.parentID == object.id || IsDescendantOf(object.parentID, object.id)))
             object.parentID = 0;
-        }
     }
 
     const size_t loadedLightCount = std::min({par.lights.size(), par.lights_objects.size(), static_cast<size_t>(MAX_LIGHTS)});
+
     for (size_t i = 0; i < loadedLightCount; ++i) {
 
         Light light;
@@ -600,13 +625,14 @@ void init() {
             obj.physics = savedObject.physics;
             obj.hasPhysics = savedObject.hasPhysics;
             obj.collider = savedObject.collider;
+            obj.colliderTransform = savedObject.colliderTransform;
             obj.hasCollider = savedObject.hasCollider;
             obj.hasMaterial = savedObject.hasMaterial;
             obj.hasMapping = savedObject.hasMapping;
             obj.hasAnimation = savedObject.hasAnimation;
             obj.tiling = savedObject.tiling;
             obj.visible = savedObject.visible;
-            obj.obj_texture = TextureManager::Get(obj.tex, true);
+            obj.obj_texture = TextureManager::Get(obj.tex, false);
             obj.normalTexture = TextureManager::Get(obj.norm_map, false);
             obj.hasNormalMap = savedObject.hasNormalMap && obj.normalTexture != 0;
 

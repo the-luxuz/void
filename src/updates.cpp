@@ -12,9 +12,11 @@ static bool IsBoundsVisible(const glm::mat4 &clipMatrix, const glm::vec3 &min, c
                                   {min.x, max.y, max.z}, {max.x, max.y, max.z}};
 
     auto allOutside = [&](auto predicate) {
+
         for (const glm::vec3 &corner : corners) {
 
             const glm::vec4 clip = clipMatrix * glm::vec4(corner, 1.0f);
+
             if (!predicate(clip))
                 return false;
         }
@@ -28,77 +30,6 @@ static bool IsBoundsVisible(const glm::mat4 &clipMatrix, const glm::vec3 &min, c
            !allOutside([](const glm::vec4 &p) { return p.y > p.w; }) &&
            !allOutside([](const glm::vec4 &p) { return p.z < -p.w; }) &&
            !allOutside([](const glm::vec4 &p) { return p.z > p.w; });
-}
-
-static int FindObjectIndex(EntityID id) {
-
-    for (size_t index = 0; index < objects.size(); ++index) {
-
-        if (objects[index].id == id)
-            return static_cast<int>(index);
-    }
-
-    return -1;
-}
-
-static void DrawHierarchyNode(Object &object, size_t depth = 0) {
-
-    if (depth >= objects.size())
-        return;
-
-    bool hasChildren = false;
-    for (const Object &candidate : objects) {
-
-        if (candidate.parentID == object.id) {
-
-            hasChildren = true;
-            break;
-        }
-    }
-
-    ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
-    if (selectedObject == FindObjectIndex(object.id))
-        flags |= ImGuiTreeNodeFlags_Selected;
-    if (!hasChildren)
-        flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
-
-    ImGui::PushID(reinterpret_cast<void *>(static_cast<uintptr_t>(object.id)));
-    const bool open = ImGui::TreeNodeEx(object.name.c_str(), flags);
-    if (ImGui::IsItemClicked())
-        selectedObject = FindObjectIndex(object.id);
-
-    if (ImGui::BeginDragDropSource()) {
-
-        ImGui::SetDragDropPayload("HIERARCHY_OBJECT", &object.id, sizeof(object.id));
-        ImGui::TextUnformatted(object.name.c_str());
-        ImGui::EndDragDropSource();
-    }
-
-    if (ImGui::BeginDragDropTarget()) {
-
-        if (const ImGuiPayload *payload = ImGui::AcceptDragDropPayload("HIERARCHY_OBJECT")) {
-
-            EntityID childID = 0;
-            memcpy(&childID, payload->Data, sizeof(childID));
-            if (Object *child = FindObjectByID(childID))
-                ReparentObject(*child, object.id);
-        }
-
-        ImGui::EndDragDropTarget();
-    }
-
-    if (hasChildren && open) {
-
-        for (Object &child : objects) {
-
-            if (child.parentID == object.id)
-                DrawHierarchyNode(child, depth + 1);
-        }
-
-        ImGui::TreePop();
-    }
-
-    ImGui::PopID();
 }
 
 //--------------------------------------------------------------------------
@@ -137,6 +68,7 @@ void update_depthmap() {
     //--------------------------------------------------------------------
 
     const size_t shadowLightCount = std::min({lights.size(), lightObjects.size(), static_cast<size_t>(MAX_LIGHTS)});
+
     for (size_t i = 0; i < shadowLightCount; ++i) {
 
         lights[i].dir = glm::normalize(lightObjects[i].rotation * glm::vec3(0.0f, -1.0f, 0.0f));
@@ -168,9 +100,15 @@ void update_depthmap() {
 
         for (auto &obj : objects) {
 
+            if (IsEmptyObject(obj))
+                continue;
+
             const glm::mat4 model = GetModelMatrix(obj);
 
             glm::mat4 lightMVP = lightVP[i] * model;
+
+            if (!IsBoundsVisible(lightMVP, obj.min, obj.max))
+                continue;
 
             glUniformMatrix4fv(3, 1, GL_FALSE, glm::value_ptr(lightMVP));
 
@@ -186,8 +124,7 @@ void update_depthmap() {
                     if (!IsBoundsVisible(lightMVP, submesh.min, submesh.max))
                         continue;
 
-                    glDrawElements(
-                        GL_TRIANGLES, static_cast<GLsizei>(submesh.indexCount), GL_UNSIGNED_INT,
+                    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(submesh.indexCount), GL_UNSIGNED_INT,
                         reinterpret_cast<const void *>(static_cast<uintptr_t>(submesh.firstIndex) * sizeof(GLuint)));
                 }
             }
@@ -239,7 +176,7 @@ void update_objects() {
 
     for (int i = 0; i < numLights; ++i) {
 
-            glActiveTexture(GL_TEXTURE2 + static_cast<GLenum>(i));
+        glActiveTexture(GL_TEXTURE2 + static_cast<GLenum>(i));
         glBindTexture(GL_TEXTURE_2D, depth_texture[i]);
 
         if (!shader_uniform.class_uniforms_initialized) {
@@ -372,17 +309,25 @@ void update_objects() {
         };
 
         if (!obj.hasMaterial || obj.submeshes.empty()) {
+
             Material fallback{};
+
             fallback.normalTexture = obj.normalTexture;
             fallback.shininess = obj.shininess;
             fallback.roughness = glm::clamp(std::sqrt(2.0f / (obj.shininess + 2.0f)), 0.04f, 1.0f);
+
             bindMaterial(fallback);
             glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(obj.indices.size()), GL_UNSIGNED_INT, nullptr);
+
         } else {
+
             for (const Submesh &submesh : obj.submeshes) {
+
                 if (!IsBoundsVisible(obj.mvp, submesh.min, submesh.max))
                     continue;
+
                 bindMaterial(submesh.material);
+
                 glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(submesh.indexCount), GL_UNSIGNED_INT,
                     reinterpret_cast<const void *>(static_cast<uintptr_t>(submesh.firstIndex) * sizeof(GLuint)));
             }
@@ -425,6 +370,7 @@ void update_objects() {
     }
 
     const size_t drawableLightCount = std::min(lights.size(), lightObjects.size());
+
     for (size_t i = 0; i < drawableLightCount; ++i) {
 
         if (currentViewMode == view_Mode::PLAY && !lightObjects[i].visible)
@@ -553,9 +499,6 @@ void UpdateAnimation(float dt) {
     UpdateAnimationPreview(dt);
 }
 
-//--------------------------------------------------------------------------
-// Update Collisions
-
 void CollisionUpdate() {
 
     for (size_t i = 0; i < objects.size(); i++) {
@@ -573,16 +516,20 @@ void CollisionUpdate() {
             if (!CanCollide(a, b))
                 continue;
 
+            if (a.collider.type == ColliderType::None || b.collider.type == ColliderType::None)
+                continue;
+
             if (!a.hasCollider)
                 continue;
 
             if (!b.hasCollider)
                 continue;
 
-            // Static objects cannot change one another. Skipping the pair avoids
-            // needless narrow-phase collision work in static scenes.
             if (a.hasPhysics && b.hasPhysics && a.physics.isStatic && b.physics.isStatic)
                 continue;
+
+            Object colliderA = GetColliderProxy(a);
+            Object colliderB = GetColliderProxy(b);
 
             switch (a.collider.type) {
 
@@ -591,12 +538,12 @@ void CollisionUpdate() {
                 switch (b.collider.type) {
 
                 case ColliderType::Sphere:
-                    contact = Sphere_vs_Plane(b, a);
+                    contact = Sphere_vs_Plane(colliderB, colliderA);
                     contact.normal *= -1.0f;
                     break;
 
                 case ColliderType::AABB:
-                    contact = AABB_vs_Plane(b, a);
+                    contact = AABB_vs_Plane(colliderB, colliderA);
                     contact.normal *= -1.0f;
                     break;
                 }
@@ -608,15 +555,15 @@ void CollisionUpdate() {
                 switch (b.collider.type) {
 
                 case ColliderType::Plane:
-                    contact = Sphere_vs_Plane(a, b);
+                    contact = Sphere_vs_Plane(colliderA, colliderB);
                     break;
 
                 case ColliderType::Sphere:
-                    contact = Sphere_vs_Sphere(a, b);
+                    contact = Sphere_vs_Sphere(colliderA, colliderB);
                     break;
 
                 case ColliderType::AABB:
-                    contact = Sphere_vs_AABB(a, b);
+                    contact = Sphere_vs_AABB(colliderA, colliderB);
                     break;
                 }
 
@@ -627,16 +574,16 @@ void CollisionUpdate() {
                 switch (b.collider.type) {
 
                 case ColliderType::Plane:
-                    contact = AABB_vs_Plane(a, b);
+                    contact = AABB_vs_Plane(colliderA, colliderB);
                     break;
 
                 case ColliderType::Sphere:
-                    contact = Sphere_vs_AABB(b, a);
+                    contact = Sphere_vs_AABB(colliderB, colliderA);
                     contact.normal *= -1.0f;
                     break;
 
                 case ColliderType::AABB:
-                    contact = AABB_vs_AABB(a, b);
+                    contact = AABB_vs_AABB(colliderA, colliderB);
                     break;
                 }
 
@@ -657,1379 +604,12 @@ void CollisionUpdate() {
     }
 }
 
+
+
 //--------------------------------------------------------------------------
 // Update Imgui and guizmo
 
 void update_imgui_guizmo() {
 
-    ImGui::Begin("ViewPort", nullptr);
-
-    viewport_scroll_active = ImGui::IsWindowHovered();
-
-    viewportPos = ImGui::GetCursorScreenPos();
-    viewportSize = ImGui::GetContentRegionAvail();
-
-    ImGui::Image((ImTextureID)(intptr_t)viewport_texture, viewportSize, ImVec2(0, 1), ImVec2(1, 0));
-
-    Object *obj = GetSelectedObject();
-    Light *light = GetSelectedLight();
-
-    if (obj) {
-
-        ImGuizmo::BeginFrame();
-
-        ImGuizmo::SetDrawlist(ImGui::GetWindowDrawList());
-
-        ImGuizmo::SetOrthographic(false);
-
-        ImGuizmo::SetRect(viewportPos.x, viewportPos.y, viewportSize.x, viewportSize.y);
-
-        float moveSnap[3] = {12.5, 12.5, 12.5};
-        float scaleSnap[3] = {0.125, 0.125, 0.125};
-        float rotateSnap[3] = {11.25, 11.25, 11.25};
-
-        snap = nullptr;
-
-        useSnap = SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_LSHIFT];
-
-        if (useSnap) {
-
-            switch (currentOperation) {
-
-            case ImGuizmo::TRANSLATE:
-                snap = moveSnap;
-                break;
-
-            case ImGuizmo::ROTATE:
-                snap = rotateSnap;
-                break;
-
-            case ImGuizmo::SCALE:
-                snap = scaleSnap;
-                break;
-            }
-        }
-
-        obj->model = GetModelMatrix(*obj);
-
-        ImGuizmo::Manipulate(glm::value_ptr(view), glm::value_ptr(projection), currentOperation, ImGuizmo::WORLD,
-                             glm::value_ptr(obj->model), nullptr, snap);
-
-        static bool wasUsing = false;
-
-        bool usingGizmo = ImGuizmo::IsUsing();
-
-        if (usingGizmo && !wasUsing) {
-
-            prevState = CaptureState(*obj);
-        }
-
-        if (usingGizmo && !wasUsing && light) {
-
-            prevLightState = CaptureLightState(*light);
-        }
-
-        if (ImGuizmo::IsUsing()) {
-
-            glm::vec3 translation = glm::vec3(0.0f);
-            glm::vec3 scale = glm::vec3(20.0f);
-            glm::vec3 euler;
-
-            ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(obj->model), glm::value_ptr(translation),
-                                                  glm::value_ptr(euler), glm::value_ptr(scale));
-
-            if (useSnap && currentOperation == ImGuizmo::ROTATE) {
-
-                auto Snap = [](float value, float step) { return roundf(value / step) * step; };
-
-                euler.x = Snap(euler.x, rotateSnap[0]);
-                euler.y = Snap(euler.y, rotateSnap[1]);
-                euler.z = Snap(euler.z, rotateSnap[2]);
-            }
-
-            if (useSnap && currentOperation == ImGuizmo::ROTATE) {
-
-                obj->model = glm::translate(glm::mat4(1.0f), translation);
-                obj->model *= glm::toMat4(glm::quat(glm::radians(euler)));
-                obj->model = glm::scale(obj->model, scale);
-            }
-
-            SetObjectWorldMatrix(*obj, obj->model);
-        }
-
-        if (!usingGizmo && wasUsing) {
-
-            obj->undoStack.push_back(prevState);
-            obj->redoStack.clear();
-        }
-
-        if (!usingGizmo && wasUsing && light) {
-
-            light->undoStack.push_back(prevLightState);
-            light->redoStack.clear();
-        }
-
-        wasUsing = usingGizmo;
-
-        if (currentOperation != ImGuizmo::SCALE && light)
-            obj->scale = glm::vec3(20.0f);
-    }
-
-    ImGui::End();
-
-    //----------------------------------------------------
-    // browser
-
-    ImGuiWindowFlags a_flags =
-        ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
-
-    ImGui::Begin("Assets", nullptr, a_flags);
-
-    if (currentFolder != rootFolder) {
-
-        if (ImGui::Button("<-")) {
-
-            currentFolder = currentFolder.parent_path();
-            ReloadFolder();
-        }
-    } else {
-
-        ImGui::BeginDisabled();
-        ImGui::Button("<-");
-        ImGui::EndDisabled();
-    }
-
-    ImGui::SameLine();
-
-    if (ImGui::Button("Home")) {
-
-        currentFolder = rootFolder;
-        ReloadFolder();
-    }
-
-    ImGui::SameLine();
-
-    ImGui::TextUnformatted(currentFolder.string().c_str());
-
-    ImGui::Separator();
-
-    int columns = std::max(1, (int)(ImGui::GetContentRegionAvail().x / cellSize));
-
-    if (ImGui::BeginTable("AssetsTable", columns)) {
-
-        for (auto &entry : folderEntries) {
-
-            ImGui::TableNextColumn();
-
-            ImGui::PushID(entry.path().string().c_str());
-
-            if (entry.is_directory()) {
-
-                if (ImGui::Button("", ImVec2(64, 64))) {
-
-                    newFolder = entry.path();
-                    reloadFolder = true;
-                }
-
-                ImGui::TextWrapped("%s", entry.path().filename().string().c_str());
-            } else {
-
-                auto ext = entry.path().extension().string();
-
-                if (ext == ".png" || ext == ".jpg" || ext == ".jpeg") {
-
-                    ImGui::PushID(entry.path().string().c_str());
-
-                    std::string path = entry.path().string();
-
-                    if (path.rfind("../", 0) == 0)
-                        path.erase(0, 3);
-
-                    GLuint tex = TextureManager::Get(path);
-
-                    if (ImGui::ImageButton("", (ImTextureID)(intptr_t)tex, ImVec2(64, 64), ImVec2(0, 1),
-                                           ImVec2(1, 0))) {
-
-                        if (selectedObject != -1 && objects[selectedObject].hasMaterial) {
-
-                            objects[selectedObject].obj_texture = tex;
-                            objects[selectedObject].tex = path;
-                        }
-                    }
-
-                    if (ImGui::BeginDragDropSource()) {
-
-                        ImGui::SetDragDropPayload("IMAGE_FILE", path.c_str(), path.size() + 1);
-
-                        ImGui::Image((ImTextureID)(intptr_t)tex, ImVec2(64, 64));
-                        ImGui::Text("%s", entry.path().filename().string().c_str());
-
-                        ImGui::EndDragDropSource();
-                    }
-
-                    ImGui::TextWrapped("%s", entry.path().stem().string().c_str());
-
-                    ImGui::PopID();
-                }
-
-                if (ext == ".obj") {
-
-                    std::string path = entry.path().string();
-
-                    if (ImGui::Button("", ImVec2(64, 64))) {
-
-                        Object obj;
-
-                        init_obj(path.c_str(), obj);
-                        PrepareImportedObject(obj);
-
-                        obj.id = GenerateEntityID();
-                        obj.name = GenerateObjectName(entry.path().stem().string());
-                        obj.mesh = path;
-
-                        buffer(obj);
-
-                        obj.position = glm::vec3(0.0f, 50.0f, 0.0f);
-                        obj.rotation = glm::quat(1.f, 0.f, 0.f, 0.f);
-                        obj.scale = glm::vec3(obj.importScale);
-
-                        obj.original_vertices = obj.vertices;
-                        obj.original_indices = obj.indices;
-
-                        obj.shininess = 20.0f;
-                        obj.hasNormalMap = false;
-                        obj.model = GetModelMatrix(obj);
-
-                        obj.obj_texture = 0;
-                        obj.tex.clear();
-
-                        objects.push_back(std::move(obj));
-                        selectedObject = static_cast<int>(objects.size()) - 1;
-                    }
-
-                    if (ImGui::BeginDragDropSource()) {
-
-                        ImGui::SetDragDropPayload("OBJ_FILE", path.c_str(), path.size() + 1);
-
-                        ImGui::Image((ImTextureID)(intptr_t)nullptr, ImVec2(64, 64));
-                        ImGui::Text("%s", entry.path().filename().string().c_str());
-
-                        ImGui::EndDragDropSource();
-                    }
-
-                    ImGui::TextWrapped("%s", entry.path().stem().string().c_str());
-                }
-
-                if (ext == ".exr" || ext == ".hdr") {
-
-                    std::string path = entry.path().string();
-
-                    if (path.rfind("../", 0) == 0)
-                        path.erase(0, 3);
-
-                    if (ImGui::Button("", ImVec2(64, 64))) {
-
-                        init_skybox(path.c_str(), false);
-                        st.skybox = path;
-                    }
-
-                    ImGui::TextWrapped("%s", entry.path().stem().string().c_str());
-                }
-
-                if (ext == ".bin") {
-
-                    std::string path = entry.path().string();
-
-                    if (ImGui::Button("", ImVec2(64, 64))) {
-
-                        load_scene_ok(path.c_str());
-                    }
-
-                    ImGui::TextWrapped("%s", entry.path().stem().string().c_str());
-                }
-
-                if (ext == ".mp4") {
-
-                    std::string path = entry.path().string();
-
-                    if (ImGui::Button("", ImVec2(64, 64))) {
-
-                        videoPlayer.Open(path.c_str());
-                        videoPlayer.Play();
-
-                        isCinematicActive = true;
-                    }
-
-                    ImGui::TextWrapped("%s", entry.path().stem().string().c_str());
-                }
-            }
-
-            ImGui::PopID();
-        }
-
-        if (reloadFolder) {
-
-            currentFolder = newFolder;
-
-            ReloadFolder();
-
-            reloadFolder = false;
-        }
-
-        ImGui::EndTable();
-    }
-
-    ImGui::End();
-
-    //----------------------------------------------------
-    // hierarchy
-
-    ImGuiWindowFlags h_flags =
-        ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
-
-    ImGui::Begin("Hierarchy", nullptr, h_flags);
-
-    ImGui::Selectable("Scene Root", false);
-    if (ImGui::BeginDragDropTarget()) {
-
-        if (const ImGuiPayload *payload = ImGui::AcceptDragDropPayload("HIERARCHY_OBJECT")) {
-
-            EntityID childID = 0;
-            memcpy(&childID, payload->Data, sizeof(childID));
-            if (Object *child = FindObjectByID(childID))
-                ReparentObject(*child, 0);
-        }
-
-        ImGui::EndDragDropTarget();
-    }
-
-    if (ImGui::Button("+ Empty")) {
-
-        objects.push_back(CreateEmptyObject());
-        selectedObject = static_cast<int>(objects.size()) - 1;
-    }
-
-    ImGui::Separator();
-
-    for (Object &object : objects) {
-
-        if (object.parentID == 0 || !FindObjectByID(object.parentID))
-            DrawHierarchyNode(object);
-    }
-
-    if (!lightObjects.empty())
-        ImGui::SeparatorText("Lights");
-
-    for (size_t i = 0; i < lightObjects.size(); i++) {
-
-        ImGui::PushID((int)(objects.size() + i));
-
-        bool selected = (selectedObject == (int)(objects.size() + i));
-
-        if (ImGui::Selectable(lightObjects[i].name.c_str(), selected))
-            selectedObject = objects.size() + i;
-
-        ImGui::PopID();
-    }
-
-    ImGui::End();
-
-    //----------------------------------------------------
-    // lights
-
-    ImGui::Begin("Lights");
-
-    if (ImGui::Button("+ Point")) {
-
-        if (lights.size() < MAX_LIGHTS) {
-
-            CreateLight("POINT");
-            selectedObject = (int)(objects.size() + lightObjects.size() - 1);
-        }
-    }
-
-    ImGui::SameLine();
-
-    if (ImGui::Button("+ Spot")) {
-
-        if (lights.size() < MAX_LIGHTS) {
-
-            CreateLight("SPOT");
-            selectedObject = (int)(objects.size() + lightObjects.size() - 1);
-        }
-    }
-
-    ImGui::SameLine();
-
-    if (ImGui::Button("+ Directional")) {
-
-        if (lights.size() < MAX_LIGHTS) {
-
-            CreateLight("DIR");
-            selectedObject = (int)(objects.size() + lightObjects.size() - 1);
-        }
-    }
-
-    ImGui::End();
-
-    //----------------------------------------------------
-    // Inspector
-
-    static const char *mappings[] = {"UV", "Planar", "Cube", "Cylinder", "Sphere"};
-
-    static const char *planarCoords[] = {"XZ", "XY", "YZ"};
-
-    static const char *cylinderAxes[] = {"X", "Y", "Z"};
-
-    ImGui::Begin("Inspector");
-
-    if (selectedObject != -1 && selectedObject < (int)objects.size()) {
-
-        Object *obj = GetSelectedObject();
-        const bool isEmpty = obj && IsEmptyObject(*obj);
-
-        if (ImGui::CollapsingHeader("General")) {
-
-            static char name[256];
-            strncpy_s(name, objects[selectedObject].name.c_str(), sizeof(name));
-            name[255] = '\0';
-
-            if (ImGui::InputText("Name", name, sizeof(name))) {
-
-                objects[selectedObject].name = name;
-            }
-
-            ImGui::DragFloat3("Position", &obj->position.x, 0.1f);
-            HandleInspectorUndo(*obj);
-
-            glm::vec3 euler = glm::degrees(glm::eulerAngles(obj->rotation));
-
-            if (ImGui::DragFloat3("Rotation", &euler.x, 1.0f))
-                obj->rotation = glm::quat(glm::radians(euler));
-
-            HandleInspectorUndo(*obj);
-
-            ImGui::DragFloat3("Scale", &obj->scale.x, 0.1f);
-            HandleInspectorUndo(*obj);
-
-            ImGui::Checkbox("Visible", &obj->visible);
-            HandleInspectorUndo(*obj);
-        }
-
-        //------------------------------------------------------------
-
-        if (!isEmpty && obj->hasPhysics) {
-
-            ImGui::Separator();
-
-            if (ImGui::CollapsingHeader("Physics")) {
-
-                Physics &p = obj->physics;
-
-                ImGui::DragFloat3("Velocity", &obj->physics.velocity.x, 0.1f);
-                HandleInspectorUndo(*obj);
-
-                ImGui::DragFloat3("Acceleration", &obj->physics.acceleration.x, 0.1f);
-                HandleInspectorUndo(*obj);
-
-                ImGui::DragFloat("Drag", &obj->physics.drag, 0.1f);
-                HandleInspectorUndo(*obj);
-
-                ImGui::DragFloat("Restitution", &obj->physics.restitution, 0.1f);
-                HandleInspectorUndo(*obj);
-
-                ImGui::DragFloat("Friction", &obj->physics.friction, 0.1f);
-                HandleInspectorUndo(*obj);
-
-                ImGui::DragFloat3("Force", &obj->physics.force.x, 0.1f);
-                HandleInspectorUndo(*obj);
-
-                float mass = (p.inverseMass == 0.0f) ? 0.0f : 1.0f / p.inverseMass;
-
-                if (ImGui::DragFloat("Mass", &mass, 0.1f, 0.0f, 1000.0f)) {
-
-                    if (mass == 0.0f)
-                        p.inverseMass = 0.0f;
-                    else
-                        p.inverseMass = 1.0f / mass;
-                }
-
-                HandleInspectorUndo(*obj);
-
-                ImGui::Checkbox("Use Gravity", &obj->physics.useGravity);
-                HandleInspectorUndo(*obj);
-
-                ImGui::Checkbox("Is Static", &obj->physics.isStatic);
-                HandleInspectorUndo(*obj);
-
-                if (ImGui::Button("Reset Velocities")) {
-
-                    obj->physics.velocity = glm::vec3(0.0f);
-                    obj->physics.acceleration = glm::vec3(0.0f);
-                }
-            }
-        }
-
-        //------------------------------------------------------------
-
-        static const char *colliderTypes[] = {"None", "Plane", "Sphere", "AABB"};
-
-        if (!isEmpty && obj->hasCollider) {
-
-            ImGui::Separator();
-
-            if (ImGui::CollapsingHeader("Collision")) {
-
-                ImGui::Separator();
-
-                int currentType = (int)obj->collider.type;
-
-                if (ImGui::Combo("Type", &currentType, colliderTypes, IM_ARRAYSIZE(colliderTypes))) {
-
-                    HandleInspectorUndo(*obj);
-
-                    obj->collider.type = (ColliderType)currentType;
-                }
-
-                ImGui::Separator();
-
-                switch (obj->collider.type) {
-
-                case ColliderType::None: {
-
-                    ImGui::TextDisabled("No collider.");
-                    break;
-                }
-
-                case ColliderType::Plane: {
-
-                    ImGui::Text("Plane Collider");
-
-                    ImGui::Separator();
-
-                    ImGui::Checkbox("Trigger", &obj->collider.isTrigger);
-
-                    ImGui::Separator();
-
-                    if (ImGui::BeginCombo("Layers", "Select layers")) {
-
-                        bool world = (obj->collider.layer & CollisionLayer::World) != 0;
-                        bool player = (obj->collider.layer & CollisionLayer::Player) != 0;
-                        bool enemy = (obj->collider.layer & CollisionLayer::Enemy) != 0;
-                        bool bullet = (obj->collider.layer & CollisionLayer::Bullets) != 0;
-
-                        if (ImGui::Checkbox("World", &world)) {
-
-                            if (world)
-                                obj->collider.layer |= CollisionLayer::World;
-                            else
-                                obj->collider.layer &= ~CollisionLayer::World;
-
-                            HandleInspectorUndo(*obj);
-                        }
-
-                        if (ImGui::Checkbox("Player", &player)) {
-
-                            if (player)
-                                obj->collider.layer |= CollisionLayer::Player;
-                            else
-                                obj->collider.layer &= ~CollisionLayer::Player;
-
-                            HandleInspectorUndo(*obj);
-                        }
-
-                        if (ImGui::Checkbox("Enemy", &enemy)) {
-
-                            if (enemy)
-                                obj->collider.layer |= CollisionLayer::Enemy;
-                            else
-                                obj->collider.layer &= ~CollisionLayer::Enemy;
-
-                            HandleInspectorUndo(*obj);
-                        }
-
-                        if (ImGui::Checkbox("Bullet", &bullet)) {
-
-                            if (bullet)
-                                obj->collider.layer |= CollisionLayer::Bullets;
-                            else
-                                obj->collider.layer &= ~CollisionLayer::Bullets;
-
-                            HandleInspectorUndo(*obj);
-                        }
-
-                        ImGui::EndCombo();
-                    }
-
-                    ImGui::Separator();
-
-                    if (ImGui::BeginCombo("Mask", "Collides With")) {
-
-                        bool world = (obj->collider.mask & CollisionLayer::World) != 0;
-                        ;
-                        bool player = (obj->collider.mask & CollisionLayer::Player) != 0;
-                        ;
-                        bool enemy = (obj->collider.mask & CollisionLayer::Enemy) != 0;
-                        ;
-                        bool bullet = (obj->collider.mask & CollisionLayer::Bullets) != 0;
-                        ;
-
-                        if (ImGui::Checkbox("World", &world)) {
-
-                            if (world)
-                                obj->collider.mask |= CollisionLayer::World;
-                            else
-                                obj->collider.mask &= ~CollisionLayer::World;
-
-                            HandleInspectorUndo(*obj);
-                        }
-
-                        if (ImGui::Checkbox("Player", &player)) {
-
-                            if (player)
-                                obj->collider.mask |= CollisionLayer::Player;
-                            else
-                                obj->collider.mask &= ~CollisionLayer::Player;
-
-                            HandleInspectorUndo(*obj);
-                        }
-
-                        if (ImGui::Checkbox("Enemy", &enemy)) {
-
-                            if (enemy)
-                                obj->collider.mask |= CollisionLayer::Enemy;
-                            else
-                                obj->collider.mask &= ~CollisionLayer::Enemy;
-
-                            HandleInspectorUndo(*obj);
-                        }
-
-                        if (ImGui::Checkbox("Bullet", &bullet)) {
-
-                            if (bullet)
-                                obj->collider.mask |= CollisionLayer::Bullets;
-                            else
-                                obj->collider.mask &= ~CollisionLayer::Bullets;
-
-                            HandleInspectorUndo(*obj);
-                        }
-
-                        ImGui::EndCombo();
-                    }
-
-                    ImGui::Separator();
-
-                    break;
-                }
-
-                case ColliderType::Sphere: {
-
-                    ImGui::Text("Sphere Collider");
-
-                    ImGui::Separator();
-
-                    ImGui::DragFloat("Radius", &obj->collider.radius, 0.01f, 0.0f);
-
-                    ImGui::Separator();
-
-                    ImGui::Checkbox("Trigger", &obj->collider.isTrigger);
-
-                    ImGui::Separator();
-
-                    if (ImGui::BeginCombo("Layers", "Select layers")) {
-
-                        bool world = (obj->collider.layer & CollisionLayer::World) != 0;
-                        ;
-                        bool player = (obj->collider.layer & CollisionLayer::Player) != 0;
-                        ;
-                        bool enemy = (obj->collider.layer & CollisionLayer::Enemy) != 0;
-                        ;
-                        bool bullet = (obj->collider.layer & CollisionLayer::Bullets) != 0;
-                        ;
-
-                        if (ImGui::Checkbox("World", &world)) {
-
-                            if (world)
-                                obj->collider.layer |= CollisionLayer::World;
-                            else
-                                obj->collider.layer &= ~CollisionLayer::World;
-
-                            HandleInspectorUndo(*obj);
-                        }
-
-                        if (ImGui::Checkbox("Player", &player)) {
-
-                            if (player)
-                                obj->collider.layer |= CollisionLayer::Player;
-                            else
-                                obj->collider.layer &= ~CollisionLayer::Player;
-
-                            HandleInspectorUndo(*obj);
-                        }
-
-                        if (ImGui::Checkbox("Enemy", &enemy)) {
-
-                            if (enemy)
-                                obj->collider.layer |= CollisionLayer::Enemy;
-                            else
-                                obj->collider.layer &= ~CollisionLayer::Enemy;
-
-                            HandleInspectorUndo(*obj);
-                        }
-
-                        if (ImGui::Checkbox("Bullet", &bullet)) {
-
-                            if (bullet)
-                                obj->collider.layer |= CollisionLayer::Bullets;
-                            else
-                                obj->collider.layer &= ~CollisionLayer::Bullets;
-
-                            HandleInspectorUndo(*obj);
-                        }
-
-                        ImGui::EndCombo();
-                    }
-
-                    ImGui::Separator();
-
-                    if (ImGui::BeginCombo("Mask", "Collides With")) {
-
-                        bool world = (obj->collider.mask & CollisionLayer::World) != 0;
-                        ;
-                        bool player = (obj->collider.mask & CollisionLayer::Player) != 0;
-                        ;
-                        bool enemy = (obj->collider.mask & CollisionLayer::Enemy) != 0;
-                        ;
-                        bool bullet = (obj->collider.mask & CollisionLayer::Bullets) != 0;
-                        ;
-
-                        if (ImGui::Checkbox("World", &world)) {
-
-                            if (world)
-                                obj->collider.mask |= CollisionLayer::World;
-                            else
-                                obj->collider.mask &= ~CollisionLayer::World;
-
-                            HandleInspectorUndo(*obj);
-                        }
-
-                        if (ImGui::Checkbox("Player", &player)) {
-
-                            if (player)
-                                obj->collider.mask |= CollisionLayer::Player;
-                            else
-                                obj->collider.mask &= ~CollisionLayer::Player;
-
-                            HandleInspectorUndo(*obj);
-                        }
-
-                        if (ImGui::Checkbox("Enemy", &enemy)) {
-
-                            if (enemy)
-                                obj->collider.mask |= CollisionLayer::Enemy;
-                            else
-                                obj->collider.mask &= ~CollisionLayer::Enemy;
-
-                            HandleInspectorUndo(*obj);
-                        }
-
-                        if (ImGui::Checkbox("Bullet", &bullet)) {
-
-                            if (bullet)
-                                obj->collider.mask |= CollisionLayer::Bullets;
-                            else
-                                obj->collider.mask &= ~CollisionLayer::Bullets;
-
-                            HandleInspectorUndo(*obj);
-                        }
-
-                        ImGui::EndCombo();
-                    }
-
-                    ImGui::Separator();
-
-                    break;
-                }
-
-                case ColliderType::AABB: {
-
-                    ImGui::Text("AABB Collider");
-
-                    ImGui::Separator();
-
-                    // ImGui::DragFloat3("Half Extents", &obj->collider.halfExtents.x,
-                    // 0.01f);
-
-                    ImGui::Separator();
-
-                    ImGui::Checkbox("Trigger", &obj->collider.isTrigger);
-
-                    ImGui::Separator();
-
-                    if (ImGui::BeginCombo("Layers", "Select layers")) {
-
-                        bool world = (obj->collider.layer & CollisionLayer::World) != 0;
-                        bool player = (obj->collider.layer & CollisionLayer::Player) != 0;
-                        bool enemy = (obj->collider.layer & CollisionLayer::Enemy) != 0;
-                        bool bullet = (obj->collider.layer & CollisionLayer::Bullets) != 0;
-
-                        if (ImGui::Checkbox("World", &world)) {
-
-                            if (world)
-                                obj->collider.layer |= CollisionLayer::World;
-                            else
-                                obj->collider.layer &= ~CollisionLayer::World;
-
-                            HandleInspectorUndo(*obj);
-                        }
-
-                        if (ImGui::Checkbox("Player", &player)) {
-
-                            if (player)
-                                obj->collider.layer |= CollisionLayer::Player;
-                            else
-                                obj->collider.layer &= ~CollisionLayer::Player;
-
-                            HandleInspectorUndo(*obj);
-                        }
-
-                        if (ImGui::Checkbox("Enemy", &enemy)) {
-
-                            if (enemy)
-                                obj->collider.layer |= CollisionLayer::Enemy;
-                            else
-                                obj->collider.layer &= ~CollisionLayer::Enemy;
-
-                            HandleInspectorUndo(*obj);
-                        }
-
-                        if (ImGui::Checkbox("Bullet", &bullet)) {
-
-                            if (bullet)
-                                obj->collider.layer |= CollisionLayer::Bullets;
-                            else
-                                obj->collider.layer &= ~CollisionLayer::Bullets;
-
-                            HandleInspectorUndo(*obj);
-                        }
-
-                        ImGui::EndCombo();
-                    }
-
-                    ImGui::Separator();
-
-                    if (ImGui::BeginCombo("Mask", "Collides With")) {
-
-                        bool world = (obj->collider.mask & CollisionLayer::World) != 0;
-                        ;
-                        bool player = (obj->collider.mask & CollisionLayer::Player) != 0;
-                        ;
-                        bool enemy = (obj->collider.mask & CollisionLayer::Enemy) != 0;
-                        ;
-                        bool bullet = (obj->collider.mask & CollisionLayer::Bullets) != 0;
-                        ;
-
-                        if (ImGui::Checkbox("World", &world)) {
-
-                            if (world)
-                                obj->collider.mask |= CollisionLayer::World;
-                            else
-                                obj->collider.mask &= ~CollisionLayer::World;
-
-                            HandleInspectorUndo(*obj);
-                        }
-
-                        if (ImGui::Checkbox("Player", &player)) {
-
-                            if (player)
-                                obj->collider.mask |= CollisionLayer::Player;
-                            else
-                                obj->collider.mask &= ~CollisionLayer::Player;
-
-                            HandleInspectorUndo(*obj);
-                        }
-
-                        if (ImGui::Checkbox("Enemy", &enemy)) {
-
-                            if (enemy)
-                                obj->collider.mask |= CollisionLayer::Enemy;
-                            else
-                                obj->collider.mask &= ~CollisionLayer::Enemy;
-
-                            HandleInspectorUndo(*obj);
-                        }
-
-                        if (ImGui::Checkbox("Bullet", &bullet)) {
-
-                            if (bullet)
-                                obj->collider.mask |= CollisionLayer::Bullets;
-                            else
-                                obj->collider.mask &= ~CollisionLayer::Bullets;
-
-                            HandleInspectorUndo(*obj);
-                        }
-
-                        ImGui::EndCombo();
-                    }
-
-                    ImGui::Separator();
-
-                    break;
-                }
-                }
-            }
-        }
-
-        if (!isEmpty && obj->hasMaterial) {
-
-            ImGui::Separator();
-
-            if (ImGui::CollapsingHeader("Material")) {
-
-                ImGui::DragFloat("Shininess", &obj->shininess, 1.0f, 1.0f, 256.0f);
-                HandleInspectorUndo(*obj);
-
-                ImGui::Text("Texture:");
-
-                ImGui::TextWrapped("%s", obj->tex.c_str());
-
-                ImGui::Image((ImTextureID)(intptr_t)obj->obj_texture, ImVec2(80, 80), ImVec2(0, 1), ImVec2(1, 0));
-
-                ImGui::Button("Drop texture here##Texture", ImVec2(80, 80));
-
-                if (ImGui::BeginDragDropTarget()) {
-
-                    if (const ImGuiPayload *payload = ImGui::AcceptDragDropPayload("IMAGE_FILE")) {
-
-                        HandleInspectorUndo(*obj);
-
-                        const char *file = (const char *)payload->Data;
-
-                        objects[selectedObject].obj_texture = TextureManager::Get(file);
-
-                        objects[selectedObject].tex = file;
-                    }
-
-                    ImGui::EndDragDropTarget();
-                }
-
-                ImGui::Checkbox("Tiling", &obj->tiling);
-                HandleInspectorUndo(*obj);
-
-                //------------------------------------------------------------
-
-                ImGui::Text("Normal Map:");
-
-                ImGui::TextWrapped("%s", obj->norm_map.c_str());
-
-                ImGui::Image((ImTextureID)(intptr_t)obj->normalTexture, ImVec2(80, 80), ImVec2(0, 1), ImVec2(1, 0));
-
-                ImGui::Button("Drop texture here##NormalMap", ImVec2(80, 80));
-
-                if (ImGui::BeginDragDropTarget()) {
-
-                    if (const ImGuiPayload *payload = ImGui::AcceptDragDropPayload("IMAGE_FILE")) {
-
-                        HandleInspectorUndo(*obj);
-
-                        const char *file = (const char *)payload->Data;
-
-                        objects[selectedObject].normalTexture = TextureManager::Get(file);
-
-                        objects[selectedObject].norm_map = file;
-                        objects[selectedObject].hasNormalMap = true;
-                    }
-
-                    ImGui::EndDragDropTarget();
-                }
-            }
-        }
-
-        ImGui::Separator();
-
-        if (isEmpty) {
-
-            ImGui::Separator();
-            ImGui::TextUnformatted("Empty object: transform-only hierarchy parent.");
-            ImGui::TextUnformatted("Drag scene objects onto it in Hierarchy to parent them.");
-        }
-
-        if (!isEmpty && ImGui::CollapsingHeader("Mesh")) {
-
-            ImGui::TextWrapped("%s", obj->mesh.c_str());
-
-            ImGui::Text("Mesh:");
-
-            ImGui::Button("Drop .obj here##Mesh", ImVec2(200, 80));
-
-            if (ImGui::BeginDragDropTarget()) {
-
-                if (const ImGuiPayload *payload = ImGui::AcceptDragDropPayload("OBJ_FILE")) {
-
-                    HandleInspectorUndo(*obj);
-
-                    DestroyBuffers(*obj);
-
-                    obj->vertices.clear();
-                    obj->indices.clear();
-
-                    obj->normalLines.clear();
-
-                    obj->tangentLines.clear();
-                    obj->bitangentLines.clear();
-                    obj->normalLinesTBN.clear();
-
-                    obj->original_vertices.clear();
-                    obj->original_indices.clear();
-
-                    ReplaceMesh(objects[selectedObject], (const char *)payload->Data);
-                }
-
-                ImGui::EndDragDropTarget();
-            }
-
-            ImGui::TextWrapped("%s", obj->mesh.c_str());
-
-            ImGui::Text("Vertices: %d", (int)obj->vertices.size());
-            ImGui::Text("Triangles: %d", (int)obj->indices.size() / 3);
-        }
-
-        ImGui::Separator();
-
-        if (!isEmpty && ImGui::CollapsingHeader("Bounds")) {
-
-            ImGui::DragFloat3("Min", &obj->min.x, 0.1f);
-            HandleInspectorUndo(*obj);
-
-            ImGui::DragFloat3("Max", &obj->max.x, 0.1f);
-            HandleInspectorUndo(*obj);
-        }
-
-        if (animationWindow) {
-
-            if (obj)
-                DrawObjectAnimationButtons(*obj);
-        }
-
-        if (!isEmpty && obj->hasMapping) {
-
-            ImGui::Separator();
-
-            int current = (int)obj->mapping;
-
-            if (ImGui::CollapsingHeader("Mapping")) {
-
-                if (ImGui::Combo("Mapping##M", &current, mappings, IM_ARRAYSIZE(mappings))) {
-
-                    HandleInspectorUndo(*obj);
-
-                    obj->mapping = (TextureMapping)current;
-                    UpdateMapping(*obj);
-                }
-
-                //------------------------------------------------------------
-                // Planar
-
-                if (obj->mapping == TextureMapping::Planar) {
-
-                    int coord = (int)obj->coordType;
-
-                    if (ImGui::Combo("Plane", &coord, planarCoords, IM_ARRAYSIZE(planarCoords))) {
-
-                        HandleInspectorUndo(*obj);
-
-                        obj->coordType = (coord_types)coord;
-                        UpdateMapping(*obj);
-                    }
-                }
-
-                //------------------------------------------------------------
-                // Cubic
-
-                if (obj->mapping == TextureMapping::Cubic) {
-
-                    if (ImGui::Button("Regenerate Cube UV")) {
-
-                        HandleInspectorUndo(*obj);
-
-                        UpdateMapping(*obj);
-                    }
-                }
-
-                //------------------------------------------------------------
-                // Cylindrical
-
-                if (obj->mapping == TextureMapping::Cylindrical) {
-
-                    int axis = (int)obj->cyaxisType;
-
-                    if (ImGui::Combo("Axis", &axis, cylinderAxes, IM_ARRAYSIZE(cylinderAxes))) {
-
-                        HandleInspectorUndo(*obj);
-
-                        obj->cyaxisType = (cylinder_axis)axis;
-                        UpdateMapping(*obj);
-                    }
-                }
-
-                //------------------------------------------------------------
-                // Spherical
-
-                if (obj->mapping == TextureMapping::Spherical) {
-
-                    if (ImGui::Button("Regenerate Sphere UV")) {
-
-                        HandleInspectorUndo(*obj);
-
-                        UpdateMapping(*obj);
-                    }
-                }
-
-                //------------------------------------------------------------
-                // UV
-
-                if (obj->mapping == TextureMapping::UV) {
-
-                    if (ImGui::Button("Restore Original UV")) {
-
-                        HandleInspectorUndo(*obj);
-
-                        UpdateMapping(*obj);
-                    }
-                }
-            }
-        }
-
-        ImGui::Separator();
-
-        if (!isEmpty && ImGui::BeginCombo("Add Module", "Modules")) {
-
-            bool material = obj->hasMaterial;
-            bool collision = obj->hasCollider;
-            bool physics = obj->hasPhysics;
-            bool mapping = obj->hasMapping;
-            bool animation = obj->hasAnimation;
-
-            if (ImGui::Checkbox("Material", &material)) {
-
-                obj->hasMaterial = material;
-                HandleInspectorUndo(*obj);
-            }
-
-            if (ImGui::Checkbox("Collision", &collision)) {
-
-                obj->hasCollider = collision;
-                HandleInspectorUndo(*obj);
-            }
-
-            if (ImGui::Checkbox("Physics", &physics)) {
-
-                obj->hasPhysics = physics;
-                HandleInspectorUndo(*obj);
-            }
-
-            if (ImGui::Checkbox("Mapping", &mapping)) {
-
-                obj->hasMapping = mapping;
-                HandleInspectorUndo(*obj);
-            }
-
-            if (ImGui::Checkbox("Animation", &animation)) {
-
-                obj->hasAnimation = animation;
-                HandleInspectorUndo(*obj);
-            }
-
-            ImGui::EndCombo();
-        }
-
-        ImGui::Separator();
-
-        if (ImGui::Button("Delete Object")) {
-
-            DetachChildren(objects[selectedObject].id);
-
-            DestroyBuffers(objects[selectedObject]);
-
-            objects[selectedObject].vertices.clear();
-            objects[selectedObject].indices.clear();
-
-            objects[selectedObject].normalLines.clear();
-
-            objects[selectedObject].tangentLines.clear();
-            objects[selectedObject].bitangentLines.clear();
-            objects[selectedObject].normalLinesTBN.clear();
-
-            objects[selectedObject].original_vertices.clear();
-            objects[selectedObject].original_indices.clear();
-
-            objects.erase(objects.begin() + selectedObject);
-
-            selectedObject = -1;
-        }
-    } else {
-
-        Light *light = GetSelectedLight();
-        Object *obj = GetSelectedObject();
-
-        if (light) {
-
-            if (ImGui::CollapsingHeader("General", ImGuiTreeNodeFlags_DefaultOpen)) {
-
-                static char name[256];
-                strncpy_s(name, lightObjects[selectedObject - objects.size()].name.c_str(), sizeof(name));
-                name[255] = '\0';
-
-                if (ImGui::InputText("Name", name, sizeof(name))) {
-
-                    lightObjects[selectedObject - objects.size()].name = name;
-                }
-
-                ImGui::ColorEdit3("Color", &light->col.x);
-                HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
-
-                ImGui::DragFloat3("Position", &obj->position.x, 0.1f);
-                HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
-
-                glm::vec3 euler = glm::degrees(glm::eulerAngles(obj->rotation));
-
-                if (ImGui::DragFloat3("Rotation", &euler.x, 1.0f)) {
-
-                    obj->rotation = glm::quat(glm::radians(euler));
-                }
-
-                HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
-
-                ImGui::DragFloat3("Direction", &light->dir.x, 0.01f);
-                HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
-
-                ImGui::DragFloat("Ambient", &light->ambient, 0.01f, 0.f, 1.f);
-                HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
-
-                ImGui::Checkbox("Visible", &obj->visible);
-                HandleInspectorUndo(*obj);
-            }
-
-            if (ImGui::CollapsingHeader("Attenuation", ImGuiTreeNodeFlags_DefaultOpen)) {
-
-                ImGui::DragFloat("Constant", &light->att.x, 0.001f, 0.f, 10.f);
-                HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
-
-                ImGui::DragFloat("Linear", &light->att.y, 0.0001f, 0.f, 1.f);
-                HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
-
-                ImGui::DragFloat("Quadratic", &light->att.z, 0.00001f, 0.f, 1.f);
-                HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
-
-                if (light->type == "SPOT") {
-
-                    ImGui::SeparatorText("Spot");
-
-                    ImGui::DragFloat("Inner", &light->inner, 0.25f, 0.f, 90.f);
-                    HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
-
-                    ImGui::DragFloat("Outer", &light->outer, 0.25f, 0.f, 90.f);
-                    HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
-
-                    ImGui::DragFloat("Falloff", &light->falloff, 0.05f, 0.f, 16.f);
-                    HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
-                }
-            }
-
-            if (ImGui::CollapsingHeader("Shadow", ImGuiTreeNodeFlags_DefaultOpen)) {
-
-                ImGui::DragFloat("Bias", &light->bias, 0.000001f, 0.f, 0.01f, "%.6f");
-                HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
-
-                ImGui::DragFloat("PCF", &light->pcf, 0.1f, 1.f, 16.f);
-                HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
-            }
-
-            ImGui::Separator();
-
-            if (animationWindow) {
-
-                if (light)
-                    DrawLightAnimationButtons(*light);
-
-                if (obj)
-                    DrawObjectAnimationButtons(*obj);
-            }
-
-            if (ImGui::CollapsingHeader("Type", ImGuiTreeNodeFlags_DefaultOpen)) {
-
-                static const char *types[] = {"Point", "Directional", "Spot"};
-
-                int current = light->typeID;
-
-                if (ImGui::Combo("Light Type", &current, types, IM_ARRAYSIZE(types))) {
-
-                    light->typeID = current;
-
-                    switch (current) {
-
-                    case 0:
-                        light->type = "POINT";
-                        break;
-
-                    case 1:
-                        light->type = "DIR";
-                        break;
-
-                    case 2:
-                        light->type = "SPOT";
-                        break;
-                    }
-                }
-            }
-
-            if (ImGui::Button("Delete Light")) {
-
-                int index = selectedObject - objects.size();
-
-                DestroyBuffers(lightObjects[index]);
-
-                lightObjects[index].vertices.clear();
-                lightObjects[index].indices.clear();
-
-                lightObjects[index].normalLines.clear();
-
-                lightObjects[index].tangentLines.clear();
-                lightObjects[index].bitangentLines.clear();
-                lightObjects[index].normalLinesTBN.clear();
-
-                lightObjects[index].original_vertices.clear();
-                lightObjects[index].original_indices.clear();
-
-                lights.erase(lights.begin() + index);
-                lightObjects.erase(lightObjects.begin() + index);
-
-                selectedObject = -1;
-            }
-        }
-    }
-
-    ImGui::End();
-
-    if (animationWindow) {
-
-        animationEditor.animationSnapEnable = SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_LSHIFT];
-
-        UpdateAnimationImGui();
-    }
-
-    switch (currentTool) {
-
-    case Tools::TRANSLATE:
-        currentOperation = ImGuizmo::TRANSLATE;
-        break;
-
-    case Tools::ROTATE:
-        currentOperation = ImGuizmo::ROTATE;
-        break;
-
-    case Tools::SCALE:
-        currentOperation = ImGuizmo::SCALE;
-        break;
-    }
+    Editor();
 }

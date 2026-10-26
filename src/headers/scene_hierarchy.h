@@ -2,8 +2,6 @@
 
 #include "classes.h"
 
-// Scene graph helpers. Object transforms are stored locally and this module
-// resolves their world-space representation for rendering, picking and tools.
 Object *FindObjectByID(EntityID id);
 
 glm::mat4 GetLocalModelMatrix(const Object &obj);

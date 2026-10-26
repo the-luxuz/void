@@ -112,7 +112,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)external\tinyexr\deps\libdeflate\lib;$(SolutionDir)include\stb;$(SolutionDir)src\headers;$(SolutionDir)external\tinyexr\deps\zstd;$(SolutionDir)external\tinyexr\deps\miniz;$(SolutionDir)external\tinyexr;$(SolutionDir)external\imgui\backends;$(SolutionDir)external\imgui;$(SolutionDir)include;$(SolutionDir)external\nativefiledialog\include;$(SolutionDir)external\nativefiledialog;$(SolutionDir)external\ffmpeg\include;$(SolutionDir)external\tinyexr\deps\zstd;$(SolutionDir)external\tinyexr\deps\miniz;$(SolutionDir)external\tinyexr;$(SolutionDir)external\imgui\backends;$(SolutionDir)external\imgui;$(SolutionDir)include;$(SolutionDir)external\nativefiledialog\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)external\cgltf;$(SolutionDir)external\tinyexr\deps\libdeflate\lib;$(SolutionDir)include\stb;$(SolutionDir)src\headers;$(SolutionDir)external\tinyexr\deps\zstd;$(SolutionDir)external\tinyexr\deps\miniz;$(SolutionDir)external\tinyexr;$(SolutionDir)external\imgui\backends;$(SolutionDir)external\imgui;$(SolutionDir)include;$(SolutionDir)external\nativefiledialog\include;$(SolutionDir)external\nativefiledialog;$(SolutionDir)external\ffmpeg\include;$(SolutionDir)external\tinyexr\deps\zstd;$(SolutionDir)external\tinyexr\deps\miniz;$(SolutionDir)external\tinyexr;$(SolutionDir)external\imgui\backends;$(SolutionDir)external\imgui;$(SolutionDir)include;$(SolutionDir)external\nativefiledialog\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -133,7 +133,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)external\tinyexr\deps\libdeflate\lib;$(SolutionDir)include\stb;$(SolutionDir)src\headers;$(SolutionDir)external\tinyexr\deps\zstd;$(SolutionDir)external\tinyexr\deps\miniz;$(SolutionDir)external\tinyexr;$(SolutionDir)external\imgui\backends;$(SolutionDir)external\imgui;$(SolutionDir)include;$(SolutionDir)external\nativefiledialog\include;$(SolutionDir)external\nativefiledialog;$(SolutionDir)external\ffmpeg\include;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)external\cgltf;$(SolutionDir)external\tinyexr\deps\libdeflate\lib;$(SolutionDir)include\stb;$(SolutionDir)src\headers;$(SolutionDir)external\tinyexr\deps\zstd;$(SolutionDir)external\tinyexr\deps\miniz;$(SolutionDir)external\tinyexr;$(SolutionDir)external\imgui\backends;$(SolutionDir)external\imgui;$(SolutionDir)include;$(SolutionDir)external\nativefiledialog\include;$(SolutionDir)external\nativefiledialog;$(SolutionDir)external\ffmpeg\include;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -158,6 +158,11 @@
     <ClCompile Include="..\external\tinyexr\tinyexr.cc" />
     <ClCompile Include="..\src\buffers.cpp" />
     <ClCompile Include="..\src\classes.cpp" />
+    <ClCompile Include="..\src\editor\Browser.cpp" />
+    <ClCompile Include="..\src\editor\Editor.cpp" />
+    <ClCompile Include="..\src\editor\Guizmo.cpp" />
+    <ClCompile Include="..\src\editor\Hierarchy.cpp" />
+    <ClCompile Include="..\src\editor\Inspector.cpp" />
     <ClCompile Include="..\src\helpers.cpp" />
     <ClCompile Include="..\src\ImGuizmo.cpp" />
     <ClCompile Include="..\src\imgui_helpers.cpp" />
@@ -174,6 +179,12 @@
   <ItemGroup>
     <ClInclude Include="..\external\tinyexr\deps\miniz\miniz.h" />
     <ClInclude Include="..\external\tinyexr\tinyexr.h" />
+    <ClInclude Include="..\src\editor\Browser.h" />
+    <ClInclude Include="..\src\editor\Editor.h" />
+    <ClInclude Include="..\src\editor\editorLocal.h" />
+    <ClInclude Include="..\src\editor\Guizmo.h" />
+    <ClInclude Include="..\src\editor\Hierarchy.h" />
+    <ClInclude Include="..\src\editor\Inspector.h" />
     <ClInclude Include="..\src\headers\buffers.h" />
     <ClInclude Include="..\src\headers\classes.h" />
     <ClInclude Include="..\src\headers\helpers.h" />

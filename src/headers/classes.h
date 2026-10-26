@@ -50,8 +50,8 @@ struct VideoQuad {
     GLuint ebo = 0;
 
     float vertices[16] = {
-        // position     // uv
-        -1.0f, -1.0f, 0.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, -1.0f, 1.0f, 0.0f, 0.0f};
+  // position // uv
+  -1.0f, -1.0f, 0.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, -1.0f, 1.0f, 0.0f, 0.0f};
 
     unsigned int indices[6] = {0, 1, 2, 2, 3, 0};
 };
@@ -109,6 +109,13 @@ struct Collider {
 
     // AABB
     // glm::vec3 halfExtents = glm::vec3(0.5f);
+};
+
+struct ColliderTransform {
+
+    glm::vec3 offset = glm::vec3(0.0f);
+    glm::quat rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+    glm::vec3 size = glm::vec3(1.0f);
 };
 
 struct Vertex {
@@ -170,6 +177,7 @@ struct ObjectState {
     bool hasPhysics;
 
     Collider collider;
+    ColliderTransform colliderTransform;
     bool hasCollider = false;
 
     bool hasMaterial = true;
@@ -277,10 +285,7 @@ struct Settings {
 
 struct camera {
 
-    camera()
-        : fov(90), nearPlane(.5f), farPlane(5000.0f), cam_position(100, 100, 100), cam_target(0, 0, 0),
-          cam_up(0, 1, 0) {
-    }
+    camera() : fov(90), nearPlane(.5f), farPlane(5000.0f), cam_position(100, 100, 100), cam_target(0, 0, 0), cam_up(0, 1, 0) { }
 
     float fov;
 
@@ -370,6 +375,7 @@ struct Object {
     bool hasPhysics = false;
 
     Collider collider;
+    ColliderTransform colliderTransform;
     bool hasCollider = false;
 
     bool hasMaterial = true;
@@ -450,10 +456,9 @@ inline void ApplyLightState(Light &l, const LightState &s) {
 
 inline ObjectState CaptureState(const Object &o) {
 
-    return {o.position,    o.rotation,     o.scale,        o.parentID, o.name,       o.mesh,       o.obj_texture,
-            o.tex,         o.min,          o.max,          o.mapping,  o.coordType,  o.cyaxisType, o.normalTexture,
-            o.norm_map,    o.hasNormalMap, o.shininess,    o.physics,  o.hasPhysics, o.collider,   o.hasCollider,
-            o.hasMaterial, o.hasMapping,   o.hasAnimation, o.tiling,   o.visible};
+    return {o.position, o.rotation, o.scale, o.parentID, o.name, o.mesh, o.obj_texture, o.tex, o.min, o.max, o.mapping, o.coordType, 
+        o.cyaxisType, o.normalTexture, o.norm_map, o.hasNormalMap, o.shininess, o.physics,  o.hasPhysics, o.collider, o.colliderTransform, 
+        o.hasCollider, o.hasMaterial, o.hasMapping, o.hasAnimation, o.tiling,   o.visible};
 }
 
 inline void ApplyState(Object &o, const ObjectState &s) {
@@ -486,6 +491,7 @@ inline void ApplyState(Object &o, const ObjectState &s) {
     o.hasPhysics = s.hasPhysics;
 
     o.collider = s.collider;
+    o.colliderTransform = s.colliderTransform;
     o.hasCollider = s.hasCollider;
 
     o.hasMaterial = s.hasMaterial;
@@ -693,10 +699,10 @@ const AnimationKey *GetPrevKey(const AnimationTrack &track, float time);
 const AnimationKey *GetNextKey(const AnimationTrack &track, float time);
 
 AnimationTrack *FindTrack(AnimationClip &clip, AnimationTargetType targetType, EntityID targetID,
-                          AnimationProperty property);
+    AnimationProperty property);
 
 AnimationTrack &GetOrCreateTrack(AnimationClip &clip, AnimationTargetType targetType, EntityID targetID,
-                                 AnimationProperty property);
+     AnimationProperty property);
 
 void RecalculateAnimationDuration(AnimationClip &clip);
 
@@ -704,18 +710,18 @@ template <typename T> void AddKey(AnimationTrack &track, float time, const T &va
 
     for (AnimationKey &key : track.keys) {
 
-        if (std::abs(key.time - time) < 0.0001f) {
+  if (std::abs(key.time - time) < 0.0001f) {
 
-            key.value = AnimationValue(value);
+  key.value = AnimationValue(value);
 
-            return;
-        }
+  return;
+  }
     }
 
     track.keys.push_back({time, AnimationValue(value)});
 
     std::sort(track.keys.begin(), track.keys.end(),
-              [](const AnimationKey &a, const AnimationKey &b) { return a.time < b.time; });
+  [](const AnimationKey &a, const AnimationKey &b) { return a.time < b.time; });
 }
 
 AnimationValue EvaluateTrack(const AnimationTrack &track, float time);
@@ -757,7 +763,7 @@ struct PlaySoundEvent : public Event {
     }
 
     EventType GetType() const override {
-        return EventType::PlaySound;
+  return EventType::PlaySound;
     }
 
     std::string path;
@@ -773,7 +779,7 @@ int FindAnimations(std::string name, EntityID objId);
 //    {}
 //
 //    EventType GetType() const override {
-//        return EventType::StopSound;
+//  return EventType::StopSound;
 //    }
 //
 //    std::string path;
@@ -787,7 +793,7 @@ struct PlayAnimationEvent : public Event {
 
     EventType GetType() const override {
 
-        return EventType::PlayAnimation;
+  return EventType::PlayAnimation;
     }
 
     std::string animation;
@@ -800,7 +806,7 @@ struct PlayCinematicEvent : public Event {
 
     EventType GetType() const override {
 
-        return EventType::StartCinematic;
+  return EventType::StartCinematic;
     }
 
     std::string path;
@@ -817,39 +823,39 @@ struct EventManager {
 
         switch (event.GetType()) {
 
-        case EventType::PlaySound: {
-
-            PlaySoundEvent &soundEvent = static_cast<PlaySoundEvent &>(event);
-
-            // missing
-
-            break;
-        }
-
-        case EventType::PlayAnimation: {
-
-            PlayAnimationEvent &animEvent = static_cast<PlayAnimationEvent &>(event);
-
-            int animationIndex = FindAnimationByName(animEvent.animation);
-
-            if (animationIndex >= 0)
-                PlayAnimation(animationIndex);
-
-            break;
-        }
-
-        case EventType::StartCinematic: {
-
-            PlayCinematicEvent &cinematicEvent = static_cast<PlayCinematicEvent &>(event);
-
-            videoPlayer.Open(cinematicEvent.path.c_str());
-            videoPlayer.Play();
-
-            isCinematicActive = true;
-
-            break;
-        }
-        }
+            case EventType::PlaySound: {
+            
+                PlaySoundEvent &soundEvent = static_cast<PlaySoundEvent &>(event);
+                
+                // missing
+                
+                break;
+            }
+            
+            case EventType::PlayAnimation: {
+            
+                PlayAnimationEvent &animEvent = static_cast<PlayAnimationEvent &>(event);
+                
+                int animationIndex = FindAnimationByName(animEvent.animation);
+                
+                if (animationIndex >= 0)
+                  PlayAnimation(animationIndex);
+                
+                break;
+            }
+            
+            case EventType::StartCinematic: {
+            
+                PlayCinematicEvent &cinematicEvent = static_cast<PlayCinematicEvent &>(event);
+                
+                videoPlayer.Open(cinematicEvent.path.c_str());
+                videoPlayer.Play();
+                
+                isCinematicActive = true;
+                
+                break;
+            }
+          }
     }
 
     void Dispatch() {
@@ -859,7 +865,7 @@ struct EventManager {
             HandleEvent(*event);
         }
 
-        events.clear();
+          events.clear();
     }
 
   private:
