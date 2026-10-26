@@ -153,20 +153,51 @@ void update(SDL_Window *window, float dt) {
         ImGui::NewFrame();
 
         if (currentViewMode == view_Mode::EDITOR) {
-
             io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
             Docking();
         }
 
-        fps = ImGui::GetIO().Framerate;
+        ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
 
-        ImGuiWindowFlags flags =
-            ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+        static constexpr int FPS_HISTORY_SIZE = 180;
 
-        ImGui::Begin("HUD", nullptr, flags);
+        static float fpsHistory[FPS_HISTORY_SIZE] = {};
+        static int fpsHistoryCount = 0;
 
-        ImGui::Text("FPS: %.1f", fps);
-        ImGui::Text("Frame: %.3f ms", 1000.0f / fps);
+        const float currentFPS = io.DeltaTime > 0.0f ? 1.0f / io.DeltaTime : 0.0f;
+
+        if (currentFPS > 0.0f) {
+            if (fpsHistoryCount < FPS_HISTORY_SIZE) {
+                fpsHistory[fpsHistoryCount++] = currentFPS;
+            } else {
+                for (int i = 0; i < FPS_HISTORY_SIZE - 1; ++i)
+                    fpsHistory[i] = fpsHistory[i + 1];
+
+                fpsHistory[FPS_HISTORY_SIZE - 1] = currentFPS;
+            }
+        }
+
+        float fpsLow = FLT_MAX;
+        float fpsHigh = 0.0f;
+
+        for (int i = 0; i < fpsHistoryCount; ++i) {
+
+            fpsLow = std::min(fpsLow, fpsHistory[i]);
+            fpsHigh = std::max(fpsHigh, fpsHistory[i]);
+        }
+
+        ImGui::SetNextWindowSize(ImVec2(275.0f, 30.0f));
+
+        if (ImGui::Begin("FPS Debug", nullptr, flags)) {
+
+            ImGui::Text("FPS: %.1f", currentFPS);
+            ImGui::SameLine();
+
+            ImGui::Text("Low: %.1f", fpsLow);
+            ImGui::SameLine();
+
+            ImGui::Text("High: %.1f", fpsHigh);
+        }
 
         ImGui::End();
 
@@ -191,6 +222,7 @@ void update(SDL_Window *window, float dt) {
 
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     }
+
 
     //----------------------------------------------------
     // windows

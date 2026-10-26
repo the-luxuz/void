@@ -607,33 +607,48 @@ void init() {
                 light.typeID = 2;
 
             const Parser::Transform& savedObject = par.lights_objects[i];
+
             obj.id = savedObject.id;
             obj.parentID = savedObject.parentID;
+
             obj.name = savedObject.obj_name;
             obj.mesh = savedObject.mesh;
+
             obj.tex = savedObject.tex;
+
             obj.norm_map = savedObject.normal_map;
+
             obj.position = savedObject.position;
             obj.rotation = savedObject.rotation;
             obj.scale = savedObject.scale;
+
             obj.min = savedObject.min;
             obj.max = savedObject.max;
+
             obj.shininess = savedObject.shininess;
             obj.mapping = savedObject.mapping;
             obj.coordType = savedObject.coordType;
             obj.cyaxisType = savedObject.cyaxisType;
+
             obj.physics = savedObject.physics;
             obj.hasPhysics = savedObject.hasPhysics;
+
             obj.collider = savedObject.collider;
             obj.colliderTransform = savedObject.colliderTransform;
             obj.hasCollider = savedObject.hasCollider;
+
             obj.hasMaterial = savedObject.hasMaterial;
             obj.hasMapping = savedObject.hasMapping;
             obj.hasAnimation = savedObject.hasAnimation;
+
             obj.tiling = savedObject.tiling;
+
             obj.visible = savedObject.visible;
+
             obj.obj_texture = TextureManager::Get(obj.tex, false);
+
             obj.normalTexture = TextureManager::Get(obj.norm_map, false);
+
             obj.hasNormalMap = savedObject.hasNormalMap && obj.normalTexture != 0;
 
             maxID = std::max(maxID, light.id);
@@ -655,6 +670,7 @@ void init() {
     animationEditor = par.animEditor;
 
     nextAnimationPlayerID = 1;
+
     for (const AnimationPlayer& player : animationPlayers)
         nextAnimationPlayerID = std::max(nextAnimationPlayerID, player.id + 1);
 
