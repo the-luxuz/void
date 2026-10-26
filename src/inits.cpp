@@ -1,9 +1,12 @@
 #include "headers/inits.h"
 #include "headers/scene_hierarchy.h"
+#include "cgltf.h"
 
 #include <filesystem>
+#include <functional>
 #include <limits>
 #include <unordered_map>
+#include <glm/gtx/matrix_decompose.hpp>
 
 //--------------------------------------------------------------------------
 // init functions
@@ -311,9 +314,9 @@ void init_obj(const char *objFile, Object &obj) {
     std::vector<Material> importedMaterials(materials.size());
     std::vector<bool> materialLoaded(materials.size(), false);
 
-    for (const auto &shape : shapes) {
+    for (auto &shape : shapes) {
 
-        const auto &indices = shape.mesh.indices;
+        auto &indices = shape.mesh.indices;
 
         int activeMaterialId = std::numeric_limits<int>::min();
 
@@ -321,7 +324,7 @@ void init_obj(const char *objFile, Object &obj) {
 
         for (size_t face = 0; face * 3 + 2 < indices.size(); ++face) {
 
-            const int materialId = face < shape.mesh.material_ids.size() ? shape.mesh.material_ids[face] : -1;
+            int materialId = face < shape.mesh.material_ids.size() ? shape.mesh.material_ids[face] : -1;
 
             if (materialId != activeMaterialId) {
 
@@ -331,7 +334,7 @@ void init_obj(const char *objFile, Object &obj) {
 
                 if (materialId >= 0 && materialId < static_cast<int>(materials.size())) {
 
-                    const size_t index = static_cast<size_t>(materialId);
+                    size_t index = static_cast<size_t>(materialId);
 
                     if (!materialLoaded[index]) {
 
@@ -344,16 +347,23 @@ void init_obj(const char *objFile, Object &obj) {
                 }
                 submesh.min = glm::vec3(FLT_MAX);
                 submesh.max = glm::vec3(-FLT_MAX);
+
                 obj.submeshes.push_back(std::move(submesh));
+
                 activeSubmesh = &obj.submeshes.back();
+
                 activeMaterialId = materialId;
             }
 
-            for (size_t corner = 0; corner < 3; ++corner) {
-                const GLuint vertexIndex = addVertex(indices[face * 3 + corner]);
+            for (size_t corner = 0; corner < 3; corner++) {
+
+                GLuint vertexIndex = addVertex(indices[face * 3 + corner]);
+
                 obj.indices.push_back(vertexIndex);
                 activeSubmesh->indexCount++;
-                const glm::vec3 &position = obj.vertices[vertexIndex].position;
+
+                glm::vec3 &position = obj.vertices[vertexIndex].position;
+
                 activeSubmesh->min = glm::min(activeSubmesh->min, position);
                 activeSubmesh->max = glm::max(activeSubmesh->max, position);
             }
@@ -374,6 +384,271 @@ void init_obj(const char *objFile, Object &obj) {
     glm::vec3 size = max - min;
 
     obj.collider.radius = std::max(size.x, std::max(size.y, size.z)) * 0.5f;
+}
+
+bool ImportGltf(const std::string &path, std::vector<Object> &importedObjects) {
+
+    cgltf_options options{};
+
+    cgltf_data *data = nullptr;
+
+    if (cgltf_parse_file(&options, path.c_str(), &data) != cgltf_result_success || !data)
+        return false;
+
+    auto cleanup = [&]() { 
+        cgltf_free(data); 
+    };
+
+    if (cgltf_load_buffers(&options, data, path.c_str()) != cgltf_result_success) {
+
+        cleanup();
+
+        return false;
+    }
+
+    std::filesystem::path sourcePath(path);
+
+    auto readAttribute = [](cgltf_accessor *accessor, size_t index, float *out, size_t size) {
+
+        if (!accessor || accessor->type == cgltf_type_invalid || !cgltf_accessor_read_float(accessor, index, out, size))
+            return false;
+
+        return true;
+    };
+
+    auto materialFrom = [&](cgltf_material *source) {
+
+        Material material{};
+
+        if (!source) 
+            return material;
+
+        material.name = source->name ? source->name : "Material";
+
+        if (source->has_pbr_metallic_roughness) {
+
+            auto &pbr = source->pbr_metallic_roughness;
+
+            material.diffuse = {pbr.base_color_factor[0], pbr.base_color_factor[1], pbr.base_color_factor[2]};
+
+            material.opacity = pbr.base_color_factor[3];
+
+            material.roughness = pbr.roughness_factor;
+
+            material.metallic = pbr.metallic_factor;
+
+            if (pbr.base_color_texture.texture && pbr.base_color_texture.texture->image && pbr.base_color_texture.texture->image->uri) {
+
+                auto imagePath = (sourcePath.parent_path() / pbr.base_color_texture.texture->image->uri).lexically_normal();
+
+                if (std::filesystem::exists(imagePath)) {
+
+                    material.albedoPath = imagePath.generic_string();
+                    material.albedoTexture = TextureManager::Get(material.albedoPath, true);
+                }
+            }
+        }
+        if (source->normal_texture.texture && source->normal_texture.texture->image && source->normal_texture.texture->image->uri) {
+
+            auto imagePath = (sourcePath.parent_path() / source->normal_texture.texture->image->uri).lexically_normal();
+
+            if (std::filesystem::exists(imagePath)) {
+
+                material.normalPath = imagePath.generic_string();
+                material.normalTexture = TextureManager::Get(material.normalPath, false);
+            }
+        }
+        return material;
+    };
+
+    std::vector<cgltf_node *> nodes;
+
+    if (data->scene) {
+
+        for (cgltf_size i = 0; i < data->scene->nodes_count; ++i) 
+            nodes.push_back(data->scene->nodes[i]);
+
+    } else if (data->scenes_count) {
+
+        for (cgltf_size i = 0; i < data->scenes[0].nodes_count; ++i) 
+            nodes.push_back(data->scenes[0].nodes[i]);
+
+    } else {
+        for (cgltf_size i = 0; i < data->nodes_count; ++i)
+            if (!data->nodes[i].parent) nodes.push_back(&data->nodes[i]);
+    }
+
+    size_t unnamedIndex = 0;
+
+    std::function<void(cgltf_node *)> visit = [&](cgltf_node *node) {
+
+        if (node->mesh) {
+
+            Object obj;
+
+            obj.name = node->name ? node->name : (node->mesh->name ? node->mesh->name : "ImportedObject" + std::to_string(unnamedIndex++));
+
+            obj.mesh = path;
+
+            float worldValues[16];
+
+            cgltf_node_transform_world(node, worldValues);
+
+            glm::mat4 world = glm::make_mat4(worldValues);
+            glm::vec3 skew, scale;
+            glm::vec4 perspective;
+
+            glm::decompose(world, scale, obj.rotation, obj.position, skew, perspective);
+
+            obj.scale = scale;
+
+            glm::vec3 boundsMin(FLT_MAX), boundsMax(-FLT_MAX);
+
+            for (cgltf_size p = 0; p < node->mesh->primitives_count; ++p) {
+
+                cgltf_primitive &primitive = node->mesh->primitives[p];
+
+                if (primitive.type != cgltf_primitive_type_triangles)
+                    continue;
+
+                cgltf_accessor *positions = nullptr, *normals = nullptr, *uvs = nullptr;
+
+                for (cgltf_size a = 0; a < primitive.attributes_count; ++a) {
+
+                    cgltf_attribute &attribute = primitive.attributes[a];
+
+                    if (attribute.type == cgltf_attribute_type_position) 
+                        positions = attribute.data;
+
+                    else if (attribute.type == cgltf_attribute_type_normal) 
+                        normals = attribute.data;
+
+                    else if (attribute.type == cgltf_attribute_type_texcoord && attribute.index == 0) 
+                        uvs = attribute.data;
+
+                }
+                if (!positions) 
+                    continue;
+
+                Submesh submesh{};
+
+                submesh.firstIndex = static_cast<GLuint>(obj.indices.size());
+
+                submesh.min = glm::vec3(FLT_MAX); submesh.max = glm::vec3(-FLT_MAX);
+
+                submesh.material = materialFrom(primitive.material);
+
+                GLuint baseVertex = static_cast<GLuint>(obj.vertices.size());
+
+                for (cgltf_size v = 0; v < positions->count; ++v) {
+
+                    Vertex vertex{};
+                    float value[4]{};
+
+                    if (!readAttribute(positions, v, value, 3)) 
+                        continue;
+
+                    vertex.position = {value[0], value[1], value[2]};
+
+                    if (readAttribute(normals, v, value, 3)) 
+                        vertex.normal = {value[0], value[1], value[2]};
+
+                    if (readAttribute(uvs, v, value, 2)) 
+                        vertex.uv = {value[0], 1.0f - value[1]};
+
+                    vertex.originalUV = vertex.uv;
+
+                    obj.vertices.push_back(vertex);
+
+                    submesh.min = glm::min(submesh.min, vertex.position); submesh.max = glm::max(submesh.max, vertex.position);
+                }
+                if (primitive.indices) {
+
+                    for (cgltf_size i = 0; i < primitive.indices->count; ++i)
+                        obj.indices.push_back(baseVertex + static_cast<GLuint>(cgltf_accessor_read_index(primitive.indices, i)));
+
+                } else {
+
+                    for (cgltf_size i = 0; i < positions->count; ++i) 
+                        obj.indices.push_back(baseVertex + static_cast<GLuint>(i));
+                }
+
+                submesh.indexCount = static_cast<GLuint>(obj.indices.size()) - submesh.firstIndex;
+                if (submesh.indexCount) 
+                    obj.submeshes.push_back(std::move(submesh));
+            }
+            if (!obj.vertices.empty() && !obj.indices.empty()) {
+
+                BuildImportedTBN(obj);
+
+                for (const Vertex &vertex : obj.vertices) { 
+
+                    boundsMin = glm::min(boundsMin, vertex.position); 
+                    boundsMax = glm::max(boundsMax, vertex.position); 
+                }
+
+                obj.min = boundsMin; 
+                obj.max = boundsMax;
+
+                obj.collider.radius = glm::length(boundsMax - boundsMin) * 0.5f;
+
+                obj.original_vertices = obj.vertices; obj.original_indices = obj.indices;
+
+                importedObjects.push_back(std::move(obj));
+            }
+        }
+
+        for (cgltf_size i = 0; i < node->children_count; ++i) 
+            visit(node->children[i]);
+    };
+
+    for (cgltf_node *node : nodes) 
+        visit(node);
+
+    if (!importedObjects.empty()) {
+
+        glm::vec3 sceneMin(FLT_MAX), sceneMax(-FLT_MAX);
+
+        float largestObjectDimension = 0.0f;
+
+        for (Object &obj : importedObjects) {
+
+            glm::mat4 model = glm::translate(glm::mat4(1.0f), obj.position) * glm::toMat4(obj.rotation) * glm::scale(glm::mat4(1.0f), obj.scale);
+
+            glm::vec3 objectMin(FLT_MAX), objectMax(-FLT_MAX);
+
+            for (int corner = 0; corner < 8; ++corner) {
+
+                glm::vec3 point( (corner & 1) ? obj.max.x : obj.min.x, (corner & 2) ? obj.max.y : obj.min.y, (corner & 4) ? obj.max.z : obj.min.z);
+
+                glm::vec3 worldPoint = glm::vec3(model * glm::vec4(point, 1.0f));
+
+                sceneMin = glm::min(sceneMin, worldPoint);
+                sceneMax = glm::max(sceneMax, worldPoint);
+
+                objectMin = glm::min(objectMin, worldPoint);
+                objectMax = glm::max(objectMax, worldPoint);
+            }
+
+            glm::vec3 objectSize = objectMax - objectMin;
+
+            largestObjectDimension = std::max(largestObjectDimension, std::max(objectSize.x, std::max(objectSize.y, objectSize.z)));
+        }
+         
+        glm::vec3 center = (sceneMin + sceneMax) * 0.5f;
+        float importScale = largestObjectDimension > 0.0001f ? 100.0f / largestObjectDimension : 1.0f;
+
+        for (Object &obj : importedObjects) {
+
+            obj.position = (obj.position - center) * importScale;
+            obj.scale *= importScale;
+            obj.collider.radius *= importScale;
+        }
+    }
+
+    cleanup();
+
+    return !importedObjects.empty();
 }
 
 void PrepareImportedObject(Object &obj) {

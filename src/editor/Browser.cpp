@@ -232,7 +232,7 @@ void Browser() {
                 //------------------------------------------------
                 // OBJ models
 
-                else if (ext == ".obj") {
+                else if (ext == ".obj" || ext == ".gltf" || ext == ".glb") {
 
                     std::string path = entry.path().string();
 
@@ -253,33 +253,51 @@ void Browser() {
 
                     if (clicked) {
 
-                        Object obj;
+                        std::vector<Object> imported;
 
-                        init_obj(path.c_str(), obj);
-                        PrepareImportedObject(obj);
+                        if (ext == ".obj") {
 
-                        obj.id = GenerateEntityID();
-                        obj.name = GenerateObjectName(entry.path().stem().string());
-                        obj.mesh = path;
+                            Object obj;
 
-                        buffer(obj);
+                            init_obj(path.c_str(), obj);
 
-                        obj.position = glm::vec3(0.0f, 50.0f, 0.0f);
-                        obj.rotation = glm::quat(1.f, 0.f, 0.f, 0.f);
-                        obj.scale = glm::vec3(obj.importScale);
+                            imported.push_back(std::move(obj));
 
-                        obj.original_vertices = obj.vertices;
-                        obj.original_indices = obj.indices;
+                        } else if (!ImportGltf(path, imported))
+                            std::cerr << "Could not import glTF model: " << path << '\n';
 
-                        obj.shininess = 20.0f;
-                        obj.hasNormalMap = false;
-                        obj.model = GetModelMatrix(obj);
+                        size_t firstImported = objects.size();
 
-                        obj.obj_texture = 0;
-                        obj.tex.clear();
+                        for (Object &obj : imported) {
 
-                        objects.push_back(std::move(obj));
-                        selectedObject = static_cast<int>(objects.size()) - 1;
+                            if (ext == ".obj")
+                                PrepareImportedObject(obj);
+
+                            obj.id = GenerateEntityID();
+
+                            obj.name = GenerateObjectName(obj.name.empty() ? entry.path().stem().string() : obj.name);
+
+                            obj.mesh = path;
+
+                            buffer(obj);
+
+                            obj.position += glm::vec3(0.0f, 50.0f, 0.0f);
+                            obj.scale *= glm::vec3(obj.importScale);
+
+                            obj.shininess = 20.0f;
+                            obj.hasNormalMap = false;
+
+                            obj.model = GetModelMatrix(obj);
+
+                            obj.obj_texture = 0;
+
+                            obj.tex.clear();
+
+                            objects.push_back(std::move(obj));
+                        }
+
+                        if (objects.size() > firstImported)
+                            selectedObject = static_cast<int>(objects.size()) - 1;
                     }
 
                     if (ImGui::BeginDragDropSource()) {
