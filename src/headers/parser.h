@@ -78,6 +78,8 @@ struct Parser {
 
         std::string mesh;
 
+        uint32_t importedMeshIndex = 0;
+
         std::string tex;
 
         std::string normal_map = "data/textures/brick_normal_map.png";

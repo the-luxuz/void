@@ -40,6 +40,7 @@ class TextureManager {
 
   public:
     static GLuint Get(const std::string &path, bool sRGB = false);
+    static GLuint GetEmbedded(const std::string &key, const unsigned char *data, size_t size, bool sRGB = false);
     static void Clear();
 };
 
@@ -105,7 +106,7 @@ struct Collider {
     bool isTrigger = false;
 
     // Sphere
-    float radius;
+    float radius = 0.5f;
 
     // AABB
     // glm::vec3 halfExtents = glm::vec3(0.5f);
@@ -349,6 +350,8 @@ struct Object {
     float importScale = 1.0f;
 
     std::string mesh; // has the .obj path
+
+    uint32_t importedMeshIndex = 0;
 
     glm::vec3 min, max;
 

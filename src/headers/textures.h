@@ -42,6 +42,7 @@ void Load_Skybox(const std::string &path);
 // OBJ texture
 
 GLuint LoadObjTexture(const std::string &path, bool sRGB = false);
+GLuint LoadObjTextureFromMemory(const unsigned char *data, int size, bool sRGB = false);
 
 //--------------------------------------------------------------------------
 // Viewport and viewport depth texture

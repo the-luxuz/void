@@ -1,5 +1,7 @@
 #include "headers/helpers.h"
 
+#include <limits>
+
 // Kept local because it is only consumed by this translation unit.
 static bool showGraphicsSettings = false;
 
@@ -1157,6 +1159,23 @@ GLuint TextureManager::Get(const std::string &path, bool sRGB) {
 
     if (texture != 0)
         textures[key] = texture;
+
+    return texture;
+}
+
+GLuint TextureManager::GetEmbedded(const std::string &key, const unsigned char *data, size_t size, bool sRGB) {
+
+    if (!data || size == 0 || size > static_cast<size_t>(std::numeric_limits<int>::max()))
+        return 0;
+
+    std::string cacheKey = key + (sRGB ? "|srgb" : "|linear");
+    auto it = textures.find(cacheKey);
+    if (it != textures.end())
+        return it->second;
+
+    GLuint texture = LoadObjTextureFromMemory(data, static_cast<int>(size), sRGB);
+    if (texture != 0)
+        textures[cacheKey] = texture;
 
     return texture;
 }

@@ -92,7 +92,7 @@ void Inspector(){
 
         //------------------------------------------------------------
 
-        if (!isEmpty && obj->hasPhysics) {
+        if (obj->hasPhysics) {
 
             ImGui::Separator();
 
@@ -148,7 +148,7 @@ void Inspector(){
 
         static const char *colliderTypes[] = {"None", "Plane", "Sphere", "AABB"};
 
-        if (!isEmpty && obj->hasCollider) {
+        if (obj->hasCollider) {
 
             ImGui::Separator();
 
@@ -793,19 +793,9 @@ void Inspector(){
 
         ImGui::Separator();
 
-        if (!isEmpty && ImGui::BeginCombo("Add Module", "Modules")) {
+        if (ImGui::BeginCombo("Add Module", "Modules")) {
 
-            bool material = obj->hasMaterial;
             bool collision = obj->hasCollider;
-            bool physics = obj->hasPhysics;
-            bool mapping = obj->hasMapping;
-            bool animation = obj->hasAnimation;
-
-            if (ImGui::Checkbox("Material", &material)) {
-
-                obj->hasMaterial = material;
-                HandleInspectorUndo(*obj);
-            }
 
             if (ImGui::Checkbox("Collision", &collision)) {
 
@@ -813,22 +803,33 @@ void Inspector(){
                 HandleInspectorUndo(*obj);
             }
 
+            bool physics = obj->hasPhysics;
+
             if (ImGui::Checkbox("Physics", &physics)) {
 
                 obj->hasPhysics = physics;
                 HandleInspectorUndo(*obj);
             }
 
-            if (ImGui::Checkbox("Mapping", &mapping)) {
+            if (!isEmpty) {
+                bool material = obj->hasMaterial;
+                bool mapping = obj->hasMapping;
+                bool animation = obj->hasAnimation;
 
-                obj->hasMapping = mapping;
-                HandleInspectorUndo(*obj);
-            }
+                if (ImGui::Checkbox("Material", &material)) {
+                    obj->hasMaterial = material;
+                    HandleInspectorUndo(*obj);
+                }
 
-            if (ImGui::Checkbox("Animation", &animation)) {
+                if (ImGui::Checkbox("Mapping", &mapping)) {
+                    obj->hasMapping = mapping;
+                    HandleInspectorUndo(*obj);
+                }
 
-                obj->hasAnimation = animation;
-                HandleInspectorUndo(*obj);
+                if (ImGui::Checkbox("Animation", &animation)) {
+                    obj->hasAnimation = animation;
+                    HandleInspectorUndo(*obj);
+                }
             }
 
             ImGui::EndCombo();
@@ -838,23 +839,7 @@ void Inspector(){
 
         if (ImGui::Button("Delete Object")) {
 
-            DetachChildren(objects[selectedObject].id);
-
-            DestroyBuffers(objects[selectedObject]);
-
-            objects[selectedObject].vertices.clear();
-            objects[selectedObject].indices.clear();
-
-            objects[selectedObject].normalLines.clear();
-
-            objects[selectedObject].tangentLines.clear();
-            objects[selectedObject].bitangentLines.clear();
-            objects[selectedObject].normalLinesTBN.clear();
-
-            objects[selectedObject].original_vertices.clear();
-            objects[selectedObject].original_indices.clear();
-
-            objects.erase(objects.begin() + selectedObject);
+            DeleteObjectHierarchy(objects[selectedObject].id);
 
             selectedObject = -1;
         }

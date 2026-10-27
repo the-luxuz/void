@@ -1,9 +1,12 @@
 #include "parser.h"
 
+#include <filesystem>
+#include <unordered_map>
+
 namespace {
 
 constexpr uint32_t SceneMagic = 0x564F4944; // "VOID"
-constexpr uint32_t SceneVersion = 4;
+constexpr uint32_t SceneVersion = 5;
 constexpr uint32_t MaxSceneObjects = 100000;
 constexpr uint32_t MaxAnimationKeys = 1000000;
 
@@ -381,6 +384,7 @@ void Parser::save_scene(std::ofstream &out, const std::vector<Object> &scene, co
 
         WriteString(out, obj.name);
         WriteString(out, obj.mesh);
+        Write(out, obj.importedMeshIndex);
         WriteString(out, obj.tex);
 
         WriteString(out, obj.norm_map);
@@ -436,6 +440,7 @@ void Parser::save_scene(std::ofstream &out, const std::vector<Object> &scene, co
 
         WriteString(out, scene_lgh_obj[i].name);
         WriteString(out, scene_lgh_obj[i].mesh);
+        Write(out, scene_lgh_obj[i].importedMeshIndex);
         WriteString(out, scene_lgh_obj[i].tex);
 
         WriteString(out, scene_lgh_obj[i].norm_map);
@@ -619,6 +624,8 @@ bool Parser::load_scene(std::ifstream &in, Settings *sceneSettings, camera *scen
     lights.resize(lightCount);
     anim.resize(animCount);
 
+    std::unordered_map<std::string, uint32_t> legacyGltfMeshIndices;
+
     for (auto &obj : objects) {
 
         Read(in, obj.id);
@@ -633,6 +640,13 @@ bool Parser::load_scene(std::ifstream &in, Settings *sceneSettings, camera *scen
 
         ReadString(in, obj.obj_name);
         ReadString(in, obj.mesh);
+        if (sceneVersion >= 5)
+            Read(in, obj.importedMeshIndex);
+        else {
+            const std::string extension = std::filesystem::path(obj.mesh).extension().string();
+            if (extension == ".gltf" || extension == ".glb")
+                obj.importedMeshIndex = legacyGltfMeshIndices[obj.mesh]++;
+        }
         ReadString(in, obj.tex);
         ReadString(in, obj.normal_map);
 
@@ -698,6 +712,8 @@ bool Parser::load_scene(std::ifstream &in, Settings *sceneSettings, camera *scen
 
         ReadString(in, obj.obj_name);
         ReadString(in, obj.mesh);
+        if (sceneVersion >= 5)
+            Read(in, obj.importedMeshIndex);
         ReadString(in, obj.tex);
         ReadString(in, obj.normal_map);
 

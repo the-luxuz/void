@@ -1,6 +1,7 @@
 #include "headers/scene_hierarchy.h"
 #include "headers/helpers.h"
 #include <glm/gtx/matrix_decompose.hpp>
+#include <unordered_set>
 
 Object *FindObjectByID(EntityID id) {
 
@@ -105,6 +106,27 @@ void DetachChildren(EntityID parentID) {
 
         if (object.parentID == parentID)
             ReparentObject(object, 0);
+    }
+}
+
+void DeleteObjectHierarchy(EntityID rootID) {
+
+    std::unordered_set<EntityID> hierarchy{rootID};
+    bool addedChild = true;
+    while (addedChild) {
+        addedChild = false;
+        for (const Object &object : objects) {
+            if (hierarchy.contains(object.parentID) && hierarchy.insert(object.id).second)
+                addedChild = true;
+        }
+    }
+
+    for (size_t index = objects.size(); index-- > 0;) {
+        if (!hierarchy.contains(objects[index].id))
+            continue;
+
+        DestroyBuffers(objects[index]);
+        objects.erase(objects.begin() + static_cast<std::ptrdiff_t>(index));
     }
 }
 

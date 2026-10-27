@@ -268,12 +268,26 @@ void Browser() {
 
                         size_t firstImported = objects.size();
 
-                        for (Object &obj : imported) {
+                        EntityID importGroupID = 0;
+                        if (!imported.empty() && (ext == ".gltf" || ext == ".glb")) {
+                            Object group = CreateEmptyObject();
+                            group.name = GenerateObjectName(entry.path().stem().string());
+                            group.position = glm::vec3(0.0f, 50.0f, 0.0f);
+                            group.model = GetModelMatrix(group);
+                            importGroupID = group.id;
+                            objects.push_back(std::move(group));
+                        }
+
+                        for (size_t importedIndex = 0; importedIndex < imported.size(); ++importedIndex) {
+
+                            Object &obj = imported[importedIndex];
 
                             if (ext == ".obj")
                                 PrepareImportedObject(obj);
 
                             obj.id = GenerateEntityID();
+                            obj.parentID = importGroupID;
+                            obj.importedMeshIndex = static_cast<uint32_t>(importedIndex);
 
                             obj.name = GenerateObjectName(obj.name.empty() ? entry.path().stem().string() : obj.name);
 
@@ -281,7 +295,8 @@ void Browser() {
 
                             buffer(obj);
 
-                            obj.position += glm::vec3(0.0f, 50.0f, 0.0f);
+                            if (importGroupID == 0)
+                                obj.position += glm::vec3(0.0f, 50.0f, 0.0f);
                             obj.scale *= glm::vec3(obj.importScale);
 
                             obj.shininess = 20.0f;
@@ -297,7 +312,7 @@ void Browser() {
                         }
 
                         if (objects.size() > firstImported)
-                            selectedObject = static_cast<int>(objects.size()) - 1;
+                            selectedObject = static_cast<int>(firstImported);
                     }
 
                     if (ImGui::BeginDragDropSource()) {

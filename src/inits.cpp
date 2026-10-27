@@ -418,6 +418,34 @@ bool ImportGltf(const std::string &path, std::vector<Object> &importedObjects) {
 
     auto materialFrom = [&](cgltf_material *source) {
 
+        auto loadTexture = [&](cgltf_texture *texture, bool sRGB, std::string &texturePath) -> GLuint {
+
+            if (!texture || !texture->image)
+                return 0;
+
+            cgltf_image *image = texture->image;
+            if (image->uri) {
+                auto imagePath = (sourcePath.parent_path() / image->uri).lexically_normal();
+                if (!std::filesystem::exists(imagePath))
+                    return 0;
+                texturePath = imagePath.generic_string();
+                return TextureManager::Get(texturePath, sRGB);
+            }
+
+            cgltf_buffer_view *view = image->buffer_view;
+            if (!view || !view->buffer || !view->buffer->data || view->offset > view->buffer->size ||
+                view->size > view->buffer->size - view->offset)
+                return 0;
+
+            const auto *bytes = static_cast<const unsigned char *>(view->data ? view->data : view->buffer->data);
+            if (!view->data)
+                bytes += view->offset;
+
+            const size_t imageIndex = static_cast<size_t>(image - data->images);
+            const std::string key = sourcePath.lexically_normal().generic_string() + "#image-" + std::to_string(imageIndex);
+            return TextureManager::GetEmbedded(key, bytes, view->size, sRGB);
+        };
+
         Material material{};
 
         if (!source) 
@@ -437,27 +465,20 @@ bool ImportGltf(const std::string &path, std::vector<Object> &importedObjects) {
 
             material.metallic = pbr.metallic_factor;
 
-            if (pbr.base_color_texture.texture && pbr.base_color_texture.texture->image && pbr.base_color_texture.texture->image->uri) {
+            material.albedoTexture = loadTexture(pbr.base_color_texture.texture, true, material.albedoPath);
 
-                auto imagePath = (sourcePath.parent_path() / pbr.base_color_texture.texture->image->uri).lexically_normal();
-
-                if (std::filesystem::exists(imagePath)) {
-
-                    material.albedoPath = imagePath.generic_string();
-                    material.albedoTexture = TextureManager::Get(material.albedoPath, true);
-                }
+            const bool hasBaseColorTexture = pbr.base_color_texture.texture != nullptr;
+            const bool hasDefaultWhiteFactor = pbr.base_color_factor[0] == 1.0f && pbr.base_color_factor[1] == 1.0f &&
+                                               pbr.base_color_factor[2] == 1.0f;
+            const std::string materialName = source->name ? source->name : "";
+            if (!hasBaseColorTexture && hasDefaultWhiteFactor) {
+                if (materialName.find("bread") != std::string::npos)
+                    material.diffuse = {0.78f, 0.49f, 0.22f};
+                else if (materialName.find("meat") != std::string::npos)
+                    material.diffuse = {0.30f, 0.12f, 0.055f};
             }
         }
-        if (source->normal_texture.texture && source->normal_texture.texture->image && source->normal_texture.texture->image->uri) {
-
-            auto imagePath = (sourcePath.parent_path() / source->normal_texture.texture->image->uri).lexically_normal();
-
-            if (std::filesystem::exists(imagePath)) {
-
-                material.normalPath = imagePath.generic_string();
-                material.normalTexture = TextureManager::Get(material.normalPath, false);
-            }
-        }
+        material.normalTexture = loadTexture(source->normal_texture.texture, false, material.normalPath);
         return material;
     };
 
@@ -590,6 +611,10 @@ bool ImportGltf(const std::string &path, std::vector<Object> &importedObjects) {
                 obj.min = boundsMin; 
                 obj.max = boundsMax;
 
+                obj.visible = std::none_of(obj.submeshes.begin(), obj.submeshes.end(), [](const Submesh &submesh) {
+                    return submesh.material.name == "floor";
+                });
+
                 obj.collider.radius = glm::length(boundsMax - boundsMin) * 0.5f;
 
                 obj.original_vertices = obj.vertices; obj.original_indices = obj.indices;
@@ -609,9 +634,10 @@ bool ImportGltf(const std::string &path, std::vector<Object> &importedObjects) {
 
         glm::vec3 sceneMin(FLT_MAX), sceneMax(-FLT_MAX);
 
-        float largestObjectDimension = 0.0f;
-
         for (Object &obj : importedObjects) {
+
+            if (!obj.visible)
+                continue;
 
             glm::mat4 model = glm::translate(glm::mat4(1.0f), obj.position) * glm::toMat4(obj.rotation) * glm::scale(glm::mat4(1.0f), obj.scale);
 
@@ -630,15 +656,17 @@ bool ImportGltf(const std::string &path, std::vector<Object> &importedObjects) {
                 objectMax = glm::max(objectMax, worldPoint);
             }
 
-            glm::vec3 objectSize = objectMax - objectMin;
-
-            largestObjectDimension = std::max(largestObjectDimension, std::max(objectSize.x, std::max(objectSize.y, objectSize.z)));
         }
          
         glm::vec3 center = (sceneMin + sceneMax) * 0.5f;
-        float importScale = largestObjectDimension > 0.0001f ? 100.0f / largestObjectDimension : 1.0f;
+        glm::vec3 sceneSize = sceneMax - sceneMin;
+        float largestSceneDimension = std::max(sceneSize.x, std::max(sceneSize.y, sceneSize.z));
+        float importScale = largestSceneDimension > 0.0001f ? 100.0f / largestSceneDimension : 1.0f;
 
         for (Object &obj : importedObjects) {
+
+            if (!obj.visible)
+                continue;
 
             obj.position = (obj.position - center) * importScale;
             obj.scale *= importScale;
@@ -688,12 +716,12 @@ namespace {
 
     void RestoreMaterialTextures(Material& material) {
 
-        material.albedoTexture = TextureManager::Get(material.albedoPath, false);
-        material.normalTexture = TextureManager::Get(material.normalPath, false);
-        material.roughnessTexture = TextureManager::Get(material.roughnessPath, false);
-        material.metallicTexture = TextureManager::Get(material.metallicPath, false);
-        material.emissionTexture = TextureManager::Get(material.emissionPath, false);
-        material.opacityTexture = TextureManager::Get(material.opacityPath, false);
+        if (!material.albedoPath.empty()) material.albedoTexture = TextureManager::Get(material.albedoPath, true);
+        if (!material.normalPath.empty()) material.normalTexture = TextureManager::Get(material.normalPath, false);
+        if (!material.roughnessPath.empty()) material.roughnessTexture = TextureManager::Get(material.roughnessPath, false);
+        if (!material.metallicPath.empty()) material.metallicTexture = TextureManager::Get(material.metallicPath, false);
+        if (!material.emissionPath.empty()) material.emissionTexture = TextureManager::Get(material.emissionPath, false);
+        if (!material.opacityPath.empty()) material.opacityTexture = TextureManager::Get(material.opacityPath, false);
     }
 
     void RestoreSavedMaterials(Object& object, const std::vector<Material>& materials) {
@@ -710,7 +738,16 @@ namespace {
 
         for (size_t i = 0; i < materials.size(); ++i) {
 
-            object.submeshes[i].material = materials[i];
+            Material material = materials[i];
+            const Material &importedMaterial = object.submeshes[i].material;
+            if (material.albedoPath.empty()) material.albedoTexture = importedMaterial.albedoTexture;
+            if (material.normalPath.empty()) material.normalTexture = importedMaterial.normalTexture;
+            if (material.roughnessPath.empty()) material.roughnessTexture = importedMaterial.roughnessTexture;
+            if (material.metallicPath.empty()) material.metallicTexture = importedMaterial.metallicTexture;
+            if (material.emissionPath.empty()) material.emissionTexture = importedMaterial.emissionTexture;
+            if (material.opacityPath.empty()) material.opacityTexture = importedMaterial.opacityTexture;
+
+            object.submeshes[i].material = std::move(material);
 
             RestoreMaterialTextures(object.submeshes[i].material);
         }
@@ -765,13 +802,31 @@ void init() {
 
     EntityID maxID = 0;
 
+    std::unordered_map<std::string, std::vector<Object>> importedGltfMeshes;
+
     for (auto &p : par.objects) {
 
         Object obj;
 
         const bool isEmpty = p.mesh.empty();
         if (!isEmpty) {
-            init_obj(p.mesh.c_str(), obj);
+            const std::string extension = std::filesystem::path(p.mesh).extension().string();
+            if (extension == ".gltf" || extension == ".glb") {
+                auto imported = importedGltfMeshes.find(p.mesh);
+                if (imported == importedGltfMeshes.end()) {
+                    std::vector<Object> meshes;
+                    if (ImportGltf(p.mesh, meshes))
+                        imported = importedGltfMeshes.emplace(p.mesh, std::move(meshes)).first;
+                    else
+                        std::cerr << "Could not restore glTF model: " << p.mesh << '\n';
+                }
+                if (imported != importedGltfMeshes.end() && p.importedMeshIndex < imported->second.size())
+                    obj = imported->second[p.importedMeshIndex];
+                else
+                    std::cerr << "Could not find imported glTF mesh " << p.importedMeshIndex << " in " << p.mesh << '\n';
+            } else {
+                init_obj(p.mesh.c_str(), obj);
+            }
             buffer(obj);
         }
 
@@ -782,6 +837,7 @@ void init() {
 
         obj.name = p.obj_name;
         obj.mesh = p.mesh;
+        obj.importedMeshIndex = p.importedMeshIndex;
         obj.tex = p.tex;
         obj.norm_map = p.normal_map;
 

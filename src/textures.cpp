@@ -211,6 +211,47 @@ GLuint LoadObjTexture(const std::string &path, bool sRGB) {
     return texture;
 }
 
+GLuint LoadObjTextureFromMemory(const unsigned char *encodedData, int encodedSize, bool sRGB) {
+
+    if (!encodedData || encodedSize <= 0)
+        return 0;
+
+    stbi_set_flip_vertically_on_load(true);
+
+    int width = 0;
+    int height = 0;
+    int channels = 0;
+    unsigned char *data = stbi_load_from_memory(encodedData, encodedSize, &width, &height, &channels, 0);
+    if (!data) {
+        std::cout << "Couldn't decode embedded texture: " << stbi_failure_reason() << '\n';
+        return 0;
+    }
+
+    GLenum format = channels == 4 ? GL_RGBA : channels == 3 ? GL_RGB : channels == 1 ? GL_RED : 0;
+    if (format == 0) {
+        stbi_image_free(data);
+        return 0;
+    }
+
+    const GLenum internalFormat = channels == 4 ? (sRGB ? GL_SRGB8_ALPHA8 : GL_RGBA8)
+                                  : channels == 3 ? (sRGB ? GL_SRGB8 : GL_RGB8)
+                                                  : GL_R8;
+    GLuint texture = 0;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    stbi_image_free(data);
+    return texture;
+}
+
 //--------------------------------------------------------------------------
 // Viewport and viewport depth texture
 

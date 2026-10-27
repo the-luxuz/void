@@ -328,23 +328,8 @@ int main(int argc, char *args[]) {
                         if (selectedObject != -1) {
 
                             if (selectedObject < (int)objects.size()) {
-                                DetachChildren(objects[selectedObject].id);
-
-                                DestroyBuffers(objects[selectedObject]);
-
-                                objects[selectedObject].vertices.clear();
-                                objects[selectedObject].indices.clear();
-
-                                objects[selectedObject].normalLines.clear();
-
-                                objects[selectedObject].tangentLines.clear();
-                                objects[selectedObject].bitangentLines.clear();
-                                objects[selectedObject].normalLinesTBN.clear();
-
-                                objects[selectedObject].original_vertices.clear();
-                                objects[selectedObject].original_indices.clear();
-
-                                objects.erase(objects.begin() + selectedObject);
+                                DeleteObjectHierarchy(objects[selectedObject].id);
+                                selectedObject = -1;
 
                             } else {
 
