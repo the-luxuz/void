@@ -532,13 +532,12 @@ int main(int argc, char *args[]) {
                         }
                     }
 
-                    if (event.key.mod & SDL_KMOD_CTRL && event.key.scancode == SDL_SCANCODE_S) {
+                    if (event.key.mod & SDL_KMOD_CTRL && event.key.scancode == SDL_SCANCODE_G) {
 
                         cam.cam_position = cameraPos;
 
                         if (save_outPath != "")
-                            par.save("../data/settings.bin", save_outPath.c_str(), st, cam, objects, lightObjects,
-                                     lights);
+                            par.save("../data/settings.bin", save_outPath.c_str(), st, cam, objects, lightObjects, lights);
                         else {
 
                             nfdu8char_t *outPath = nullptr;
@@ -579,6 +578,12 @@ int main(int argc, char *args[]) {
                 }
 
                 if (event.key.scancode == SDL_SCANCODE_F11) {
+
+                    if (st.win_mode == window_mode::WINDOWED) {
+                        SDL_GetWindowSize(window, &windowedSize.x, &windowedSize.y);
+                        st.windowed_w = windowedSize.x;
+                        st.windowed_h = windowedSize.y;
+                    }
 
                     switch (st.win_mode) {
 

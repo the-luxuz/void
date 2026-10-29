@@ -162,6 +162,8 @@ void Docking() {
                     st.win_mode = window_mode::WINDOWED;
                     st.w = 1280;
                     st.h = 720;
+                    st.windowed_w = 1280;
+                    st.windowed_h = 720;
                     st.VSync = 0;
                     st.fov = 90;
 
@@ -582,6 +584,9 @@ void ApplyWindowMode(SDL_Window *window) {
 
     case window_mode::WINDOWED: {
 
+        if (st.windowed_w > 0 && st.windowed_h > 0)
+            windowedSize = {st.windowed_w, st.windowed_h};
+
         SDL_SetWindowFullscreen(window, false);
 
         SDL_SetWindowBordered(window, true);
@@ -930,7 +935,7 @@ void UpdateMapping(Object &obj) {
         break;
     }
 
-    glBindBuffer(GL_ARRAY_BUFFER, obj.vbo);
+    glBindVertexArray(obj.vao);
 
     glBindBuffer(GL_ARRAY_BUFFER, obj.vbo);
 
@@ -940,6 +945,8 @@ void UpdateMapping(Object &obj) {
 
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, obj.indices.size() * sizeof(unsigned int), obj.indices.data(),
                  GL_STATIC_DRAW);
+
+    glBindVertexArray(0);
 }
 
 //--------------------------------------------------------------------------

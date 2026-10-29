@@ -459,7 +459,7 @@ void PhysicsUpdate(float dt) {
         if (p.inverseMass > 0.0f && p.useGravity) {
 
             float mass = 1.0f / p.inverseMass;
-            p.force += glm::vec3(0.0f, -150.f, 0.0f) * mass;
+            p.force += p.gravity * mass;
         }
 
         p.acceleration = p.force * p.inverseMass;

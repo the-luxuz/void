@@ -138,11 +138,12 @@ struct Physics {
 
     glm::vec3 force = glm::vec3(0.0f);
 
+    glm::vec3 gravity = glm::vec3(0.f, -300.f, 0.f);
+
     float inverseMass = 1.0f;
 
     float restitution = 0.5f;
-    float friction = 0.5f;
-    float drag = 0.1f;
+    float drag = 8.0f;
 
     bool useGravity = true;
     bool isStatic = false;
@@ -269,6 +270,9 @@ struct Settings {
 
     int w = 1280;
     int h = 720;
+
+    int windowed_w = 0;
+    int windowed_h = 0;
 
     float fov;
 

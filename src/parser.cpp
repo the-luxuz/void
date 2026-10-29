@@ -6,7 +6,7 @@
 namespace {
 
 constexpr uint32_t SceneMagic = 0x564F4944; // "VOID"
-constexpr uint32_t SceneVersion = 5;
+constexpr uint32_t SceneVersion = 6;
 constexpr uint32_t MaxSceneObjects = 100000;
 constexpr uint32_t MaxAnimationKeys = 1000000;
 
@@ -358,6 +358,8 @@ void Parser::save_scene(std::ofstream &out, const std::vector<Object> &scene, co
 
     Write(out, sceneSettings.w);
     Write(out, sceneSettings.h);
+    Write(out, sceneSettings.windowed_w);
+    Write(out, sceneSettings.windowed_h);
 
     WriteString(out, sceneSettings.win_name);
     WriteString(out, sceneSettings.skybox);
@@ -584,6 +586,17 @@ bool Parser::load_scene(std::ifstream &in, Settings *sceneSettings, camera *scen
 
         Read(in, loadedSettings.w);
         Read(in, loadedSettings.h);
+
+        if (sceneVersion >= 6) {
+            Read(in, loadedSettings.windowed_w);
+            Read(in, loadedSettings.windowed_h);
+        } else if (loadedSettings.win_mode == window_mode::WINDOWED) {
+            loadedSettings.windowed_w = loadedSettings.w;
+            loadedSettings.windowed_h = loadedSettings.h;
+        } else {
+            loadedSettings.windowed_w = 1280;
+            loadedSettings.windowed_h = 720;
+        }
 
         ReadString(in, loadedSettings.win_name);
         ReadString(in, loadedSettings.skybox);

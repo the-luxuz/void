@@ -67,6 +67,7 @@ void Inspector(){
             if (ImGui::InputText("Name", name, sizeof(name))) {
 
                 Object *obj = GetSelectedObject();
+
                 if (obj && obj == &objects[selectedObject])
                     objects[selectedObject].name = name;
             }
@@ -74,19 +75,22 @@ void Inspector(){
             ImGui::PopID();
 
             ImGui::DragFloat3("Position", &obj->position.x, 0.1f);
-            HandleInspectorUndo(*obj);
 
+            HandleInspectorUndo(*obj);
             glm::vec3 euler = glm::degrees(glm::eulerAngles(obj->rotation));
 
-            if (ImGui::DragFloat3("Rotation", &euler.x, 1.0f))
+            if (ImGui::DragFloat3("Rotation", &euler.x, 1.0f)) {
+            
                 obj->rotation = glm::quat(glm::radians(euler));
 
-            HandleInspectorUndo(*obj);
+                HandleInspectorUndo(*obj);
+            }
 
             ImGui::DragFloat3("Scale", &obj->scale.x, 0.1f);
-            HandleInspectorUndo(*obj);
 
+            HandleInspectorUndo(*obj);
             ImGui::Checkbox("Visible", &obj->visible);
+
             HandleInspectorUndo(*obj);
         }
 
@@ -100,24 +104,26 @@ void Inspector(){
 
                 Physics &p = obj->physics;
 
+                HandleInspectorUndo(*obj);
+                ImGui::DragFloat3("Gravity", &obj->physics.gravity.x, 1.f);
+
+                ImGui::Separator();
+
                 ImGui::DragFloat3("Velocity", &obj->physics.velocity.x, 0.1f);
-                HandleInspectorUndo(*obj);
 
+                HandleInspectorUndo(*obj);
                 ImGui::DragFloat3("Acceleration", &obj->physics.acceleration.x, 0.1f);
-                HandleInspectorUndo(*obj);
 
+                HandleInspectorUndo(*obj);
                 ImGui::DragFloat("Drag", &obj->physics.drag, 0.1f);
-                HandleInspectorUndo(*obj);
 
+                HandleInspectorUndo(*obj);
                 ImGui::DragFloat("Restitution", &obj->physics.restitution, 0.1f);
-                HandleInspectorUndo(*obj);
 
-                ImGui::DragFloat("Friction", &obj->physics.friction, 0.1f);
                 HandleInspectorUndo(*obj);
-
                 ImGui::DragFloat3("Force", &obj->physics.force.x, 0.1f);
-                HandleInspectorUndo(*obj);
 
+                HandleInspectorUndo(*obj);
                 float mass = (p.inverseMass == 0.0f) ? 0.0f : 1.0f / p.inverseMass;
 
                 if (ImGui::DragFloat("Mass", &mass, 0.1f, 0.0f, 1000.0f)) {
@@ -126,15 +132,35 @@ void Inspector(){
                         p.inverseMass = 0.0f;
                     else
                         p.inverseMass = 1.0f / mass;
+
+                    HandleInspectorUndo(*obj);
                 }
 
-                HandleInspectorUndo(*obj);
-
                 ImGui::Checkbox("Use Gravity", &obj->physics.useGravity);
-                HandleInspectorUndo(*obj);
 
-                ImGui::Checkbox("Is Static", &obj->physics.isStatic);
                 HandleInspectorUndo(*obj);
+                static float storedInverseMass = 1.f;
+                static bool storedGravityUse = true;
+
+                if (ImGui::Checkbox("Is Static", &obj->physics.isStatic)) {
+
+                    if (obj->physics.isStatic) {
+
+                        storedInverseMass = p.inverseMass;
+                        storedGravityUse = obj->physics.useGravity;
+                
+                        obj->physics.useGravity = false;
+                        p.inverseMass = 0.f;    
+
+                    }else{
+                    
+                        obj->physics.useGravity = storedGravityUse;
+                        p.inverseMass = storedInverseMass;  
+                    }
+
+                    HandleInspectorUndo(*obj);
+                }
+
 
                 if (ImGui::Button("Reset Velocities")) {
 
@@ -157,17 +183,22 @@ void Inspector(){
                 ImGui::Separator();
 
                 ImGui::DragFloat3("Collider Offset", &obj->colliderTransform.offset.x, 0.1f);
-                HandleInspectorUndo(*obj);
 
-                glm::vec3 colliderRotation = glm::degrees(glm::eulerAngles(obj->colliderTransform.rotation));
-                if (ImGui::DragFloat3("Collider Rotation", &colliderRotation.x, 1.0f))
-                    obj->colliderTransform.rotation = glm::quat(glm::radians(colliderRotation));
                 HandleInspectorUndo(*obj);
+                glm::vec3 colliderRotation = glm::degrees(glm::eulerAngles(obj->colliderTransform.rotation));
+
+                if (ImGui::DragFloat3("Collider Rotation", &colliderRotation.x, 1.0f)) {
+                
+                    obj->colliderTransform.rotation = glm::quat(glm::radians(colliderRotation));
+
+                    HandleInspectorUndo(*obj);
+                }
 
                 ImGui::DragFloat3("Collider Size", &obj->colliderTransform.size.x, 0.01f, 0.01f, 1000.0f);
-                HandleInspectorUndo(*obj);
 
+                HandleInspectorUndo(*obj);
                 bool editCollider = editingColliderID == obj->id;
+
                 if (ImGui::Checkbox("Edit Collider With Gizmo", &editCollider))
                     editingColliderID = editCollider ? obj->id : 0;
 
@@ -205,8 +236,11 @@ void Inspector(){
                     if (ImGui::BeginCombo("Layers", "Select layers")) {
 
                         bool world = (obj->collider.layer & CollisionLayer::World) != 0;
+
                         bool player = (obj->collider.layer & CollisionLayer::Player) != 0;
+
                         bool enemy = (obj->collider.layer & CollisionLayer::Enemy) != 0;
+
                         bool bullet = (obj->collider.layer & CollisionLayer::Bullets) != 0;
 
                         if (ImGui::Checkbox("World", &world)) {
@@ -257,13 +291,13 @@ void Inspector(){
                     if (ImGui::BeginCombo("Mask", "Collides With")) {
 
                         bool world = (obj->collider.mask & CollisionLayer::World) != 0;
-                        ;
+
                         bool player = (obj->collider.mask & CollisionLayer::Player) != 0;
-                        ;
+
                         bool enemy = (obj->collider.mask & CollisionLayer::Enemy) != 0;
-                        ;
+
                         bool bullet = (obj->collider.mask & CollisionLayer::Bullets) != 0;
-                        ;
+
 
                         if (ImGui::Checkbox("World", &world)) {
 
@@ -330,13 +364,13 @@ void Inspector(){
                     if (ImGui::BeginCombo("Layers", "Select layers")) {
 
                         bool world = (obj->collider.layer & CollisionLayer::World) != 0;
-                        ;
+
                         bool player = (obj->collider.layer & CollisionLayer::Player) != 0;
-                        ;
+
                         bool enemy = (obj->collider.layer & CollisionLayer::Enemy) != 0;
-                        ;
+
                         bool bullet = (obj->collider.layer & CollisionLayer::Bullets) != 0;
-                        ;
+
 
                         if (ImGui::Checkbox("World", &world)) {
 
@@ -386,13 +420,13 @@ void Inspector(){
                     if (ImGui::BeginCombo("Mask", "Collides With")) {
 
                         bool world = (obj->collider.mask & CollisionLayer::World) != 0;
-                        ;
+
                         bool player = (obj->collider.mask & CollisionLayer::Player) != 0;
-                        ;
+
                         bool enemy = (obj->collider.mask & CollisionLayer::Enemy) != 0;
-                        ;
+
                         bool bullet = (obj->collider.mask & CollisionLayer::Bullets) != 0;
-                        ;
+
 
                         if (ImGui::Checkbox("World", &world)) {
 
@@ -460,8 +494,11 @@ void Inspector(){
                     if (ImGui::BeginCombo("Layers", "Select layers")) {
 
                         bool world = (obj->collider.layer & CollisionLayer::World) != 0;
+
                         bool player = (obj->collider.layer & CollisionLayer::Player) != 0;
+
                         bool enemy = (obj->collider.layer & CollisionLayer::Enemy) != 0;
+
                         bool bullet = (obj->collider.layer & CollisionLayer::Bullets) != 0;
 
                         if (ImGui::Checkbox("World", &world)) {
@@ -512,13 +549,13 @@ void Inspector(){
                     if (ImGui::BeginCombo("Mask", "Collides With")) {
 
                         bool world = (obj->collider.mask & CollisionLayer::World) != 0;
-                        ;
+
                         bool player = (obj->collider.mask & CollisionLayer::Player) != 0;
-                        ;
+
                         bool enemy = (obj->collider.mask & CollisionLayer::Enemy) != 0;
-                        ;
+
                         bool bullet = (obj->collider.mask & CollisionLayer::Bullets) != 0;
-                        ;
+
 
                         if (ImGui::Checkbox("World", &world)) {
 
@@ -578,8 +615,8 @@ void Inspector(){
             if (ImGui::CollapsingHeader("Material")) {
 
                 ImGui::DragFloat("Shininess", &obj->shininess, 1.0f, 1.0f, 256.0f);
-                HandleInspectorUndo(*obj);
 
+                HandleInspectorUndo(*obj);
                 ImGui::Text("Texture:");
 
                 ImGui::TextWrapped("%s", obj->tex.c_str());
@@ -605,8 +642,8 @@ void Inspector(){
                 }
 
                 ImGui::Checkbox("Tiling", &obj->tiling);
-                HandleInspectorUndo(*obj);
 
+                HandleInspectorUndo(*obj);
                 //------------------------------------------------------------
 
                 ImGui::Text("Normal Map:");
@@ -690,9 +727,10 @@ void Inspector(){
         if (!isEmpty && ImGui::CollapsingHeader("Bounds")) {
 
             ImGui::DragFloat3("Min", &obj->min.x, 0.1f);
-            HandleInspectorUndo(*obj);
 
+            HandleInspectorUndo(*obj);
             ImGui::DragFloat3("Max", &obj->max.x, 0.1f);
+
             HandleInspectorUndo(*obj);
         }
 
@@ -800,6 +838,7 @@ void Inspector(){
             if (ImGui::Checkbox("Collision", &collision)) {
 
                 obj->hasCollider = collision;
+
                 HandleInspectorUndo(*obj);
             }
 
@@ -808,6 +847,7 @@ void Inspector(){
             if (ImGui::Checkbox("Physics", &physics)) {
 
                 obj->hasPhysics = physics;
+
                 HandleInspectorUndo(*obj);
             }
 
@@ -817,17 +857,23 @@ void Inspector(){
                 bool animation = obj->hasAnimation;
 
                 if (ImGui::Checkbox("Material", &material)) {
+
                     obj->hasMaterial = material;
+
                     HandleInspectorUndo(*obj);
                 }
 
                 if (ImGui::Checkbox("Mapping", &mapping)) {
+
                     obj->hasMapping = mapping;
+
                     HandleInspectorUndo(*obj);
                 }
 
                 if (ImGui::Checkbox("Animation", &animation)) {
+
                     obj->hasAnimation = animation;
+
                     HandleInspectorUndo(*obj);
                 }
             }
@@ -867,52 +913,56 @@ void Inspector(){
                 ImGui::PopID();
 
                 ImGui::ColorEdit3("Color", &light->col.x);
-                HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
 
+                HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
                 ImGui::DragFloat3("Position", &obj->position.x, 0.1f);
-                HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
 
+                HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
                 glm::vec3 euler = glm::degrees(glm::eulerAngles(obj->rotation));
 
                 if (ImGui::DragFloat3("Rotation", &euler.x, 1.0f)) {
 
                     obj->rotation = glm::quat(glm::radians(euler));
+
+                    HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
                 }
 
-                HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
 
                 ImGui::DragFloat3("Direction", &light->dir.x, 0.01f);
-                HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
 
+
+                HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
                 ImGui::DragFloat("Ambient", &light->ambient, 0.01f, 0.f, 1.f);
-                HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
 
+                HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
                 ImGui::Checkbox("Visible", &obj->visible);
+
                 HandleInspectorUndo(*obj);
             }
 
             if (ImGui::CollapsingHeader("Attenuation", ImGuiTreeNodeFlags_DefaultOpen)) {
 
                 ImGui::DragFloat("Constant", &light->att.x, 0.001f, 0.f, 10.f);
-                HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
 
+                HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
                 ImGui::DragFloat("Linear", &light->att.y, 0.0001f, 0.f, 1.f);
-                HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
 
+                HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
                 ImGui::DragFloat("Quadratic", &light->att.z, 0.00001f, 0.f, 1.f);
-                HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
 
+                HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
                 if (light->type == "SPOT") {
 
                     ImGui::SeparatorText("Spot");
 
                     ImGui::DragFloat("Inner", &light->inner, 0.25f, 0.f, 90.f);
-                    HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
 
+                    HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
                     ImGui::DragFloat("Outer", &light->outer, 0.25f, 0.f, 90.f);
-                    HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
 
+                    HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
                     ImGui::DragFloat("Falloff", &light->falloff, 0.05f, 0.f, 16.f);
+
                     HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
                 }
             }
@@ -920,9 +970,10 @@ void Inspector(){
             if (ImGui::CollapsingHeader("Shadow", ImGuiTreeNodeFlags_DefaultOpen)) {
 
                 ImGui::DragFloat("Bias", &light->bias, 0.000001f, 0.f, 0.01f, "%.6f");
-                HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
 
+                HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
                 ImGui::DragFloat("PCF", &light->pcf, 0.1f, 1.f, 16.f);
+
                 HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
             }
 

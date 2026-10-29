@@ -1072,8 +1072,16 @@ bool open_init(const char *settings, const char *scene, Settings &st) {
 
     objectNameCounters.clear();
 
-    if (par.load(settings, scene, st, cam, objects))
+    if (par.load(settings, scene, st, cam, objects)) {
+        if (st.windowed_w <= 0 || st.windowed_h <= 0) {
+            st.windowed_w = st.win_mode == window_mode::WINDOWED ? st.w : 1280;
+            st.windowed_h = st.win_mode == window_mode::WINDOWED ? st.h : 720;
+        }
+
+        windowedSize = {st.windowed_w, st.windowed_h};
+        ApplyWindowMode(window);
         init();
+    }
 
     return true;
 }
@@ -1096,7 +1104,11 @@ void init_(const char *settings, const char *scene) {
 
         avformat_network_init();
 
-        windowedSize = {st.w, st.h};
+        if (st.windowed_w <= 0 || st.windowed_h <= 0) {
+            st.windowed_w = st.win_mode == window_mode::WINDOWED ? st.w : 1280;
+            st.windowed_h = st.win_mode == window_mode::WINDOWED ? st.h : 720;
+        }
+        windowedSize = {st.windowed_w, st.windowed_h};
 
         if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
 
@@ -1168,7 +1180,11 @@ void init_(const char *settings, const char *scene) {
 
         avformat_network_init();
 
-        windowedSize = {st.w, st.h};
+        if (st.windowed_w <= 0 || st.windowed_h <= 0) {
+            st.windowed_w = st.w;
+            st.windowed_h = st.h;
+        }
+        windowedSize = {st.windowed_w, st.windowed_h};
 
         if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
 
