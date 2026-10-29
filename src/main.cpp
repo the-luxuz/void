@@ -10,6 +10,7 @@
 #include "Parser.h"
 #include "buffers.h"
 #include "classes.h"
+#include "editor/Browser.h"
 #include "helpers.h"
 #include "inits.h"
 #include "local.h"
@@ -807,6 +808,7 @@ int main(int argc, char *args[]) {
         update(window, dt);
     }
 
+    CleanBrowserThumbnails();
     clean();
 
     ImGui_ImplOpenGL3_Shutdown();

@@ -13,6 +13,7 @@ inline GLuint program_depth = 0;
 inline GLuint program_skybox = 0;
 inline GLuint program_videoplayer = 0;
 inline GLuint program_hdrToCubemap = 0;
+inline GLuint program_thumbnail = 0;
 
 //depth framebuffer
 inline GLuint depthFBO[MAX_LIGHTS]{};

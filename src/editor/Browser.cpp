@@ -1,5 +1,271 @@
 #include "Browser.h"
 
+#include <unordered_map>
+
+namespace {
+
+constexpr int ModelThumbnailSize = 128;
+
+struct PreviewMesh {
+    GLuint vao = 0;
+    GLuint vbo = 0;
+    GLuint ebo = 0;
+};
+
+static std::unordered_map<std::string, GLuint> modelThumbnailCache;
+static GLuint modelThumbnailFbo = 0;
+static GLuint modelThumbnailDepth = 0;
+
+void ClearModelThumbnailCache() {
+    for (const auto &[path, texture] : modelThumbnailCache) {
+        (void)path;
+        if (texture)
+            glDeleteTextures(1, &texture);
+    }
+
+    modelThumbnailCache.clear();
+}
+
+bool LoadPreviewModel(const std::string &path, std::vector<Object> &previewObjects) {
+    const std::string extension = std::filesystem::path(path).extension().string();
+
+    if (extension == ".obj") {
+        Object object;
+        init_obj(path.c_str(), object);
+        PrepareImportedObject(object);
+
+        if (!object.vertices.empty() && !object.indices.empty())
+            previewObjects.push_back(std::move(object));
+
+        return !previewObjects.empty();
+    }
+
+    if (extension == ".gltf" || extension == ".glb")
+        return ImportGltf(path, previewObjects);
+
+    return false;
+}
+
+GLuint CreatePreviewMesh(Object &object, PreviewMesh &mesh) {
+    glGenVertexArrays(1, &mesh.vao);
+    glGenBuffers(1, &mesh.vbo);
+    glGenBuffers(1, &mesh.ebo);
+
+    glBindVertexArray(mesh.vao);
+    glBindBuffer(GL_ARRAY_BUFFER, mesh.vbo);
+    glBufferData(GL_ARRAY_BUFFER, object.vertices.size() * sizeof(Vertex), object.vertices.data(), GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.ebo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, object.indices.size() * sizeof(GLuint), object.indices.data(), GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), reinterpret_cast<void *>(offsetof(Vertex, position)));
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), reinterpret_cast<void *>(offsetof(Vertex, normal)));
+
+    return mesh.vao;
+}
+
+GLuint RenderModelThumbnail(const std::string &path) {
+    std::vector<Object> previewObjects;
+    if (!LoadPreviewModel(path, previewObjects))
+        return 0;
+
+    glm::vec3 boundsMin(FLT_MAX);
+    glm::vec3 boundsMax(-FLT_MAX);
+    bool hasBounds = false;
+
+    std::vector<glm::mat4> objectModels;
+    objectModels.reserve(previewObjects.size());
+
+    for (Object &object : previewObjects) {
+        const glm::mat4 objectModel = glm::translate(glm::mat4(1.0f), object.position) * glm::toMat4(object.rotation) *
+                                      glm::scale(glm::mat4(1.0f), object.scale);
+        objectModels.push_back(objectModel);
+
+        if (!object.visible)
+            continue;
+
+        for (const Vertex &vertex : object.vertices) {
+            const glm::vec3 point = glm::vec3(objectModel * glm::vec4(vertex.position, 1.0f));
+            boundsMin = glm::min(boundsMin, point);
+            boundsMax = glm::max(boundsMax, point);
+            hasBounds = true;
+        }
+    }
+
+    if (!hasBounds)
+        return 0;
+
+    const glm::vec3 center = (boundsMin + boundsMax) * 0.5f;
+    const glm::vec3 size = boundsMax - boundsMin;
+    const float largestDimension = std::max({size.x, size.y, size.z});
+    if (largestDimension <= 0.0001f)
+        return 0;
+
+    const float fitScale = 1.55f / largestDimension;
+    const glm::mat4 previewRotation = glm::rotate(glm::mat4(1.0f), glm::radians(-16.0f), glm::vec3(1, 0, 0)) *
+                                      glm::rotate(glm::mat4(1.0f), glm::radians(28.0f), glm::vec3(0, 1, 0));
+    const glm::mat4 frameModel = glm::scale(glm::mat4(1.0f), glm::vec3(fitScale)) * previewRotation *
+                                 glm::translate(glm::mat4(1.0f), -center);
+    const glm::mat4 previewView = glm::lookAt(glm::vec3(0, 0, 3.6f), glm::vec3(0), glm::vec3(0, 1, 0));
+    const glm::mat4 previewProjection = glm::perspective(glm::radians(34.0f), 1.0f, 0.05f, 20.0f);
+
+    GLint oldRenderbuffer = 0;
+    glGetIntegerv(GL_RENDERBUFFER_BINDING, &oldRenderbuffer);
+
+    if (!modelThumbnailFbo) {
+        glGenFramebuffers(1, &modelThumbnailFbo);
+        glGenRenderbuffers(1, &modelThumbnailDepth);
+        glBindRenderbuffer(GL_RENDERBUFFER, modelThumbnailDepth);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, ModelThumbnailSize, ModelThumbnailSize);
+    }
+    glBindRenderbuffer(GL_RENDERBUFFER, static_cast<GLuint>(oldRenderbuffer));
+
+    GLint oldActiveTexture = GL_TEXTURE0;
+    GLint oldTexture2D = 0;
+    glGetIntegerv(GL_ACTIVE_TEXTURE, &oldActiveTexture);
+    glGetIntegerv(GL_TEXTURE_BINDING_2D, &oldTexture2D);
+    GLuint thumbnail = 0;
+    glGenTextures(1, &thumbnail);
+    glBindTexture(GL_TEXTURE_2D, thumbnail);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, ModelThumbnailSize, ModelThumbnailSize, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    GLint oldFramebuffer = 0;
+    GLint oldViewport[4]{};
+    GLint oldProgram = 0;
+    GLint oldVao = 0;
+    GLint oldArrayBuffer = 0;
+    GLint oldPolygonMode[2]{};
+    GLint oldDepthFunction = GL_LESS;
+    GLfloat oldClearColor[4]{};
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &oldFramebuffer);
+    glGetIntegerv(GL_VIEWPORT, oldViewport);
+    glGetIntegerv(GL_CURRENT_PROGRAM, &oldProgram);
+    glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &oldVao);
+    glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &oldArrayBuffer);
+    glGetIntegerv(GL_POLYGON_MODE, oldPolygonMode);
+    glGetIntegerv(GL_DEPTH_FUNC, &oldDepthFunction);
+    glGetFloatv(GL_COLOR_CLEAR_VALUE, oldClearColor);
+    const GLboolean depthWasEnabled = glIsEnabled(GL_DEPTH_TEST);
+    const GLboolean cullWasEnabled = glIsEnabled(GL_CULL_FACE);
+    const GLboolean blendWasEnabled = glIsEnabled(GL_BLEND);
+    const GLboolean scissorWasEnabled = glIsEnabled(GL_SCISSOR_TEST);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, modelThumbnailFbo);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, thumbnail, 0);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, modelThumbnailDepth);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        glBindFramebuffer(GL_FRAMEBUFFER, oldFramebuffer);
+        glActiveTexture(static_cast<GLenum>(oldActiveTexture));
+        glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(oldTexture2D));
+        glDeleteTextures(1, &thumbnail);
+        return 0;
+    }
+
+    glViewport(0, 0, ModelThumbnailSize, ModelThumbnailSize);
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+    glDisable(GL_CULL_FACE);
+    glDisable(GL_BLEND);
+    glDisable(GL_SCISSOR_TEST);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    glClearColor(0.105f, 0.12f, 0.15f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    glUseProgram(program_thumbnail);
+    const GLint mvpLocation = glGetUniformLocation(program_thumbnail, "uMVP");
+    const GLint modelLocation = glGetUniformLocation(program_thumbnail, "uModel");
+    const GLint colorLocation = glGetUniformLocation(program_thumbnail, "uColor");
+
+    std::vector<PreviewMesh> previewMeshes(previewObjects.size());
+
+    for (size_t i = 0; i < previewObjects.size(); ++i) {
+        Object &object = previewObjects[i];
+        if (!object.visible || object.vertices.empty() || object.indices.empty())
+            continue;
+
+        const glm::mat4 model = frameModel * objectModels[i];
+        const glm::mat4 mvp = previewProjection * previewView * model;
+        glUniformMatrix4fv(mvpLocation, 1, GL_FALSE, glm::value_ptr(mvp));
+        glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(model));
+        glBindVertexArray(CreatePreviewMesh(object, previewMeshes[i]));
+
+        auto drawRange = [&](GLuint firstIndex, GLuint indexCount, const glm::vec3 &color) {
+            glUniform3fv(colorLocation, 1, glm::value_ptr(color));
+            glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indexCount), GL_UNSIGNED_INT,
+                           reinterpret_cast<const void *>(static_cast<uintptr_t>(firstIndex) * sizeof(GLuint)));
+        };
+
+        if (object.submeshes.empty()) {
+            drawRange(0, static_cast<GLuint>(object.indices.size()), glm::vec3(0.72f, 0.76f, 0.84f));
+        } else {
+            for (const Submesh &submesh : object.submeshes)
+                drawRange(submesh.firstIndex, submesh.indexCount, submesh.material.diffuse);
+        }
+    }
+
+    for (const PreviewMesh &mesh : previewMeshes) {
+        if (mesh.vao)
+            glDeleteVertexArrays(1, &mesh.vao);
+        if (mesh.vbo)
+            glDeleteBuffers(1, &mesh.vbo);
+        if (mesh.ebo)
+            glDeleteBuffers(1, &mesh.ebo);
+    }
+
+    glBindVertexArray(static_cast<GLuint>(oldVao));
+    glBindBuffer(GL_ARRAY_BUFFER, static_cast<GLuint>(oldArrayBuffer));
+    glUseProgram(static_cast<GLuint>(oldProgram));
+    glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(oldFramebuffer));
+    glViewport(oldViewport[0], oldViewport[1], oldViewport[2], oldViewport[3]);
+    glPolygonMode(GL_FRONT, static_cast<GLenum>(oldPolygonMode[0]));
+    glPolygonMode(GL_BACK, static_cast<GLenum>(oldPolygonMode[1]));
+    glDepthFunc(static_cast<GLenum>(oldDepthFunction));
+    glClearColor(oldClearColor[0], oldClearColor[1], oldClearColor[2], oldClearColor[3]);
+    depthWasEnabled ? glEnable(GL_DEPTH_TEST) : glDisable(GL_DEPTH_TEST);
+    cullWasEnabled ? glEnable(GL_CULL_FACE) : glDisable(GL_CULL_FACE);
+    blendWasEnabled ? glEnable(GL_BLEND) : glDisable(GL_BLEND);
+    scissorWasEnabled ? glEnable(GL_SCISSOR_TEST) : glDisable(GL_SCISSOR_TEST);
+    glActiveTexture(static_cast<GLenum>(oldActiveTexture));
+    glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(oldTexture2D));
+
+    return thumbnail;
+}
+
+GLuint GetModelThumbnail(const std::string &path) {
+    auto found = modelThumbnailCache.find(path);
+    if (found != modelThumbnailCache.end())
+        return found->second;
+
+    const GLuint thumbnail = RenderModelThumbnail(path);
+    modelThumbnailCache.emplace(path, thumbnail);
+    return thumbnail;
+}
+
+GLuint FindModelThumbnail(const std::string &path) {
+    const auto found = modelThumbnailCache.find(path);
+    return found == modelThumbnailCache.end() ? 0 : found->second;
+}
+
+} // namespace
+
+void CleanBrowserThumbnails() {
+    ClearModelThumbnailCache();
+
+    if (modelThumbnailFbo)
+        glDeleteFramebuffers(1, &modelThumbnailFbo);
+    if (modelThumbnailDepth)
+        glDeleteRenderbuffers(1, &modelThumbnailDepth);
+
+    modelThumbnailFbo = 0;
+    modelThumbnailDepth = 0;
+}
+
 void Browser() {
 
     //----------------------------------------------------
@@ -132,15 +398,19 @@ void Browser() {
 
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
 
-        if (ImGui::ImageButton("##refresh", (ImTextureID)(intptr_t)refresIcon, ImVec2(24, 24), ImVec2(0, 1), ImVec2(1, 0)))
+        if (ImGui::ImageButton("##refresh", (ImTextureID)(intptr_t)refresIcon, ImVec2(24, 24), ImVec2(0, 1), ImVec2(1, 0))) {
+            ClearModelThumbnailCache();
             ReloadFolder();
+        }
 
         ImGui::PopStyleColor(1);
 
     } else {
 
-        if (ImGui::Button("Refresh"))
+        if (ImGui::Button("Refresh")) {
+            ClearModelThumbnailCache();
             ReloadFolder();
+        }
     }
 
     ImGui::SameLine();
@@ -235,14 +505,18 @@ void Browser() {
                 else if (ext == ".obj" || ext == ".gltf" || ext == ".glb") {
 
                     std::string path = entry.path().string();
+                    const GLuint thumbnail = ImGui::IsRectVisible(ImVec2(64, 88))
+                                                 ? GetModelThumbnail(path)
+                                                 : FindModelThumbnail(path);
+                    const GLuint modelIcon = thumbnail ? thumbnail : fileIcon;
 
                     bool clicked = false;
 
-                    if (fileIcon) {
+                    if (modelIcon) {
 
                         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
 
-                        clicked = ImGui::ImageButton("##obj", (ImTextureID)(intptr_t)fileIcon, ImVec2(64, 64), ImVec2(0, 1), ImVec2(1, 0));
+                        clicked = ImGui::ImageButton("##obj", (ImTextureID)(intptr_t)modelIcon, ImVec2(64, 64), ImVec2(0, 1), ImVec2(1, 0));
 
                         ImGui::PopStyleColor(1);
 
@@ -319,9 +593,9 @@ void Browser() {
 
                         ImGui::SetDragDropPayload("OBJ_FILE", path.c_str(), path.size() + 1);
 
-                        if (fileIcon) {
+                        if (modelIcon) {
 
-                            ImGui::Image((ImTextureID)(intptr_t)fileIcon, ImVec2(64, 64), ImVec2(0, 1), ImVec2(1, 0));
+                            ImGui::Image((ImTextureID)(intptr_t)modelIcon, ImVec2(64, 64), ImVec2(0, 1), ImVec2(1, 0));
 
                         } else {
 

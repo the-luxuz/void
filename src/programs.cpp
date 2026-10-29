@@ -72,4 +72,6 @@ void create_programs() {
 	program_videoplayer = create_shaders(program_videoplayer, "../data/shaders/vertex_videoplayer.vert", "../data/shaders/fragment_videoplayer.frag");
 
 	program_hdrToCubemap = create_shaders(program_hdrToCubemap, "../data/shaders/vertex_hdrToCubemap.vert", "../data/shaders/fragment_hdrToCubemap.frag");
+
+	program_thumbnail = create_shaders(program_thumbnail, "../data/shaders/vertex_thumbnail.vert", "../data/shaders/fragment_thumbnail.frag");
 }

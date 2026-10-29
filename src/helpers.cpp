@@ -197,7 +197,7 @@ void Docking() {
                 }
             }
 
-            if (ImGui::MenuItem("Save", "Ctrl+S")) {
+            if (ImGui::MenuItem("Save", "Ctrl+G")) {
 
                 par.skybox = st.skybox;
 
@@ -1774,6 +1774,7 @@ void clean() {
     glDeleteProgram(program_depth);
     glDeleteProgram(program_skybox);
     glDeleteProgram(program_hdrToCubemap);
+    glDeleteProgram(program_thumbnail);
 
     glDeleteVertexArrays(1, &gridVAO);
     glDeleteVertexArrays(1, &skyVAO);
