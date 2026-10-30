@@ -303,8 +303,13 @@ int main(int argc, char *args[]) {
 
             case SDL_EVENT_KEY_DOWN:
 
-                if (event.key.scancode == SDL_SCANCODE_ESCAPE)
+                if (event.key.mod & SDL_KMOD_CTRL && event.key.scancode == SDL_SCANCODE_Q)
                     quit = true;
+
+                if (currentViewMode == view_Mode::PLAY) {
+                    if (event.key.scancode == SDL_SCANCODE_ESCAPE)
+                        currentViewMode = view_Mode::EDITOR;
+                }
 
                 if (currentViewMode == view_Mode::EDITOR && !io.WantCaptureKeyboard) {
 

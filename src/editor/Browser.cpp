@@ -468,11 +468,20 @@ void Browser() {
     //----------------------------------------------------
     // assets table
 
-    int columns = std::max(1, (int)(ImGui::GetContentRegionAvail().x / cellSize));
+    int columns = std::max(1, (int)(ImGui::GetContentRegionAvail().x / 72));
 
-    if (ImGui::BeginTable("AssetsTable", columns)) {
+    if (ImGui::BeginTable("AssetsTable", columns, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_NoHostExtendX | ImGuiTableFlags_NoSavedSettings)) {
+
+        for (int column = 0; column < columns; column++)
+            ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 72);
 
         for (auto &entry : folderEntries) {
+
+            std::string ext = entry.path().extension().string();
+            bool supportedAsset = entry.is_directory() || ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".obj" || ext == ".gltf" || ext == ".glb" || ext == ".exr" || ext == ".hdr" || ext == ".bin" || ext == ".mp4";
+
+            if (!supportedAsset)
+                continue;
 
             ImGui::TableNextColumn();
 
@@ -507,8 +516,6 @@ void Browser() {
                 ImGui::TextWrapped("%s", entry.path().filename().string().c_str());
 
             } else {
-
-                auto ext = entry.path().extension().string();
 
                 //------------------------------------------------
                 // image files
