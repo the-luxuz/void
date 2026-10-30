@@ -47,26 +47,36 @@ void update(SDL_Window *window, float dt) {
         if (currentViewMode == view_Mode::PLAY)
             player = search_obj_by_name("Player");
 
-        if (currentViewMode == view_Mode::PLAY && player && !free_cam) {
+        if (currentViewMode != prevViewMode) {
 
-            cameraPos = cam.cam_position;
+            if (currentViewMode == view_Mode::PLAY) {
+
+                save_scene_state();
+                playerCameraInitialized = false;
+
+                if (player)
+                    UpdatePlayerCamera(*player, 0.0f);
+
+            } else {
+
+                load_scene_state();
+                playerCameraInitialized = false;
+            }
+
+            prevViewMode = currentViewMode;
+        }
+
+        const bool usePlayerCamera = currentViewMode == view_Mode::PLAY && player && !free_cam;
+
+        if (usePlayerCamera) {
+
+            cameraPos = playerCam.cam_position;
+            view = glm::lookAt(cameraPos, playerCam.cam_target, playerCam.cam_up);
 
         } else {
 
             cameraPos = get_cam_pos();
-        }
-
-        view = glm::lookAt(cameraPos, cam.cam_target, cam.cam_up);
-
-        if (currentViewMode != prevViewMode && currentViewMode == view_Mode::PLAY) {
-
-            save_scene_state();
-            prevViewMode = currentViewMode;
-
-        } else if (currentViewMode != prevViewMode && currentViewMode == view_Mode::EDITOR) {
-
-            load_scene_state();
-            prevViewMode = currentViewMode;
+            view = glm::lookAt(cameraPos, cam.cam_target, cam.cam_up);
         }
 
         if (camera_update) {
@@ -607,7 +617,7 @@ int main(int argc, char *args[]) {
                     }
                 }
 
-                if (event.key.scancode == SDL_SCANCODE_SPACE && !io.WantCaptureKeyboard) {
+                if (event.key.scancode == SDL_SCANCODE_P && !io.WantCaptureKeyboard) {
 
                     if (currentViewMode == view_Mode::EDITOR) {
 
@@ -642,19 +652,9 @@ int main(int argc, char *args[]) {
                 
                     if (SDL_GetWindowRelativeMouseMode(window)) {
 
-                        cam.alpha += event.motion.xrel * mouseSensitivity;
-                        cam.beta -= event.motion.yrel * mouseSensitivity;
-
-                        if (free_cam || !player) {
-
-                            cam.beta = glm::clamp(cam.beta, 0.05f, glm::pi<float>() - 0.05f);
-                            
-                        } else {
-                        
-                            constexpr float maxPitch = glm::radians(89.0f);
-
-                            cam.beta = glm::clamp(cam.beta, -maxPitch, maxPitch);
-                        }
+                        playerCam.alpha += event.motion.xrel * mouseSensitivity;
+                        playerCam.beta -= event.motion.yrel * mouseSensitivity;
+                        playerCam.beta = glm::clamp(playerCam.beta, -glm::radians(89.0f), glm::radians(89.0f));
                     }
 
                 }
@@ -663,7 +663,8 @@ int main(int argc, char *args[]) {
 
             case SDL_EVENT_KEY_UP:
 
-                if (event.key.scancode == SDL_SCANCODE_LCTRL && currentViewMode == view_Mode::EDITOR) {
+                if (event.key.scancode == SDL_SCANCODE_LCTRL &&
+                    (currentViewMode == view_Mode::EDITOR || free_cam)) {
 
                     SDL_SetWindowRelativeMouseMode(window, false);
                     //SDL_WarpMouseInWindow(window, st.w / 2.0f, st.h / 2.0f);
@@ -672,6 +673,7 @@ int main(int argc, char *args[]) {
                 if (currentViewMode == view_Mode::PLAY && event.key.scancode == SDL_SCANCODE_J) {
                 
                     free_cam = !free_cam;
+                    SDL_SetWindowRelativeMouseMode(window, !free_cam);
                 }
 
                 break;
@@ -782,10 +784,10 @@ int main(int argc, char *args[]) {
 
                     if (player && !free_cam && !io.WantCaptureKeyboard) {
 
-                        PlayerControl(keyboard, fixedDt, *player);
-                        UpdatePlayerCamera(*player);
+                        PlayerControl(keyboard, fixedDt, *player, playerCam);
+                        UpdatePlayerCamera(*player, fixedDt);
 
-                    } else if (!player) {
+                    } else if (!player && !free_cam) {
 
                         controls(keyboard, angle_speed, radius_speed, fixedDt);
                     }

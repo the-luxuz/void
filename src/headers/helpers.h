@@ -10,6 +10,10 @@
 
 // structures
 inline camera cam;
+inline camera playerCam;
+inline bool playerCameraInitialized = false;
+inline float playerCameraEyeHeight = 1.7f;
+inline float playerCameraFollowSpeed = 16.0f;
 inline Parser par;
 inline Settings st;
 
@@ -239,9 +243,9 @@ void select_object(glm::vec3 &rayOrigin, glm::vec3 &rayDir);
 
 void controls(const bool *keyboard, float angle_step, float radius_step, float dt);
 
-void PlayerControl(const bool *keyboard, float dt, Object &player);
+void PlayerControl(const bool *keyboard, float dt, Object &player, const camera &playerCamera);
 
-void UpdatePlayerCamera(Object &player);
+void UpdatePlayerCamera(Object &player, float dt);
 
 //--------------------------------------------------------------------------
 // Grid

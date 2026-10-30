@@ -520,6 +520,11 @@ void Docking() {
                                           cam.farPlane);
         }
 
+        ImGui::Separator();
+        ImGui::TextUnformatted("Player Camera");
+        ImGui::SliderFloat("Eye height", &playerCameraEyeHeight, 0.5f, 3.0f, "%.2f");
+        ImGui::SliderFloat("Follow response", &playerCameraFollowSpeed, 1.0f, 30.0f, "%.1f");
+
         ImGui::End();
     }
 
@@ -1340,17 +1345,13 @@ void controls(const bool *keyboard, float angle_step, float radius_step, float d
     
 }
 
-void PlayerControl(const bool *keyboard, float dt, Object &player) {
+void PlayerControl(const bool *keyboard, float dt, Object &player, const camera &playerCamera) {
 
     if (!player.hasPhysics || player.physics.isStatic)
         return;
 
-    constexpr float maxPitch = glm::radians(89.0f);
-
-    cam.beta = glm::clamp(cam.beta, -maxPitch, maxPitch);
-
-    const float cosYaw = std::cos(cam.alpha);
-    const float sinYaw = std::sin(cam.alpha);
+    const float cosYaw = std::cos(playerCamera.alpha);
+    const float sinYaw = std::sin(playerCamera.alpha);
 
     glm::vec3 forward(cosYaw, 0.0f, sinYaw);
 
@@ -1398,26 +1399,34 @@ void PlayerControl(const bool *keyboard, float dt, Object &player) {
     player.physics.velocity.z = horizontalVelocity.z;
 }
 
-void UpdatePlayerCamera(Object &player) {
+void UpdatePlayerCamera(Object &player, float dt) {
 
-    // camera
-    // ---------------------------------------------------------
+    constexpr float maxPitch = glm::radians(89.0f);
+    const glm::vec3 desiredPosition = player.position + glm::vec3(0.0f, playerCameraEyeHeight, 0.0f);
 
-    const float eyeHeight = 1.7f;
+    if (!playerCameraInitialized) {
 
-    cam.cam_position = player.position + glm::vec3(0.0f, eyeHeight, 0.0f);
+        const glm::vec3 editorPosition = get_cam_pos();
+        const glm::vec3 editorLook = glm::normalize(cam.cam_target - editorPosition);
 
-    glm::vec3 lookDir;
+        playerCam.alpha = std::atan2(editorLook.z, editorLook.x);
+        playerCam.beta = std::asin(glm::clamp(editorLook.y, -1.0f, 1.0f));
+        playerCam.beta = glm::clamp(playerCam.beta, -maxPitch, maxPitch);
+        playerCam.cam_position = desiredPosition;
+        playerCameraInitialized = true;
+    } else {
 
-    lookDir.x = cos(cam.alpha) * cos(cam.beta);
-    lookDir.y = sin(cam.beta);
-    lookDir.z = sin(cam.alpha) * cos(cam.beta);
+        const float followAmount = 1.0f - std::exp(-playerCameraFollowSpeed * std::max(dt, 0.0f));
+        playerCam.cam_position = glm::mix(playerCam.cam_position, desiredPosition, followAmount);
+    }
 
-    lookDir = glm::normalize(lookDir);
+    const glm::vec3 lookDirection(
+        std::cos(playerCam.alpha) * std::cos(playerCam.beta),
+        std::sin(playerCam.beta),
+        std::sin(playerCam.alpha) * std::cos(playerCam.beta));
 
-    cam.cam_target = cam.cam_position + lookDir;
-
-    cam.cam_up = glm::vec3(0, 1, 0);
+    playerCam.cam_target = playerCam.cam_position + lookDirection;
+    playerCam.cam_up = glm::vec3(0.0f, 1.0f, 0.0f);
 }
 
 //--------------------------------------------------------------------------
