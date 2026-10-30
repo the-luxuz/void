@@ -118,6 +118,9 @@ void Inspector(){
                 ImGui::DragFloat("Drag", &obj->physics.drag, 0.1f);
 
                 HandleInspectorUndo(*obj);
+                ImGui::DragFloat("Max horizontal speed (0 = default)", &obj->physics.maxHorizontalSpeed, 10.0f, 0.0f, 100000.0f);
+
+                HandleInspectorUndo(*obj);
                 ImGui::DragFloat("Restitution", &obj->physics.restitution, 0.1f);
 
                 HandleInspectorUndo(*obj);

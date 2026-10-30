@@ -10,10 +10,6 @@
 
 // structures
 inline camera cam;
-inline camera playerCam;
-inline bool playerCameraInitialized = false;
-inline float playerCameraEyeHeight = 1.7f;
-inline float playerCameraFollowSpeed = 16.0f;
 inline Parser par;
 inline Settings st;
 
@@ -62,7 +58,7 @@ inline glm::vec3 rayDir{};
 
 // movement
 inline float moveSpeed = 10.0f;
-inline float mouseSensitivity = 0.005f;
+inline float mouseSensitivity = 0.004f;
 
 // skybox
 inline glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
@@ -242,10 +238,6 @@ void select_object(glm::vec3 &rayOrigin, glm::vec3 &rayDir);
 // Controls
 
 void controls(const bool *keyboard, float angle_step, float radius_step, float dt);
-
-void PlayerControl(const bool *keyboard, float dt, Object &player, const camera &playerCamera);
-
-void UpdatePlayerCamera(Object &player, float dt);
 
 //--------------------------------------------------------------------------
 // Grid

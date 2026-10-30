@@ -6,9 +6,45 @@
 namespace {
 
 constexpr uint32_t SceneMagic = 0x564F4944; // "VOID"
-constexpr uint32_t SceneVersion = 6;
+constexpr uint32_t SceneVersion = 7;
 constexpr uint32_t MaxSceneObjects = 100000;
 constexpr uint32_t MaxAnimationKeys = 1000000;
+
+struct LegacyPhysicsV6 {
+    glm::vec3 velocity = glm::vec3(0.0f);
+    glm::vec3 acceleration = glm::vec3(0.0f);
+    glm::vec3 force = glm::vec3(0.0f);
+    glm::vec3 gravity = glm::vec3(0.0f, -300.0f, 0.0f);
+    float inverseMass = 1.0f;
+    float restitution = 0.5f;
+    float drag = 8.0f;
+    bool useGravity = true;
+    bool isStatic = false;
+};
+
+static_assert(sizeof(LegacyPhysicsV6) + sizeof(float) == sizeof(Physics));
+
+void ReadPhysics(std::ifstream &in, Physics &physics, uint32_t version) {
+
+    if (version >= 7) {
+        in.read(reinterpret_cast<char *>(&physics), sizeof(physics));
+        return;
+    }
+
+    LegacyPhysicsV6 legacy;
+    in.read(reinterpret_cast<char *>(&legacy), sizeof(legacy));
+
+    physics.velocity = legacy.velocity;
+    physics.acceleration = legacy.acceleration;
+    physics.force = legacy.force;
+    physics.gravity = legacy.gravity;
+    physics.inverseMass = legacy.inverseMass;
+    physics.restitution = legacy.restitution;
+    physics.drag = legacy.drag;
+    physics.useGravity = legacy.useGravity;
+    physics.isStatic = legacy.isStatic;
+    physics.maxHorizontalSpeed = 0.0f;
+}
 
 } // namespace
 
@@ -677,7 +713,7 @@ bool Parser::load_scene(std::ifstream &in, Settings *sceneSettings, camera *scen
         Read(in, obj.mapping);
         Read(in, obj.coordType);
         Read(in, obj.cyaxisType);
-        Read(in, obj.physics);
+        ReadPhysics(in, obj.physics, sceneVersion);
         Read(in, obj.hasPhysics);
         Read(in, obj.collider);
         Read(in, obj.hasCollider);
@@ -749,7 +785,7 @@ bool Parser::load_scene(std::ifstream &in, Settings *sceneSettings, camera *scen
         Read(in, obj.mapping);
         Read(in, obj.coordType);
         Read(in, obj.cyaxisType);
-        Read(in, obj.physics);
+        ReadPhysics(in, obj.physics, sceneVersion);
         Read(in, obj.hasPhysics);
         Read(in, obj.collider);
         Read(in, obj.hasCollider);

@@ -158,6 +158,7 @@
     <ClCompile Include="..\external\tinyexr\tinyexr.cc" />
     <ClCompile Include="..\src\buffers.cpp" />
     <ClCompile Include="..\src\classes.cpp" />
+    <ClCompile Include="..\src\actors\Player.cpp" />
     <ClCompile Include="..\src\editor\Browser.cpp" />
     <ClCompile Include="..\src\editor\Editor.cpp" />
     <ClCompile Include="..\src\editor\Guizmo.cpp" />
@@ -177,6 +178,7 @@
     <ClCompile Include="..\src\video_player.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\actors\Player.h" />
     <ClInclude Include="..\external\tinyexr\deps\miniz\miniz.h" />
     <ClInclude Include="..\external\tinyexr\tinyexr.h" />
     <ClInclude Include="..\src\editor\Browser.h" />

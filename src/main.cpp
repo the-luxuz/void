@@ -8,6 +8,7 @@
 #include <cstdlib>
 
 #include "Parser.h"
+#include "actors/Player.h"
 #include "buffers.h"
 #include "classes.h"
 #include "editor/Browser.h"
@@ -52,15 +53,15 @@ void update(SDL_Window *window, float dt) {
             if (currentViewMode == view_Mode::PLAY) {
 
                 save_scene_state();
-                playerCameraInitialized = false;
+                PlayerActor::cameraInitialized = false;
 
                 if (player)
-                    UpdatePlayerCamera(*player, 0.0f);
+                    PlayerActor::UpdateCamera(*player, 0.0f);
 
             } else {
 
                 load_scene_state();
-                playerCameraInitialized = false;
+                PlayerActor::cameraInitialized = false;
             }
 
             prevViewMode = currentViewMode;
@@ -70,8 +71,8 @@ void update(SDL_Window *window, float dt) {
 
         if (usePlayerCamera) {
 
-            cameraPos = playerCam.cam_position;
-            view = glm::lookAt(cameraPos, playerCam.cam_target, playerCam.cam_up);
+            cameraPos = PlayerActor::cameraState.cam_position;
+            view = glm::lookAt(cameraPos, PlayerActor::cameraState.cam_target, PlayerActor::cameraState.cam_up);
 
         } else {
 
@@ -652,9 +653,9 @@ int main(int argc, char *args[]) {
                 
                     if (SDL_GetWindowRelativeMouseMode(window)) {
 
-                        playerCam.alpha += event.motion.xrel * mouseSensitivity;
-                        playerCam.beta -= event.motion.yrel * mouseSensitivity;
-                        playerCam.beta = glm::clamp(playerCam.beta, -glm::radians(89.0f), glm::radians(89.0f));
+                        PlayerActor::cameraState.alpha += event.motion.xrel * PlayerActor::lookSensitivity;
+                        PlayerActor::cameraState.beta -= event.motion.yrel * PlayerActor::lookSensitivity;
+                        PlayerActor::cameraState.beta = glm::clamp(PlayerActor::cameraState.beta, -glm::radians(89.0f), glm::radians(89.0f));
                     }
 
                 }
@@ -784,8 +785,7 @@ int main(int argc, char *args[]) {
 
                     if (player && !free_cam && !io.WantCaptureKeyboard) {
 
-                        PlayerControl(keyboard, fixedDt, *player, playerCam);
-                        UpdatePlayerCamera(*player, fixedDt);
+                        PlayerActor::Control(keyboard, fixedDt, *player);
 
                     } else if (!player && !free_cam) {
 
@@ -796,6 +796,9 @@ int main(int argc, char *args[]) {
                         PhysicsUpdate(fixedDt);
                     if (st.collision_active)
                         CollisionUpdate();
+
+                    if (player && !free_cam)
+                        PlayerActor::UpdateCamera(*player, fixedDt);
                 }
 
                 UpdateAnimation(fixedDt);

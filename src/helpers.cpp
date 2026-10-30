@@ -1,4 +1,5 @@
 #include "headers/helpers.h"
+#include "actors/Player.h"
 
 #include <limits>
 
@@ -522,8 +523,13 @@ void Docking() {
 
         ImGui::Separator();
         ImGui::TextUnformatted("Player Camera");
-        ImGui::SliderFloat("Eye height", &playerCameraEyeHeight, 0.5f, 3.0f, "%.2f");
-        ImGui::SliderFloat("Follow response", &playerCameraFollowSpeed, 1.0f, 30.0f, "%.1f");
+        ImGui::SliderFloat("Eye height", &PlayerActor::cameraEyeHeight, 0.5f, 3.0f, "%.2f");
+        ImGui::SliderFloat("Follow response", &PlayerActor::cameraFollowSpeed, 1.0f, 30.0f, "%.1f");
+        ImGui::SliderFloat("Look sensitivity", &PlayerActor::lookSensitivity, 0.0001f, 0.005f, "%.4f");
+
+        ImGui::Separator();
+        ImGui::TextUnformatted("Player Movement");
+        ImGui::SliderFloat("Default max speed", &PlayerActor::defaultMaximumSpeed, 100.0f, 10000.0f, "%.0f");
 
         ImGui::End();
     }
@@ -1343,90 +1349,6 @@ void controls(const bool *keyboard, float angle_step, float radius_step, float d
     
     cam.radius = std::max(cam.radius, 0.5f);
     
-}
-
-void PlayerControl(const bool *keyboard, float dt, Object &player, const camera &playerCamera) {
-
-    if (!player.hasPhysics || player.physics.isStatic)
-        return;
-
-    const float cosYaw = std::cos(playerCamera.alpha);
-    const float sinYaw = std::sin(playerCamera.alpha);
-
-    glm::vec3 forward(cosYaw, 0.0f, sinYaw);
-
-    forward = glm::normalize(forward);
-
-    glm::vec3 right = glm::normalize(glm::cross(forward, glm::vec3(0.0f, 1.0f, 0.0f)));
-
-    glm::vec3 moveDirection(0.0f);
-
-    if (keyboard[SDL_SCANCODE_W])
-        moveDirection += forward;
-
-    if (keyboard[SDL_SCANCODE_S])
-        moveDirection -= forward;
-
-    if (keyboard[SDL_SCANCODE_A])
-        moveDirection -= right;
-
-    if (keyboard[SDL_SCANCODE_D])
-        moveDirection += right;
-
-    if (glm::length2(moveDirection) > 0.0001f)
-        moveDirection = glm::normalize(moveDirection);
-
-    constexpr float maxMoveSpeed = 6000.0f;
-    constexpr float acceleration = 6000.0f;
-    constexpr float deceleration = 8400.0f;
-
-    glm::vec3 horizontalVelocity(player.physics.velocity.x, 0.0f, player.physics.velocity.z);
-
-    const glm::vec3 targetVelocity = moveDirection * maxMoveSpeed;
-
-    const float maxVelocityChange = (glm::length2(moveDirection) > 0.0f ? acceleration : deceleration) * dt;
-
-    const glm::vec3 velocityDelta = targetVelocity - horizontalVelocity;
-
-    const float deltaLength = glm::length(velocityDelta);
-
-    if (deltaLength <= maxVelocityChange)
-        horizontalVelocity = targetVelocity;
-    else if (deltaLength > 0.0f)
-        horizontalVelocity += velocityDelta * (maxVelocityChange / deltaLength);
-
-    player.physics.velocity.x = horizontalVelocity.x;
-    player.physics.velocity.z = horizontalVelocity.z;
-}
-
-void UpdatePlayerCamera(Object &player, float dt) {
-
-    constexpr float maxPitch = glm::radians(89.0f);
-    const glm::vec3 desiredPosition = player.position + glm::vec3(0.0f, playerCameraEyeHeight, 0.0f);
-
-    if (!playerCameraInitialized) {
-
-        const glm::vec3 editorPosition = get_cam_pos();
-        const glm::vec3 editorLook = glm::normalize(cam.cam_target - editorPosition);
-
-        playerCam.alpha = std::atan2(editorLook.z, editorLook.x);
-        playerCam.beta = std::asin(glm::clamp(editorLook.y, -1.0f, 1.0f));
-        playerCam.beta = glm::clamp(playerCam.beta, -maxPitch, maxPitch);
-        playerCam.cam_position = desiredPosition;
-        playerCameraInitialized = true;
-    } else {
-
-        const float followAmount = 1.0f - std::exp(-playerCameraFollowSpeed * std::max(dt, 0.0f));
-        playerCam.cam_position = glm::mix(playerCam.cam_position, desiredPosition, followAmount);
-    }
-
-    const glm::vec3 lookDirection(
-        std::cos(playerCam.alpha) * std::cos(playerCam.beta),
-        std::sin(playerCam.beta),
-        std::sin(playerCam.alpha) * std::cos(playerCam.beta));
-
-    playerCam.cam_target = playerCam.cam_position + lookDirection;
-    playerCam.cam_up = glm::vec3(0.0f, 1.0f, 0.0f);
 }
 
 //--------------------------------------------------------------------------

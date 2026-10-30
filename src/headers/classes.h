@@ -147,6 +147,9 @@ struct Physics {
 
     bool useGravity = true;
     bool isStatic = false;
+
+    // 0 disables the horizontal speed limit.
+    float maxHorizontalSpeed = 0.0f;
 };
 
 struct ObjectState {

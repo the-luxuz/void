@@ -466,9 +466,23 @@ void PhysicsUpdate(float dt) {
 
         p.velocity += p.acceleration * dt;
 
-        p.velocity.x *= (1.0f - p.drag * dt);
+        float dragFactor = glm::clamp(1.0f - p.drag * dt, 0.0f, 1.0f);
+        p.velocity.x *= dragFactor;
+        p.velocity.z *= dragFactor;
 
-        p.velocity.z *= (1.0f - p.drag * dt);
+        if (p.maxHorizontalSpeed > 0.0f) {
+
+            glm::vec2 horizontalVelocity(p.velocity.x, p.velocity.z);
+            float horizontalSpeed = glm::length(horizontalVelocity);
+
+            if (horizontalSpeed > p.maxHorizontalSpeed) {
+
+                glm::vec2 limitedVelocity = horizontalVelocity * (p.maxHorizontalSpeed / horizontalSpeed);
+
+                p.velocity.x = limitedVelocity.x;
+                p.velocity.z = limitedVelocity.y;
+            }
+        }
 
         obj.position += p.velocity * dt;
 
