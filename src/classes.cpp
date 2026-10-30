@@ -1,5 +1,7 @@
 #include "headers/classes.h"
 
+#include <cctype>
+
 EntityID GenerateEntityID() {
 
     return nextEntityID++;
@@ -290,4 +292,41 @@ int FindAnimationByName(const std::string& name) {
     }
 
     return -1;
+}
+
+std::string AnimationReferenceIdentifier(int animationIndex) {
+    if (animationIndex < 0 || animationIndex >= static_cast<int>(animations.size()))
+        return "Anim_Unnamed";
+
+    std::string base = "Anim_";
+    bool capitalizeNext = false;
+    for (unsigned char ch : animations[animationIndex].name) {
+        if (std::isalnum(ch)) {
+            base += capitalizeNext ? static_cast<char>(std::toupper(ch)) : static_cast<char>(ch);
+            capitalizeNext = false;
+        } else {
+            capitalizeNext = true;
+        }
+    }
+    if (base == "Anim_")
+        base += "Unnamed";
+
+    size_t duplicate = 0;
+    for (int i = 0; i <= animationIndex; ++i) {
+        std::string candidate = "Anim_";
+        bool capitalize = false;
+        for (unsigned char ch : animations[i].name) {
+            if (std::isalnum(ch)) {
+                candidate += capitalize ? static_cast<char>(std::toupper(ch)) : static_cast<char>(ch);
+                capitalize = false;
+            } else {
+                capitalize = true;
+            }
+        }
+        if (candidate == "Anim_")
+            candidate += "Unnamed";
+        if (candidate == base)
+            ++duplicate;
+    }
+    return duplicate > 1 ? base + "_" + std::to_string(duplicate) : base;
 }

@@ -56,7 +56,7 @@ void Inspector(){
         Object *obj = GetSelectedObject();
         const bool isEmpty = obj && IsEmptyObject(*obj);
 
-        if (ImGui::CollapsingHeader("General")) {
+        if (ImGui::CollapsingHeader("General"), ImGuiTreeNodeFlags_DefaultOpen) {
 
             ImGui::PushID(reinterpret_cast<void *>(static_cast<uintptr_t>(obj->id)));
 
@@ -100,7 +100,7 @@ void Inspector(){
 
             ImGui::Separator();
 
-            if (ImGui::CollapsingHeader("Physics")) {
+            if (ImGui::CollapsingHeader("Physics"), ImGuiTreeNodeFlags_DefaultOpen) {
 
                 Physics &p = obj->physics;
 
@@ -181,7 +181,7 @@ void Inspector(){
 
             ImGui::Separator();
 
-            if (ImGui::CollapsingHeader("Collision")) {
+            if (ImGui::CollapsingHeader("Collision"), ImGuiTreeNodeFlags_DefaultOpen) {
 
                 ImGui::Separator();
 
@@ -615,7 +615,7 @@ void Inspector(){
 
             ImGui::Separator();
 
-            if (ImGui::CollapsingHeader("Material")) {
+            if (ImGui::CollapsingHeader("Material"), ImGuiTreeNodeFlags_DefaultOpen) {
 
                 ImGui::DragFloat("Shininess", &obj->shininess, 1.0f, 1.0f, 256.0f);
 
@@ -685,7 +685,7 @@ void Inspector(){
             ImGui::TextUnformatted("Drag scene objects onto it in Hierarchy to parent them.");
         }
 
-        if (!isEmpty && ImGui::CollapsingHeader("Mesh")) {
+        if (!isEmpty && ImGui::CollapsingHeader("Mesh"), ImGuiTreeNodeFlags_DefaultOpen) {
 
             ImGui::TextWrapped("%s", obj->mesh.c_str());
 
@@ -727,7 +727,7 @@ void Inspector(){
 
         ImGui::Separator();
 
-        if (!isEmpty && ImGui::CollapsingHeader("Bounds")) {
+        if (!isEmpty && ImGui::CollapsingHeader("Bounds"), ImGuiTreeNodeFlags_DefaultOpen) {
 
             ImGui::DragFloat3("Min", &obj->min.x, 0.1f);
 
@@ -749,7 +749,7 @@ void Inspector(){
 
             int current = (int)obj->mapping;
 
-            if (ImGui::CollapsingHeader("Mapping")) {
+            if (ImGui::CollapsingHeader("Mapping"), ImGuiTreeNodeFlags_DefaultOpen) {
 
                 if (ImGui::Combo("Mapping##M", &current, mappings, IM_ARRAYSIZE(mappings))) {
 

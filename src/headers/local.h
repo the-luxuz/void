@@ -29,4 +29,6 @@
 
 #include <glm/gtx/quaternion.hpp>
 
+#include "../../data/scene/animation_refs.h"
+
 const int MAX_LIGHTS = 8;

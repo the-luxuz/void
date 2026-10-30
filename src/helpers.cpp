@@ -605,6 +605,7 @@ void ApplyWindowMode(SDL_Window *window) {
         SDL_SetWindowSize(window, windowedSize.x, windowedSize.y);
 
         SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+        SDL_SyncWindow(window);
 
         st.w = windowedSize.x;
         st.h = windowedSize.y;
@@ -619,7 +620,6 @@ void ApplyWindowMode(SDL_Window *window) {
         SDL_SetWindowBordered(window, false);
 
         SDL_SetWindowPosition(window, bounds.x, bounds.y);
-
         SDL_SetWindowSize(window, bounds.w, bounds.h);
 
         st.w = bounds.w;
@@ -782,9 +782,20 @@ void GenerateCubeUV(Object &obj) {
     obj.vertices = obj.original_vertices;
     obj.indices = obj.original_indices;
 
+    auto safeRange = [](float range) {
+        // Flat meshes can have a zero extent on one or more axes. Avoid
+        // producing infinite UVs when projecting onto those axes.
+        return std::abs(range) < 1e-6f ? 1.0f : range;
+    };
+
+    float rangeX = safeRange(obj.max.x - obj.min.x);
+    float rangeY = safeRange(obj.max.y - obj.min.y);
+    float rangeZ = safeRange(obj.max.z - obj.min.z);
+
     for (auto &v : obj.vertices) {
 
-        glm::vec3 n = glm::normalize(v.normal);
+        float normalLength = glm::length(v.normal);
+        glm::vec3 n = normalLength > 1e-6f ? v.normal / normalLength : glm::vec3(0.0f, 1.0f, 0.0f);
 
         float ax = fabs(n.x);
         float ay = fabs(n.y);
@@ -794,40 +805,40 @@ void GenerateCubeUV(Object &obj) {
 
             if (n.x > 0) {
 
-                v.uv.x = (-v.position.z - obj.min.z) / (obj.max.z - obj.min.z);
+                v.uv.x = (-v.position.z - obj.min.z) / rangeZ;
 
-                v.uv.y = (v.position.y - obj.min.y) / (obj.max.y - obj.min.y);
+                v.uv.y = (v.position.y - obj.min.y) / rangeY;
             } else {
 
-                v.uv.x = (v.position.z - obj.min.z) / (obj.max.z - obj.min.z);
+                v.uv.x = (v.position.z - obj.min.z) / rangeZ;
 
-                v.uv.y = (v.position.y - obj.min.y) / (obj.max.y - obj.min.y);
+                v.uv.y = (v.position.y - obj.min.y) / rangeY;
             }
         } else if (ay >= ax && ay >= az) {
 
             if (n.y > 0) {
 
-                v.uv.x = (v.position.x - obj.min.x) / (obj.max.x - obj.min.x);
+                v.uv.x = (v.position.x - obj.min.x) / rangeX;
 
-                v.uv.y = (-v.position.z - obj.min.z) / (obj.max.z - obj.min.z);
+                v.uv.y = (-v.position.z - obj.min.z) / rangeZ;
             } else {
 
-                v.uv.x = (v.position.x - obj.min.x) / (obj.max.x - obj.min.x);
+                v.uv.x = (v.position.x - obj.min.x) / rangeX;
 
-                v.uv.y = (v.position.z - obj.min.z) / (obj.max.z - obj.min.z);
+                v.uv.y = (v.position.z - obj.min.z) / rangeZ;
             }
         } else {
 
             if (n.z > 0) {
 
-                v.uv.x = (v.position.x - obj.min.x) / (obj.max.x - obj.min.x);
+                v.uv.x = (v.position.x - obj.min.x) / rangeX;
 
-                v.uv.y = (v.position.y - obj.min.y) / (obj.max.y - obj.min.y);
+                v.uv.y = (v.position.y - obj.min.y) / rangeY;
             } else {
 
-                v.uv.x = (-v.position.x - obj.min.x) / (obj.max.x - obj.min.x);
+                v.uv.x = (-v.position.x - obj.min.x) / rangeX;
 
-                v.uv.y = (v.position.y - obj.min.y) / (obj.max.y - obj.min.y);
+                v.uv.y = (v.position.y - obj.min.y) / rangeY;
             }
         }
     }
@@ -909,7 +920,8 @@ void GenerateSphericalUV(Object &obj) {
 
     for (auto &v : obj.vertices) {
 
-        glm::vec3 p = glm::normalize(v.position);
+        const float positionLength = glm::length(v.position);
+        const glm::vec3 p = positionLength > 1e-6f ? v.position / positionLength : glm::vec3(0.0f, 1.0f, 0.0f);
 
         float u = atan2(p.z, p.x);
         float vv = asin(p.y);
@@ -922,6 +934,21 @@ void GenerateSphericalUV(Object &obj) {
 }
 
 void UpdateMapping(Object &obj) {
+
+    // Mapping must never replace a valid mesh with empty geometry. This can
+    // happen for objects created by older scene versions that have no cached
+    // original mesh yet.
+    if ((obj.original_vertices.empty() || obj.original_indices.empty()) &&
+        !obj.vertices.empty() && !obj.indices.empty()) {
+        obj.original_vertices = obj.vertices;
+        obj.original_indices = obj.indices;
+    }
+
+    if (obj.original_vertices.empty() || obj.original_indices.empty())
+        return;
+
+    const std::vector<Vertex> previousVertices = obj.vertices;
+    const std::vector<GLuint> previousIndices = obj.indices;
 
     switch (obj.mapping) {
 
@@ -944,6 +971,29 @@ void UpdateMapping(Object &obj) {
     case TextureMapping::Spherical:
         GenerateSphericalUV(obj);
         break;
+    }
+
+    const bool validGeometry = !obj.vertices.empty() && !obj.indices.empty() &&
+        obj.indices.size() % 3 == 0 &&
+        std::all_of(obj.indices.begin(), obj.indices.end(), [&](GLuint index) {
+            return index < obj.vertices.size();
+        });
+    const bool finiteUVs = std::all_of(obj.vertices.begin(), obj.vertices.end(), [](const Vertex &vertex) {
+        return std::isfinite(vertex.uv.x) && std::isfinite(vertex.uv.y);
+    });
+
+    if (!validGeometry) {
+        obj.vertices = previousVertices.empty() ? obj.original_vertices : previousVertices;
+        obj.indices = previousIndices.empty() ? obj.original_indices : previousIndices;
+    } else if (!finiteUVs) {
+        // Keep the new mapping where possible, but replace invalid coordinates
+        // with the mesh's original UVs so alpha textures cannot discard it.
+        for (size_t i = 0; i < obj.vertices.size(); ++i) {
+            if (std::isfinite(obj.vertices[i].uv.x) && std::isfinite(obj.vertices[i].uv.y))
+                continue;
+            obj.vertices[i].uv = i < obj.original_vertices.size()
+                ? obj.original_vertices[i].uv : glm::vec2(0.0f);
+        }
     }
 
     glBindVertexArray(obj.vao);

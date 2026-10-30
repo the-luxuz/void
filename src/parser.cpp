@@ -1,6 +1,8 @@
 #include "parser.h"
 
 #include <filesystem>
+#include <iterator>
+#include <sstream>
 #include <unordered_map>
 
 namespace {
@@ -44,6 +46,52 @@ void ReadPhysics(std::ifstream &in, Physics &physics, uint32_t version) {
     physics.useGravity = legacy.useGravity;
     physics.isStatic = legacy.isStatic;
     physics.maxHorizontalSpeed = 0.0f;
+}
+
+std::string EscapeCppString(const std::string &value) {
+    std::string escaped;
+    for (char ch : value) {
+        switch (ch) {
+        case '\\': escaped += "\\\\"; break;
+        case '"': escaped += "\\\""; break;
+        case '\n': escaped += "\\n"; break;
+        case '\r': escaped += "\\r"; break;
+        case '\t': escaped += "\\t"; break;
+        default: escaped += ch; break;
+        }
+    }
+    return escaped;
+}
+
+void WriteAnimationReferences(const char *sceneName) {
+    const std::filesystem::path scenePath(sceneName);
+    const std::filesystem::path headerPath = scenePath.parent_path() / "animation_refs.h";
+    std::ostringstream generated;
+
+    generated << "#pragma once\n\n// Generated from the animation clips in " << scenePath.filename().string()
+              << ". Save the scene in the editor to refresh this file.\n"
+           << "namespace AnimationRefs {\n";
+    for (int i = 0; i < static_cast<int>(animations.size()); ++i) {
+        const AnimationClip &clip = animations[i];
+        const std::string identifier = AnimationReferenceIdentifier(i);
+        generated << "inline constexpr char " << identifier << "[] = \"" << EscapeCppString(clip.name) << "\";\n";
+    }
+    generated << "}\n";
+
+    const std::string contents = generated.str();
+    // Read in text mode so Windows line-ending translation matches the
+    // generated string and unchanged headers keep their timestamp.
+    std::ifstream existingHeader(headerPath);
+    if (existingHeader) {
+        const std::string existingContents((std::istreambuf_iterator<char>(existingHeader)),
+                                           std::istreambuf_iterator<char>());
+        if (existingContents == contents)
+            return;
+    }
+
+    std::ofstream header(headerPath, std::ios::trunc);
+    if (header)
+        header << contents;
 }
 
 } // namespace
@@ -301,6 +349,8 @@ void Parser::save(const char *settings_name, const char *scene_name, Settings &s
     save_settings(out, st, cam);
 
     save_scene(out_scene, scene, scene_lgh_obj, scene_lgh, st, cam);
+    out_scene.close();
+    WriteAnimationReferences(scene_name);
 }
 
 bool Parser::load(const char *settings_name, const char *scene_name, Settings &st, camera &cam, std::vector<Object> &scene) {

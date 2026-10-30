@@ -612,7 +612,7 @@ void CollisionUpdate() {
                 PositionalCorrection(a, b, contact);
                 ResolveVelocity(a, b, contact);
 
-                // eventManager.Throw(std::make_unique<PlayCinematicEvent>("../data/cinematics/test.mp4"));
+                //eventManager.Throw(std::make_unique<PlayAnimationEvent>(AnimationRefs::Anim_cubeMoves));
             }
         }
     }

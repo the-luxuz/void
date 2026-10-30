@@ -33,6 +33,10 @@ SDL_Rect rect;
 
 SDL_Event event;
 
+static const char *GetImGuiLayoutPath(window_mode mode) {
+    return mode == window_mode::WINDOWED ? "imgui_windowed.ini" : "imgui_fullscreen_windowed.ini";
+}
+
 constexpr float angle_speed = glm::radians(90.0f);
 float radius_speed = 20.0f;
 
@@ -241,8 +245,20 @@ void update(SDL_Window *window, float dt) {
 
     if (st.last_win_mode != st.win_mode) {
 
+        const char *previousLayout = GetImGuiLayoutPath(st.last_win_mode);
+        const char *nextLayout = GetImGuiLayoutPath(st.win_mode);
+
+        // Keep separate dock layouts for desktop windowed and fullscreen
+        // windowed sizes, so changing display mode doesn't distort the panels.
+        ImGui::SaveIniSettingsToDisk(previousLayout);
         ApplyWindowMode(window);
         init_viewport();
+
+        std::ifstream savedLayout(nextLayout, std::ios::binary);
+        if (savedLayout.good())
+            ImGui::LoadIniSettingsFromDisk(nextLayout);
+
+        ImGui::GetIO().IniFilename = nextLayout;
     }
 
     if (isCinematicActive)
@@ -623,7 +639,8 @@ int main(int argc, char *args[]) {
                     if (currentViewMode == view_Mode::EDITOR) {
 
                         currentViewMode = view_Mode::PLAY;
-                        SDL_SetWindowRelativeMouseMode(window, true);
+                        player = search_obj_by_name("Player");
+                        SDL_SetWindowRelativeMouseMode(window, player != nullptr);
 
                     } else {
 
@@ -637,7 +654,7 @@ int main(int argc, char *args[]) {
 
             case SDL_EVENT_MOUSE_MOTION:
 
-                if (currentViewMode == view_Mode::EDITOR || free_cam) {
+                if (currentViewMode == view_Mode::EDITOR || free_cam || (currentViewMode == view_Mode::PLAY && !player)) {
                     
                     if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_LCTRL]) {
                     
@@ -664,8 +681,7 @@ int main(int argc, char *args[]) {
 
             case SDL_EVENT_KEY_UP:
 
-                if (event.key.scancode == SDL_SCANCODE_LCTRL &&
-                    (currentViewMode == view_Mode::EDITOR || free_cam)) {
+                if (event.key.scancode == SDL_SCANCODE_LCTRL && (currentViewMode == view_Mode::EDITOR || free_cam || (currentViewMode == view_Mode::PLAY && !player))) {
 
                     SDL_SetWindowRelativeMouseMode(window, false);
                     //SDL_WarpMouseInWindow(window, st.w / 2.0f, st.h / 2.0f);
@@ -681,7 +697,7 @@ int main(int argc, char *args[]) {
 
             case SDL_EVENT_MOUSE_WHEEL:
 
-                if (viewport_scroll_active || (currentViewMode == view_Mode::PLAY && free_cam)) {
+                if (viewport_scroll_active || (currentViewMode == view_Mode::PLAY && free_cam) || (currentViewMode == view_Mode::PLAY && !player)) {
 
                     cam.radius -= (event.wheel.y * 20);
 
@@ -787,7 +803,7 @@ int main(int argc, char *args[]) {
 
                         PlayerActor::Control(keyboard, fixedDt, *player);
 
-                    } else if (!player && !free_cam) {
+                    } else if (!player && !free_cam && !io.WantCaptureKeyboard) {
 
                         controls(keyboard, angle_speed, radius_speed, fixedDt);
                     }

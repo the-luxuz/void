@@ -89,6 +89,23 @@ void UpdateAnimationImGui() {
 
     if (clip) {
 
+        int clipIndex = animationPreviewPlayer.current_animation;
+
+        std::string animationRef = "AnimationRefs::" + AnimationReferenceIdentifier(clipIndex);
+
+        ImGui::Separator();
+
+        ImGui::TextDisabled("C++ reference (updated when you save the scene):");
+
+        ImGui::TextWrapped("eventManager.Throw(std::make_unique<PlayAnimationEvent>(%s));", animationRef.c_str());
+
+        if (ImGui::SmallButton("Copy C++ reference")) {
+
+            std::string code = "\neventManager.Throw(std::make_unique<PlayAnimationEvent>(" + animationRef + "));";
+
+            SDL_SetClipboardText(code.c_str());
+        }
+
         ImGui::Checkbox("Loop", &clip->loop);
 
         if (ImGui::IsWindowHovered())

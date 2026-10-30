@@ -745,6 +745,7 @@ float TimelineXToTime(float x, float startX, float pixelsPerSecond, float scroll
 AnimationPlayerID PlayAnimation(int animationIndex);
 
 int FindAnimationByName(const std::string &name);
+std::string AnimationReferenceIdentifier(int animationIndex);
 
 //--------------------------------------------------------------
 // events
