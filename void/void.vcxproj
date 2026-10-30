@@ -207,6 +207,7 @@
     <None Include="..\data\shaders\fragment_hdrToCubemap.frag" />
     <None Include="..\data\shaders\fragment_line.frag" />
     <None Include="..\data\shaders\fragment_skybox.frag" />
+    <None Include="..\data\shaders\fragment_thumbnail.frag" />
     <None Include="..\data\shaders\fragment_videoplayer.frag" />
     <None Include="..\data\shaders\vertex.vert" />
     <None Include="..\data\shaders\vertex_depth.vert" />
@@ -214,6 +215,7 @@
     <None Include="..\data\shaders\vertex_hdrToCubemap.vert" />
     <None Include="..\data\shaders\vertex_line.vert" />
     <None Include="..\data\shaders\vertex_skybox.vert" />
+    <None Include="..\data\shaders\vertex_thumbnail.vert" />
     <None Include="..\data\shaders\vertex_videoplayer.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

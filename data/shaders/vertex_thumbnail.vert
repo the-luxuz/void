@@ -9,6 +9,8 @@ uniform mat4 uModel;
 out vec3 vNormal;
 
 void main() {
+
     gl_Position = uMVP * vec4(aPosition, 1.0);
+
     vNormal = mat3(transpose(inverse(uModel))) * aNormal;
 }

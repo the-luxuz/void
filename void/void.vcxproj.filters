@@ -87,6 +87,21 @@
     <ClCompile Include="..\src\scene_hierarchy.cpp">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\editor\Browser.cpp">
+      <Filter>Archivos de origen</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\editor\Editor.cpp">
+      <Filter>Archivos de origen</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\editor\Guizmo.cpp">
+      <Filter>Archivos de origen</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\editor\Hierarchy.cpp">
+      <Filter>Archivos de origen</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\editor\Inspector.cpp">
+      <Filter>Archivos de origen</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\headers\classes.h">
@@ -137,6 +152,24 @@
     <ClInclude Include="..\src\headers\scene_hierarchy.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\editor\Browser.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\Editor.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\editorLocal.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\Guizmo.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\Hierarchy.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\Inspector.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\data\shaders\vertex.vert" />
@@ -153,5 +186,7 @@
     <None Include="..\data\shaders\vertex_line.vert" />
     <None Include="..\data\shaders\fragment_videoplayer.frag" />
     <None Include="..\data\shaders\vertex_videoplayer.vert" />
+    <None Include="..\data\shaders\fragment_thumbnail.frag" />
+    <None Include="..\data\shaders\vertex_thumbnail.vert" />
   </ItemGroup>
 </Project>
