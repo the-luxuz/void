@@ -84,7 +84,7 @@ void update(SDL_Window *window, float dt) {
             view = glm::lookAt(cameraPos, cam.cam_target, cam.cam_up);
         }
 
-        float activeFov = st.fov + (usePlayerCamera ? PlayerActor::slideFovOffset : 0.0f);
+        float activeFov = st.fov + (usePlayerCamera ? PlayerActor::speedFovOffset : 0.0f);
         static float lastProjectionFov = -1.0f;
 
         if (camera_update || std::abs(activeFov - lastProjectionFov) > 0.001f) {
@@ -517,6 +517,11 @@ int main(int argc, char *args[]) {
                             if (hasLightCopy) {
 
                                 Object copy = objCopy;
+                                Light copiedLight = lightCopy;
+                                EntityID copiedID = GenerateEntityID();
+
+                                copy.id = copiedID;
+                                copiedLight.id = copiedID;
 
                                 copy.vao = 0;
                                 copy.vbo = 0;
@@ -537,13 +542,14 @@ int main(int argc, char *args[]) {
                                 buffer(copy);
 
                                 lightObjects.push_back(copy);
-                                lights.push_back(lightCopy);
+                                lights.push_back(copiedLight);
 
                                 selectedObject = (int)(objects.size() + lightObjects.size() - 1);
 
                             } else {
 
                                 Object copy = objCopy;
+                                copy.id = GenerateEntityID();
 
                                 copy.vao = 0;
                                 copy.vbo = 0;
@@ -703,7 +709,12 @@ int main(int argc, char *args[]) {
 
             case SDL_EVENT_MOUSE_WHEEL:
 
-                if (viewport_scroll_active || (currentViewMode == view_Mode::PLAY && free_cam) || (currentViewMode == view_Mode::PLAY && !player)) {
+                if (currentViewMode == view_Mode::PLAY && player && !free_cam && !ImGui::GetIO().WantCaptureMouse) {
+
+                    if (event.wheel.y != 0.0f)
+                        PlayerActor::wheelJumpIntentRemaining = PlayerActor::wheelJumpIntentDuration;
+
+                } else if (viewport_scroll_active || (currentViewMode == view_Mode::PLAY && free_cam) || (currentViewMode == view_Mode::PLAY && !player)) {
 
                     cam.radius -= (event.wheel.y * 20);
 

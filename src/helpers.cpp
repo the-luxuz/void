@@ -327,6 +327,11 @@ void Docking() {
                     if (hasLightCopy) {
 
                         Object copy = objCopy;
+                        Light copiedLight = lightCopy;
+                        EntityID copiedID = GenerateEntityID();
+
+                        copy.id = copiedID;
+                        copiedLight.id = copiedID;
 
                         copy.vao = 0;
                         copy.vbo = 0;
@@ -347,13 +352,14 @@ void Docking() {
                         buffer(copy);
 
                         lightObjects.push_back(copy);
-                        lights.push_back(lightCopy);
+                        lights.push_back(copiedLight);
 
                         selectedObject = (int)(objects.size() + lightObjects.size() - 1);
 
                     } else {
 
                         Object copy = objCopy;
+                        copy.id = GenerateEntityID();
 
                         copy.vao = 0;
                         copy.vbo = 0;
@@ -529,20 +535,19 @@ void Docking() {
 
         ImGui::Separator();
         ImGui::TextUnformatted("Player Movement");
+        ImGui::SliderFloat("Bunny-hop wheel window", &PlayerActor::wheelJumpIntentDuration, 0.05f, 0.5f, "%.2f s");
         ImGui::SliderFloat("Default max speed", &PlayerActor::defaultMaximumSpeed, 100.0f, 10000.0f, "%.0f");
         ImGui::SliderFloat("Slide crouch scale", &PlayerActor::slideCrouchScale, 0.4f, 1.0f, "%.2f");
         ImGui::SliderFloat("Crouch transition", &PlayerActor::crouchTransitionDuration, 0.05f, 0.5f, "%.2f s");
         ImGui::SliderFloat("Crouched speed multiplier", &PlayerActor::crouchedMoveSpeedMultiplier, 0.2f, 1.0f, "%.2f x");
         ImGui::SliderFloat("Air slide steering", &PlayerActor::slideAirTurnDegreesPerSecond, 0.0f, 540.0f, "%.0f deg/s");
-        ImGui::SliderFloat("Slide FOV increase", &PlayerActor::slideFovIncrease, 0.0f, 20.0f, "%.1f°");
-        ImGui::SliderFloat("Slide FOV rise time", &PlayerActor::slideFovRiseDuration, 0.05f, 0.8f, "%.2f s");
-        ImGui::SliderFloat("Slide FOV return time", &PlayerActor::slideFovReturnDuration, 0.1f, 2.0f, "%.2f s");
+        ImGui::SliderFloat("Landing inertia grace", &PlayerActor::slideCarryLandingGraceDuration, 0.0f, 0.4f, "%.2f s");
+        ImGui::SliderFloat("Slide release jump window", &PlayerActor::slideJumpReleaseWindowDuration, 0.0f, 0.3f, "%.2f s");
+        ImGui::SliderFloat("Speed FOV increase", &PlayerActor::speedFovIncrease, 0.0f, 20.0f, "%.1f°");
+        ImGui::SliderFloat("FOV reference speed", &PlayerActor::speedFovReferenceMultiplier, 0.5f, 4.0f, "%.2f x normal");
+        ImGui::SliderFloat("Speed FOV response", &PlayerActor::speedFovChangeSpeed, 1.0f, 120.0f, "%.0f deg/s");
         ImGui::SliderFloat("Jump height", &PlayerActor::jumpHeight, 20.0f, 600.0f, "%.0f");
-        ImGui::SliderFloat("Minimum jump height", &PlayerActor::jumpMinimumHeightPercent, 10.0f, 80.0f, "%.0f%%");
-        ImGui::SliderFloat("Jump hold duration", &PlayerActor::jumpHoldDuration, 0.05f, 0.35f, "%.2f s");
         ImGui::SliderFloat("Air gravity multiplier", &PlayerActor::jumpGravityMultiplier, 1.0f, 5.0f, "%.1f x");
-        ImGui::SliderFloat("Max early release brake", &PlayerActor::jumpReleaseBrakeDuration, 0.0f, 0.3f, "%.2f s");
-        ImGui::SliderFloat("Early release brake force", &PlayerActor::jumpReleaseBrakeMultiplier, 0.0f, 3.0f, "%.1f x gravity");
 
         ImGui::End();
     }

@@ -56,7 +56,7 @@ void Inspector(){
         Object *obj = GetSelectedObject();
         const bool isEmpty = obj && IsEmptyObject(*obj);
 
-        if (ImGui::CollapsingHeader("General"), ImGuiTreeNodeFlags_DefaultOpen) {
+        if (ImGui::CollapsingHeader("General", ImGuiTreeNodeFlags_DefaultOpen)) {
 
             ImGui::PushID(reinterpret_cast<void *>(static_cast<uintptr_t>(obj->id)));
 
@@ -100,7 +100,7 @@ void Inspector(){
 
             ImGui::Separator();
 
-            if (ImGui::CollapsingHeader("Physics"), ImGuiTreeNodeFlags_DefaultOpen) {
+            if (ImGui::CollapsingHeader("Physics", ImGuiTreeNodeFlags_DefaultOpen)) {
 
                 Physics &p = obj->physics;
 
@@ -181,7 +181,7 @@ void Inspector(){
 
             ImGui::Separator();
 
-            if (ImGui::CollapsingHeader("Collision"), ImGuiTreeNodeFlags_DefaultOpen) {
+            if (ImGui::CollapsingHeader("Collision", ImGuiTreeNodeFlags_DefaultOpen)) {
 
                 ImGui::Separator();
 
@@ -615,7 +615,7 @@ void Inspector(){
 
             ImGui::Separator();
 
-            if (ImGui::CollapsingHeader("Material"), ImGuiTreeNodeFlags_DefaultOpen) {
+            if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen)) {
 
                 ImGui::DragFloat("Shininess", &obj->shininess, 1.0f, 1.0f, 256.0f);
 
@@ -749,7 +749,7 @@ void Inspector(){
 
             int current = (int)obj->mapping;
 
-            if (ImGui::CollapsingHeader("Mapping"), ImGuiTreeNodeFlags_DefaultOpen) {
+            if (ImGui::CollapsingHeader("Mapping", ImGuiTreeNodeFlags_DefaultOpen)) {
 
                 if (ImGui::Combo("Mapping##M", &current, mappings, IM_ARRAYSIZE(mappings))) {
 

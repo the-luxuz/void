@@ -5,6 +5,8 @@
 namespace PlayerActor {
 
 	inline float jumpBufferDuration = 0.12f;
+	inline float wheelJumpIntentDuration = 0.18f;
+	inline float wheelJumpIntentRemaining = 0.0f;
 	inline float groundNormalThreshold = 0.5f;
 
 	inline bool jumpKeyWasDown = false;
@@ -21,16 +23,10 @@ namespace PlayerActor {
 	inline float defaultMaximumSpeed = 450.0f;
 
 	inline float jumpHeight = 150.0f;
-	inline float jumpMinimumHeightPercent = 1.0f;
-	inline float jumpHoldDuration = 0.08f;
 	inline float jumpGravityMultiplier = 7.f;
-	inline float jumpReleaseBrakeDuration = 0.12f;
-	inline float jumpReleaseBrakeMultiplier = 1.5f;
-	inline float jumpHoldRemaining = 0.0f;
-	inline float jumpHoldForceAcceleration = 0.0f;
-	inline float jumpReleaseBrakeRemaining = 0.0f;
 
 	inline bool shiftWasDown = false;
+	inline bool slideInputSuppressedUntilRelease = false;
 	inline bool movingBeforeSlide = false;
 	inline bool sliding = false;
 
@@ -43,15 +39,20 @@ namespace PlayerActor {
 	inline bool slideCarryActive = false;
 	inline float slideCarrySpeed = 0.0f;
 	inline glm::vec3 slideCarryDirection(0.0f);
-	inline float slideAirTurnDegreesPerSecond = 180.0f;
+	inline float slideAirTurnDegreesPerSecond = 270.0f;
+	inline float slideCarryLandingGraceDuration = 0.04f;
+	inline float slideCarryLandingGraceRemaining = 0.0f;
+	inline bool slideCarryLandingGraceStarted = false;
+	inline float slideJumpReleaseWindowDuration = 0.12f;
+	inline float slideJumpReleaseWindowRemaining = 0.0f;
+	inline float releasedSlideSpeed = 0.0f;
+	inline glm::vec3 releasedSlideDirection(0.0f);
 	inline bool standingScaleInitialized = false;
 	inline glm::vec3 standingScale(1.0f);
-	inline float slideElapsed = 0.0f;
-	inline float slideFovOffset = 0.0f;
-	inline float slideFovIncrease = 7.0f;
-	inline float slideFovRiseDuration = 0.3f;
-	inline float slideFovReturnDuration = 0.8f;
-	inline float slideFovChangeSpeed = 80.0f;
+	inline float speedFovOffset = 0.0f;
+	inline float speedFovIncrease = 7.0f;
+	inline float speedFovReferenceMultiplier = 1.5f;
+	inline float speedFovChangeSpeed = 80.0f;
 
 	inline bool crouched = false;
 	inline EntityID crouchPlayerID = 0;

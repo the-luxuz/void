@@ -35,9 +35,11 @@ static void DrawHierarchyNode(Object &object, size_t depth = 0) {
     if (!hasChildren)
         flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
 
-    ImGui::PushID(reinterpret_cast<void *>(static_cast<uintptr_t>(object.id)));
-
-    const bool open = ImGui::TreeNodeEx(object.name.c_str(), flags);
+    const bool open = ImGui::TreeNodeEx(
+        reinterpret_cast<void *>(static_cast<uintptr_t>(object.id)),
+        flags,
+        "%s",
+        object.name.c_str());
 
     if (ImGui::IsItemClicked())
         selectedObject = FindObjectIndex(object.id);
@@ -77,7 +79,6 @@ static void DrawHierarchyNode(Object &object, size_t depth = 0) {
         ImGui::TreePop();
     }
 
-    ImGui::PopID();
 }
 
 
@@ -125,14 +126,11 @@ void Hierarchy(){
 
     for (size_t i = 0; i < lightObjects.size(); i++) {
 
-        ImGui::PushID((int)(objects.size() + i));
-
         bool selected = (selectedObject == (int)(objects.size() + i));
+        std::string label = lightObjects[i].name + "###light_" + std::to_string(lightObjects[i].id);
 
-        if (ImGui::Selectable(lightObjects[i].name.c_str(), selected))
+        if (ImGui::Selectable(label.c_str(), selected))
             selectedObject = objects.size() + i;
-
-        ImGui::PopID();
     }
 
     ImGui::End();
