@@ -338,8 +338,13 @@ int main(int argc, char *args[]) {
                     quit = true;
 
                 if (currentViewMode == view_Mode::PLAY) {
-                    if (event.key.scancode == SDL_SCANCODE_ESCAPE)
+                    if (event.key.scancode == SDL_SCANCODE_ESCAPE) {
                         currentViewMode = view_Mode::EDITOR;
+                        free_cam = false;
+                        SDL_SetWindowRelativeMouseMode(window, false);
+                        SDL_ShowCursor();
+                        PlayerActor::ResetJumpState();
+                    }
                 }
 
                 if (currentViewMode == view_Mode::EDITOR && !io.WantCaptureKeyboard) {

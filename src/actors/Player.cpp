@@ -55,12 +55,13 @@ namespace PlayerActor {
         bool wallCollision = std::abs(glm::dot(contact.normal, up)) < groundNormalThreshold;
 
         if (playerCollision && wallCollision) {
-            if (sliding) {
-                slideInputSuppressedUntilRelease = true;
-                crouched = false;
+
+            if (sliding && !shiftWasDown) {
+
+                
+                sliding = false;
             }
 
-            sliding = false;
             movingBeforeSlide = false;
             slideCurrentSpeed = 0.0f;
             slideSpeedCeiling = 0.0f;
@@ -91,6 +92,7 @@ namespace PlayerActor {
             jumpBufferRemaining = std::max(0.0f, jumpBufferRemaining - dt);
 
         if (wheelJumpIntentRemaining > 0.0f) {
+
             jumpBufferRemaining = jumpBufferDuration;
             wheelJumpIntentRemaining = std::max(0.0f, wheelJumpIntentRemaining - dt);
         }
@@ -106,6 +108,7 @@ namespace PlayerActor {
             return;
 
         if (!standingScaleInitialized || crouchPlayerID != player.id) {
+
             standingScale = player.scale;
             standingScaleInitialized = true;
             crouchPlayerID = player.id;
