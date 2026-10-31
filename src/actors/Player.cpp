@@ -90,16 +90,53 @@ namespace PlayerActor {
         if (keyboard[SDL_SCANCODE_D])
             moveDirection += right;
 
-        if (keyboard[SDL_SCANCODE_LSHIFT]) {
-        
-            if (!grounded)
-                AddForce(player, glm::vec3(0.0f, -1500.f, 0.0f));
+        //-----------------------------------------------------------------------------
+        // slide
 
-            defaultMaximumSpeed = 800;
-            moveDirection *= 2;
-            /*player.scale.y *= 0.5f;*/
-        }else
-            defaultMaximumSpeed = 450.0f;
+        bool shiftDown = keyboard[SDL_SCANCODE_LSHIFT];
+        bool shiftPressed = shiftDown && !shiftWasDown;
+        bool hasMove = glm::length2(moveDirection) > 0.0001f;
+
+        if (shiftPressed)
+            movingBeforeSlide = hasMove;
+
+        shiftWasDown = shiftDown;
+
+        if (normalMaximumSpeed <= 0.0f)
+            normalMaximumSpeed = physics.maxHorizontalSpeed;
+
+        if (shiftDown && grounded && movingBeforeSlide && hasMove && !sliding) {
+
+            sliding = true;
+
+            glm::vec3 horizontalVelocity(physics.velocity.x, 0.0f, physics.velocity.z);
+
+            slideDirection = glm::length2(horizontalVelocity) > 0.0001f ? glm::normalize(horizontalVelocity) : glm::normalize(moveDirection);
+
+            slideCurrentSpeed = std::max(glm::length(horizontalVelocity), normalMaximumSpeed * 1.35f);
+
+            slideSpeedCeiling = slideCurrentSpeed;
+
+            slideVelocityDirection = slideDirection;
+
+        }
+
+        if (shiftDown && !grounded)
+            AddForce(player, glm::vec3(0.0f, -4000.0f, 0.0f));
+
+        if (!shiftDown) {
+
+            sliding = false;
+
+            movingBeforeSlide = false;
+
+            slideCurrentSpeed = 0.0f;
+
+            slideSpeedCeiling = 0.0f;
+        }
+
+        //-----------------------------------------------------------------------------
+        // jump
 
         float downwardGravity = -physics.gravity.y * jumpGravityMultiplier;
 
@@ -189,17 +226,74 @@ namespace PlayerActor {
         if (glm::length2(moveDirection) > 0.0001f)
             moveDirection = glm::normalize(moveDirection);
 
-        if (glm::length2(moveDirection) > 0.0001f) {
+        if (sliding && hasMove) {
 
-            float drag = std::max(physics.drag, 1.0f);
+            float maxTurn = glm::radians(60.0f) * dt;
+            float dot = glm::clamp(glm::dot(slideVelocityDirection, moveDirection), -1.0f, 1.0f);
 
-            float dragFactor = std::max(1.0f - drag * dt, 0.01f);
+            float angle = std::atan2(slideVelocityDirection.z * moveDirection.x - slideVelocityDirection.x * moveDirection.z, dot);
 
-            float driveAcceleration = physics.maxHorizontalSpeed * drag / dragFactor;
+            angle = glm::clamp(angle, -maxTurn, maxTurn);
 
-            glm::vec3 driveForce = moveDirection * (driveAcceleration / physics.inverseMass);
+            float c = std::cos(angle);
+            float s = std::sin(angle);
+            glm::vec3 oldDirection = slideVelocityDirection;
 
-            AddForce(player, driveForce);
+            slideVelocityDirection = glm::normalize(glm::vec3(c * oldDirection.x + s * oldDirection.z, 0.0f, -s * oldDirection.x + c * oldDirection.z));
+        }
+
+        if (sliding) {
+
+            float turnFactor = 1.0f;
+
+            if (hasMove) {
+
+                float alignment = glm::clamp(glm::dot(slideDirection, slideVelocityDirection), -1.0f, 1.0f);
+
+                float alignment01 = (alignment + 1.0f) * 0.5f;
+                turnFactor = glm::mix(0.4f, 1.0f, alignment01);
+
+                if (grounded)
+                    slideSpeedCeiling = std::max(0.0f, slideSpeedCeiling - normalMaximumSpeed * 0.50f * dt);
+
+                float targetSpeed = slideSpeedCeiling * turnFactor;
+
+                float response = normalMaximumSpeed * 2.0f * dt;
+
+                slideCurrentSpeed += glm::clamp(targetSpeed - slideCurrentSpeed, -response, response);
+
+            } else if (grounded)
+                slideCurrentSpeed = std::max(0.0f, slideCurrentSpeed - normalMaximumSpeed * 2.5f * dt);
+
+            physics.maxHorizontalSpeed = normalMaximumSpeed * 2.f;
+
+            if (dt > 0.0f) {
+
+                float dragFactor = std::max(1.0f - physics.drag * dt, 0.01f);
+
+                glm::vec3 currentVelocity(physics.velocity.x, 0.0f, physics.velocity.z);
+
+                glm::vec3 targetVelocity = slideVelocityDirection * slideCurrentSpeed;
+
+                glm::vec3 acceleration = (targetVelocity / dragFactor - currentVelocity) / dt;
+
+                AddForce(player, acceleration / physics.inverseMass);
+            }
+
+        } else {
+
+            physics.maxHorizontalSpeed = normalMaximumSpeed;
+
+            if (hasMove) {
+
+                float drag = std::max(physics.drag, 1.0f);
+                float dragFactor = std::max(1.0f - drag * dt, 0.01f);
+                float driveAcceleration = physics.maxHorizontalSpeed * drag / dragFactor;
+
+                glm::vec3 driveForce = moveDirection * (driveAcceleration / physics.inverseMass);
+
+                AddForce(player, driveForce);
+            }
         }
     }
 

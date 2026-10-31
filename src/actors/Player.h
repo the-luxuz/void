@@ -15,8 +15,11 @@ namespace PlayerActor {
 	inline bool cameraInitialized = false;
 	inline float cameraEyeHeight = 1.7f;
 	inline float cameraFollowSpeed = 16.0f;
+
 	inline float lookSensitivity = 0.002f;
+
 	inline float defaultMaximumSpeed = 450.0f;
+
 	inline float jumpHeight = 150.0f;
 	inline float jumpMinimumHeightPercent = 1.0f;
 	inline float jumpHoldDuration = 0.08f;
@@ -26,6 +29,17 @@ namespace PlayerActor {
 	inline float jumpHoldRemaining = 0.0f;
 	inline float jumpHoldForceAcceleration = 0.0f;
 	inline float jumpReleaseBrakeRemaining = 0.0f;
+
+	inline bool shiftWasDown = false;
+	inline bool movingBeforeSlide = false;
+	inline bool sliding = false;
+
+	inline float normalMaximumSpeed = 0.0f;
+    inline float slideCurrentSpeed = 0.0f;
+    inline float slideSpeedCeiling = 0.0f;
+    inline glm::vec3 slideDirection(0.0f);
+
+	inline glm::vec3 slideVelocityDirection(0.0f);
 
 	void Control(const bool *keyboard, float dt, Object &player);
 	void UpdateCamera(Object &player, float dt);
