@@ -640,6 +640,7 @@ int main(int argc, char *args[]) {
 
                         currentViewMode = view_Mode::PLAY;
                         player = search_obj_by_name("Player");
+                        PlayerActor::ResetJumpState();
                         SDL_SetWindowRelativeMouseMode(window, player != nullptr);
 
                     } else {
@@ -647,6 +648,7 @@ int main(int argc, char *args[]) {
                         currentViewMode = view_Mode::EDITOR;
                         SDL_SetWindowRelativeMouseMode(window, false);
                         free_cam = false;
+                        PlayerActor::ResetJumpState();
                     }
                 }
 
@@ -812,6 +814,8 @@ int main(int argc, char *args[]) {
                         PhysicsUpdate(fixedDt);
                     if (st.collision_active)
                         CollisionUpdate();
+                    else
+                        PlayerActor::BeginCollisionStep();
 
                     if (player && !free_cam)
                         PlayerActor::UpdateCamera(*player, fixedDt);

@@ -1,4 +1,5 @@
 #include "headers/updates.h"
+#include "actors/Player.h"
 
 #include <cstring>
 
@@ -515,6 +516,8 @@ void UpdateAnimation(float dt) {
 
 void CollisionUpdate() {
 
+    PlayerActor::BeginCollisionStep();
+
     for (size_t i = 0; i < objects.size(); i++) {
 
         for (size_t j = i + 1; j < objects.size(); j++) {
@@ -608,6 +611,8 @@ void CollisionUpdate() {
             }
 
             if (contact.hit) {
+
+                PlayerActor::RegisterCollision(a, b, contact);
 
                 PositionalCorrection(a, b, contact);
                 ResolveVelocity(a, b, contact);

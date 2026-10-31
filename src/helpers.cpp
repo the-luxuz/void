@@ -530,6 +530,12 @@ void Docking() {
         ImGui::Separator();
         ImGui::TextUnformatted("Player Movement");
         ImGui::SliderFloat("Default max speed", &PlayerActor::defaultMaximumSpeed, 100.0f, 10000.0f, "%.0f");
+        ImGui::SliderFloat("Jump height", &PlayerActor::jumpHeight, 20.0f, 600.0f, "%.0f");
+        ImGui::SliderFloat("Minimum jump height", &PlayerActor::jumpMinimumHeightPercent, 10.0f, 80.0f, "%.0f%%");
+        ImGui::SliderFloat("Jump hold duration", &PlayerActor::jumpHoldDuration, 0.05f, 0.35f, "%.2f s");
+        ImGui::SliderFloat("Air gravity multiplier", &PlayerActor::jumpGravityMultiplier, 1.0f, 5.0f, "%.1f x");
+        ImGui::SliderFloat("Max early release brake", &PlayerActor::jumpReleaseBrakeDuration, 0.0f, 0.3f, "%.2f s");
+        ImGui::SliderFloat("Early release brake force", &PlayerActor::jumpReleaseBrakeMultiplier, 0.0f, 3.0f, "%.1f x gravity");
 
         ImGui::End();
     }

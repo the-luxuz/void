@@ -4,7 +4,59 @@
 
 namespace PlayerActor {
 
+    void ResetJumpState() {
+
+        jumpKeyWasDown = false;
+
+        grounded = false;
+
+        jumpBufferRemaining = 0.0f;
+
+        jumpHoldRemaining = 0.0f;
+
+        jumpHoldForceAcceleration = 0.0f;
+
+        jumpReleaseBrakeRemaining = 0.0f;
+    }
+
+    void BeginCollisionStep() {
+
+        grounded = false;
+    }
+
+    void RegisterCollision(const Object &a, const Object &b, const Contact &contact) {
+
+        if (!contact.hit || a.collider.isTrigger || b.collider.isTrigger)
+            return;
+
+        glm::vec3 up(0.0f, 1.0f, 0.0f);
+
+        if (a.name == "Player" && glm::dot(contact.normal, up) < -groundNormalThreshold) {
+            grounded = true;
+            jumpHoldRemaining = 0.0f;
+            jumpHoldForceAcceleration = 0.0f;
+            jumpReleaseBrakeRemaining = 0.0f;
+        }
+
+        if (b.name == "Player" && glm::dot(contact.normal, up) > groundNormalThreshold) {
+            grounded = true;
+            jumpHoldRemaining = 0.0f;
+            jumpHoldForceAcceleration = 0.0f;
+            jumpReleaseBrakeRemaining = 0.0f;
+        }
+    }
+
     void Control(const bool *keyboard, float dt, Object &player) {
+
+        bool jumpKeyDown = keyboard[SDL_SCANCODE_SPACE];
+        bool jumpReleased = !jumpKeyDown && jumpKeyWasDown;
+
+        if (jumpKeyDown && !jumpKeyWasDown)
+            jumpBufferRemaining = jumpBufferDuration;
+        else if (jumpBufferRemaining > 0.0f)
+            jumpBufferRemaining = std::max(0.0f, jumpBufferRemaining - dt);
+
+        jumpKeyWasDown = jumpKeyDown;
 
         if (!player.hasPhysics || player.physics.isStatic)
             return;
@@ -37,6 +89,102 @@ namespace PlayerActor {
 
         if (keyboard[SDL_SCANCODE_D])
             moveDirection += right;
+
+        if (keyboard[SDL_SCANCODE_LSHIFT]) {
+        
+            if (!grounded)
+                AddForce(player, glm::vec3(0.0f, -1500.f, 0.0f));
+
+            defaultMaximumSpeed = 800;
+            moveDirection *= 2;
+            /*player.scale.y *= 0.5f;*/
+        }else
+            defaultMaximumSpeed = 450.0f;
+
+        float downwardGravity = -physics.gravity.y * jumpGravityMultiplier;
+
+        if (jumpReleased && jumpHoldRemaining > 0.0f && physics.velocity.y > 0.0f) {
+
+            float remainingHoldFraction = jumpHoldDuration > 0.0f ? glm::clamp(jumpHoldRemaining / jumpHoldDuration, 0.0f, 1.0f) : 0.0f;
+
+            jumpHoldRemaining = 0.0f;
+            jumpHoldForceAcceleration = 0.0f;
+            jumpReleaseBrakeRemaining = jumpReleaseBrakeDuration * remainingHoldFraction;
+        }
+
+        // jump again
+        if (grounded && jumpBufferRemaining > 0.0f) {
+
+            float minimumHeightRatio = glm::clamp(jumpMinimumHeightPercent * 0.01f, 0.05f, 0.95f);
+            float minimumHeight = jumpHeight * minimumHeightRatio;
+            float launchSpeed = std::sqrt(2.0f * downwardGravity * minimumHeight);
+
+            physics.velocity.y = launchSpeed;
+
+            jumpBufferRemaining = 0.0f;
+
+            grounded = false;
+
+            jumpReleaseBrakeRemaining = 0.0f;
+
+            if (jumpKeyDown && physics.useGravity && launchSpeed > 0.0f && jumpHoldDuration > 0.0f) {
+                jumpHoldRemaining = jumpHoldDuration;
+
+                float holdTime = jumpHoldRemaining;
+                float heightToGain = std::max(jumpHeight - minimumHeight, 0.0f);
+                float quadraticTerm = 0.5f * downwardGravity * holdTime * holdTime;
+                float linearTerm = launchSpeed * holdTime - quadraticTerm;
+                float discriminant = linearTerm * linearTerm + 4.0f * quadraticTerm * heightToGain;
+                float holdAccelerationMultiplier = (-linearTerm + std::sqrt(discriminant)) / (2.0f * quadraticTerm);
+
+                jumpHoldForceAcceleration = downwardGravity * holdAccelerationMultiplier;
+            } else {
+                jumpHoldRemaining = 0.0f;
+                jumpHoldForceAcceleration = 0.0f;
+            }
+        }
+
+        if (!grounded && physics.useGravity && jumpGravityMultiplier > 1.0f) {
+
+            float extraGravityForce = -physics.gravity.y * (jumpGravityMultiplier - 1.0f) / physics.inverseMass;
+
+            AddForce(player, glm::vec3(0.0f, -extraGravityForce, 0.0f));
+        }
+
+        if (jumpHoldRemaining > 0.0f) {
+
+            if (jumpKeyDown && physics.useGravity && physics.velocity.y > 0.0f) {
+
+                float forceStep = std::min(dt, jumpHoldRemaining);
+                float liftForce = jumpHoldForceAcceleration * (forceStep / dt) / physics.inverseMass;
+
+                AddForce(player, glm::vec3(0.0f, liftForce, 0.0f));
+
+                jumpHoldRemaining = std::max(jumpHoldRemaining - dt, 0.0f);
+            } else {
+                jumpHoldRemaining = 0.0f;
+                jumpHoldForceAcceleration = 0.0f;
+            }
+
+            if (jumpHoldRemaining <= 0.0f)
+                jumpHoldForceAcceleration = 0.0f;
+        }
+
+        if (jumpReleaseBrakeRemaining > 0.0f) {
+
+            if (physics.useGravity && physics.velocity.y > 0.0f) {
+
+                float forceStep = std::min(dt, jumpReleaseBrakeRemaining);
+                float brakeAcceleration = -physics.gravity.y * jumpReleaseBrakeMultiplier;
+                float brakeForce = -brakeAcceleration * (forceStep / dt) / physics.inverseMass;
+
+                AddForce(player, glm::vec3(0.0f, brakeForce, 0.0f));
+
+                jumpReleaseBrakeRemaining = std::max(jumpReleaseBrakeRemaining - dt, 0.0f);
+
+            } else
+                jumpReleaseBrakeRemaining = 0.0f;
+        }
 
         if (glm::length2(moveDirection) > 0.0001f)
             moveDirection = glm::normalize(moveDirection);
