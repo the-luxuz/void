@@ -530,6 +530,13 @@ void Docking() {
         ImGui::Separator();
         ImGui::TextUnformatted("Player Movement");
         ImGui::SliderFloat("Default max speed", &PlayerActor::defaultMaximumSpeed, 100.0f, 10000.0f, "%.0f");
+        ImGui::SliderFloat("Slide crouch scale", &PlayerActor::slideCrouchScale, 0.4f, 1.0f, "%.2f");
+        ImGui::SliderFloat("Crouch transition", &PlayerActor::crouchTransitionDuration, 0.05f, 0.5f, "%.2f s");
+        ImGui::SliderFloat("Crouched speed multiplier", &PlayerActor::crouchedMoveSpeedMultiplier, 0.2f, 1.0f, "%.2f x");
+        ImGui::SliderFloat("Air slide steering", &PlayerActor::slideAirTurnDegreesPerSecond, 0.0f, 540.0f, "%.0f deg/s");
+        ImGui::SliderFloat("Slide FOV increase", &PlayerActor::slideFovIncrease, 0.0f, 20.0f, "%.1f°");
+        ImGui::SliderFloat("Slide FOV rise time", &PlayerActor::slideFovRiseDuration, 0.05f, 0.8f, "%.2f s");
+        ImGui::SliderFloat("Slide FOV return time", &PlayerActor::slideFovReturnDuration, 0.1f, 2.0f, "%.2f s");
         ImGui::SliderFloat("Jump height", &PlayerActor::jumpHeight, 20.0f, 600.0f, "%.0f");
         ImGui::SliderFloat("Minimum jump height", &PlayerActor::jumpMinimumHeightPercent, 10.0f, 80.0f, "%.0f%%");
         ImGui::SliderFloat("Jump hold duration", &PlayerActor::jumpHoldDuration, 0.05f, 0.35f, "%.2f s");

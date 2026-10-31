@@ -84,12 +84,16 @@ void update(SDL_Window *window, float dt) {
             view = glm::lookAt(cameraPos, cam.cam_target, cam.cam_up);
         }
 
-        if (camera_update) {
+        float activeFov = st.fov + (usePlayerCamera ? PlayerActor::slideFovOffset : 0.0f);
+        static float lastProjectionFov = -1.0f;
 
-            projection = glm::perspective(glm::radians(st.fov), (float)viewport_width / viewport_height, cam.nearPlane,
+        if (camera_update || std::abs(activeFov - lastProjectionFov) > 0.001f) {
+
+            projection = glm::perspective(glm::radians(activeFov), (float)viewport_width / viewport_height, cam.nearPlane,
                                           cam.farPlane);
 
             camera_update = false;
+            lastProjectionFov = activeFov;
         }
 
         if (currentViewMode == view_Mode::EDITOR) {

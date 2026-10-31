@@ -17,6 +17,27 @@ namespace PlayerActor {
         jumpHoldForceAcceleration = 0.0f;
 
         jumpReleaseBrakeRemaining = 0.0f;
+
+        shiftWasDown = false;
+        movingBeforeSlide = false;
+        sliding = false;
+        normalMaximumSpeed = 0.0f;
+        slideCurrentSpeed = 0.0f;
+        slideSpeedCeiling = 0.0f;
+        slideDirection = glm::vec3(0.0f);
+        slideVelocityDirection = glm::vec3(0.0f);
+        slideCarryActive = false;
+        slideCarrySpeed = 0.0f;
+        slideCarryDirection = glm::vec3(0.0f);
+        crouched = false;
+        crouchAmount = 0.0f;
+        standingScaleInitialized = false;
+        crouchPlayerID = 0;
+        standingScale = glm::vec3(1.0f);
+        slideElapsed = 0.0f;
+        slideFovOffset = 0.0f;
+
+        coyoteRemaining = 0.0f;
     }
 
     void BeginCollisionStep() {
@@ -66,6 +87,12 @@ namespace PlayerActor {
         if (physics.inverseMass <= 0.0f)
             return;
 
+        if (!standingScaleInitialized || crouchPlayerID != player.id) {
+            standingScale = player.scale;
+            standingScaleInitialized = true;
+            crouchPlayerID = player.id;
+        }
+
         if (physics.maxHorizontalSpeed <= 0.0f)
             physics.maxHorizontalSpeed = defaultMaximumSpeed;
 
@@ -96,11 +123,29 @@ namespace PlayerActor {
         bool shiftDown = keyboard[SDL_SCANCODE_LSHIFT];
         bool shiftPressed = shiftDown && !shiftWasDown;
         bool hasMove = glm::length2(moveDirection) > 0.0001f;
+        bool slideWasActive = sliding;
 
         if (shiftPressed)
             movingBeforeSlide = hasMove;
 
         shiftWasDown = shiftDown;
+
+        if (shiftDown && grounded)
+            crouched = true;
+
+        if (!shiftDown)
+            crouched = false;
+
+        float previousAmount = crouchAmount;
+        float targetAmount = crouched ? 1.0f : 0.0f;
+        float step = dt / std::max(crouchTransitionDuration, 0.001f);
+
+        crouchAmount += glm::clamp(targetAmount - crouchAmount, -step, step);
+
+        player.scale = standingScale;
+        player.scale.y = standingScale.y * (1.0f - (1.0f - slideCrouchScale) * crouchAmount);
+
+        player.position.y -= std::abs(standingScale.y) * (1.0f - slideCrouchScale) * 0.5f * (crouchAmount - previousAmount);
 
         if (normalMaximumSpeed <= 0.0f)
             normalMaximumSpeed = physics.maxHorizontalSpeed;
@@ -108,6 +153,10 @@ namespace PlayerActor {
         if (shiftDown && grounded && movingBeforeSlide && hasMove && !sliding) {
 
             sliding = true;
+            slideCarryActive = false;
+            slideCarrySpeed = 0.0f;
+            slideCarryDirection = glm::vec3(0.0f);
+            slideElapsed = 0.0f;
 
             glm::vec3 horizontalVelocity(physics.velocity.x, 0.0f, physics.velocity.z);
 
@@ -121,9 +170,6 @@ namespace PlayerActor {
 
         }
 
-        if (shiftDown && !grounded)
-            AddForce(player, glm::vec3(0.0f, -4000.0f, 0.0f));
-
         if (!shiftDown) {
 
             sliding = false;
@@ -134,6 +180,35 @@ namespace PlayerActor {
 
             slideSpeedCeiling = 0.0f;
         }
+
+        float targetFovOffset = 0.0f;
+
+        if (sliding && shiftDown) {
+
+            slideElapsed += dt;
+
+            if (slideFovRiseDuration > 0.0f && slideElapsed <= slideFovRiseDuration) {
+
+                float riseAmount = glm::clamp(slideElapsed / slideFovRiseDuration, 0.0f, 1.0f);
+
+                targetFovOffset = slideFovIncrease * riseAmount;
+
+            } else if (slideFovReturnDuration > 0.0f) {
+
+                float returnAmount = glm::clamp((slideElapsed - slideFovRiseDuration) / slideFovReturnDuration, 0.0f, 1.0f);
+
+                targetFovOffset = slideFovIncrease * (1.0f - returnAmount);
+            }
+        }
+
+        float maxFovStep = slideFovChangeSpeed * dt;
+
+        slideFovOffset += glm::clamp(targetFovOffset - slideFovOffset, -maxFovStep, maxFovStep);
+
+        if (grounded)
+            coyoteRemaining = coyoteDuration;
+        else
+            coyoteRemaining = std::max(0.0f, coyoteRemaining - dt);
 
         //-----------------------------------------------------------------------------
         // jump
@@ -149,8 +224,10 @@ namespace PlayerActor {
             jumpReleaseBrakeRemaining = jumpReleaseBrakeDuration * remainingHoldFraction;
         }
 
+        bool jumpLaunchedThisStep = false;
+
         // jump again
-        if (grounded && jumpBufferRemaining > 0.0f) {
+        if (coyoteRemaining > 0.0f && jumpBufferRemaining > 0.0f) {
 
             float minimumHeightRatio = glm::clamp(jumpMinimumHeightPercent * 0.01f, 0.05f, 0.95f);
             float minimumHeight = jumpHeight * minimumHeightRatio;
@@ -158,9 +235,23 @@ namespace PlayerActor {
 
             physics.velocity.y = launchSpeed;
 
+            if (slideWasActive || sliding || slideCarryActive) {
+
+                glm::vec3 horizontalVelocity(physics.velocity.x, 0.0f, physics.velocity.z);
+
+                slideCarrySpeed = glm::length(horizontalVelocity);
+                slideCarryDirection = slideCarrySpeed > 0.001f ? glm::normalize(horizontalVelocity) : slideVelocityDirection;
+                slideCarryActive = slideCarrySpeed > 0.001f;
+
+                sliding = false;
+            }
+
             jumpBufferRemaining = 0.0f;
 
+            coyoteRemaining = 0.0f;
+
             grounded = false;
+            jumpLaunchedThisStep = true;
 
             jumpReleaseBrakeRemaining = 0.0f;
 
@@ -180,6 +271,18 @@ namespace PlayerActor {
                 jumpHoldForceAcceleration = 0.0f;
             }
         }
+
+        if (grounded && slideCarryActive && !sliding && !jumpLaunchedThisStep) {
+
+            slideCarryActive = false;
+
+            slideCarrySpeed = 0.0f;
+
+            slideCarryDirection = glm::vec3(0.0f);
+        }
+
+        if (shiftDown && !grounded && physics.velocity.y <= 0.0f)
+            AddForce(player, glm::vec3(0.0f, -4000.0f, 0.0f));
 
         if (!grounded && physics.useGravity && jumpGravityMultiplier > 1.0f) {
 
@@ -280,9 +383,42 @@ namespace PlayerActor {
                 AddForce(player, acceleration / physics.inverseMass);
             }
 
+        } else if (slideCarryActive && !grounded) {
+
+            if (hasMove && glm::length2(slideCarryDirection) > 0.0001f) {
+
+                float maxTurn = glm::radians(slideAirTurnDegreesPerSecond) * dt;
+
+                float dot = glm::clamp(glm::dot(slideCarryDirection, moveDirection), -1.0f, 1.0f);
+
+                float angle = std::atan2(slideCarryDirection.z * moveDirection.x - slideCarryDirection.x * moveDirection.z, dot);
+                angle = glm::clamp(angle, -maxTurn, maxTurn);
+
+                float c = std::cos(angle);
+                float s = std::sin(angle);
+
+                glm::vec3 oldDirection = slideCarryDirection;
+
+                slideCarryDirection = glm::normalize(glm::vec3(c * oldDirection.x + s * oldDirection.z, 0.0f, -s * oldDirection.x + c * oldDirection.z));
+            }
+
+            physics.maxHorizontalSpeed = std::max(normalMaximumSpeed, slideCarrySpeed);
+
+            if (dt > 0.0f && slideCarrySpeed > 0.001f) {
+
+                float dragFactor = std::max(1.0f - physics.drag * dt, 0.01f);
+
+                glm::vec3 currentVelocity(physics.velocity.x, 0.0f, physics.velocity.z);
+                glm::vec3 targetVelocity = slideCarryDirection * slideCarrySpeed;
+                glm::vec3 acceleration = (targetVelocity / dragFactor - currentVelocity) / dt;
+
+                AddForce(player, acceleration / physics.inverseMass);
+            }
+
         } else {
 
-            physics.maxHorizontalSpeed = normalMaximumSpeed;
+            float crouchSpeedFactor = glm::mix(1.0f, crouchedMoveSpeedMultiplier, crouchAmount);
+            physics.maxHorizontalSpeed = normalMaximumSpeed * crouchSpeedFactor;
 
             if (hasMove) {
 
@@ -300,7 +436,8 @@ namespace PlayerActor {
     void UpdateCamera(Object &player, float dt) {
 
         constexpr float maxPitch = glm::radians(89.0f);
-        glm::vec3 desiredPosition = player.position + glm::vec3(0.0f, cameraEyeHeight, 0.0f);
+        float effectiveEyeHeight = cameraEyeHeight * (1.0f - (1.0f - slideCrouchScale) * crouchAmount);
+        glm::vec3 desiredPosition = player.position + glm::vec3(0.0f, effectiveEyeHeight, 0.0f);
 
         if (!cameraInitialized) {
 
