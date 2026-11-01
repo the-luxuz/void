@@ -220,14 +220,13 @@ glm::vec3 get_cam_pos();
 Object *GetSelectedObject();
 
 Light *GetSelectedLight();
-float GetLightRange(const Light &light);
+float GetLightRange(const Light& light);
 void SetLightRange(Light &light, float range);
 
 //--------------------------------------------------------------------------
 // Ray-AABB intersection test
 
-bool RayVsAABB(const glm::vec3 &rayOrigin, const glm::vec3 &rayDir, const glm::vec3 &boxMin, const glm::vec3 &boxMax,
-               float &t);
+bool RayVsAABB(const glm::vec3 &rayOrigin, const glm::vec3 &rayDir, const glm::vec3 &boxMin, const glm::vec3 &boxMax, float &t);
 
 void BuildRay(float mouseX, float mouseY, glm::vec3 &rayOrigin, glm::vec3 &rayDir);
 

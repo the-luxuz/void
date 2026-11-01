@@ -1215,25 +1215,24 @@ Light *GetSelectedLight() {
     return &lights[lightIndex];
 }
 
-float GetLightRange(const Light &light) {
+float GetLightRange(const Light& light) {
 
-    const float constant = std::max(light.att.x, 0.001f);
-    const float linear = std::max(light.att.y, 0.0f);
-    const float quadratic = std::max(light.att.z, 0.0f);
-    const float targetDenominator = 80.0f * constant;
-    const float remainingDenominator = targetDenominator - constant;
+    float constant = std::max(light.att.x, 0.001f);
+    float linear = std::max(light.att.y, 0.0f);
+    float quadratic = std::max(light.att.z, 0.0f);
+    float targetDenominator = 80.0f * constant;
+    float remainingDenominator = targetDenominator - constant;
 
     float range = 10000.0f;
 
     if (quadratic > 1e-8f) {
 
-        const float discriminant = linear * linear + 4.0f * quadratic * remainingDenominator;
+        float discriminant = linear * linear + 4.0f * quadratic * remainingDenominator;
+
         range = (-linear + std::sqrt(std::max(discriminant, 0.0f))) / (2.0f * quadratic);
 
-    } else if (linear > 1e-8f) {
-
+    } else if (linear > 1e-8f)
         range = remainingDenominator / linear;
-    }
 
     return glm::clamp(range, 1.0f, 10000.0f);
 }
@@ -1242,7 +1241,7 @@ void SetLightRange(Light &light, float range) {
 
     range = glm::clamp(range, 1.0f, 10000.0f);
 
-    const float constant = std::max(light.att.x, 0.001f);
+    float constant = std::max(light.att.x, 0.001f);
     light.att.x = constant;
     light.att.y = 4.5f * constant / range;
     light.att.z = 75.0f * constant / (range * range);
