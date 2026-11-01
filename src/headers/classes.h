@@ -194,6 +194,8 @@ struct ObjectState {
     bool tiling = false;
 
     bool visible = true;
+
+    bool renderBothSides = false;
 };
 
 struct LightState {
@@ -398,6 +400,8 @@ struct Object {
     bool tiling = false;
 
     bool visible = true;
+
+    bool renderBothSides = false;
 };
 
 inline bool IsEmptyObject(const Object &object) {
@@ -469,7 +473,7 @@ inline ObjectState CaptureState(const Object &o) {
 
     return {o.position, o.rotation, o.scale, o.parentID, o.name, o.mesh, o.obj_texture, o.tex, o.min, o.max, o.mapping, o.coordType, 
         o.cyaxisType, o.normalTexture, o.norm_map, o.hasNormalMap, o.shininess, o.physics,  o.hasPhysics, o.collider, o.colliderTransform, 
-        o.hasCollider, o.hasMaterial, o.hasMapping, o.hasAnimation, o.tiling,   o.visible};
+        o.hasCollider, o.hasMaterial, o.hasMapping, o.hasAnimation, o.tiling, o.visible, o.renderBothSides};
 }
 
 inline void ApplyState(Object &o, const ObjectState &s) {
@@ -513,6 +517,8 @@ inline void ApplyState(Object &o, const ObjectState &s) {
     o.tiling = s.tiling;
 
     o.visible = s.visible;
+
+    o.renderBothSides = s.renderBothSides;
 }
 
 struct Shader_Uniform {
@@ -585,6 +591,8 @@ struct Shader_Uniform {
     GLint worldSize;
 
     GLint tiling;
+
+    GLint renderBothSides;
 
     bool class_uniforms_initialized = false;
 };

@@ -8,7 +8,7 @@
 namespace {
 
 constexpr uint32_t SceneMagic = 0x564F4944; // "VOID"
-constexpr uint32_t SceneVersion = 7;
+constexpr uint32_t SceneVersion = 9;
 constexpr uint32_t MaxSceneObjects = 100000;
 constexpr uint32_t MaxAnimationKeys = 1000000;
 
@@ -482,9 +482,7 @@ void Parser::save_scene(std::ofstream &out, const std::vector<Object> &scene, co
         Write(out, obj.position);
         Write(out, obj.scale);
 
-        glm::vec3 euler = glm::degrees(glm::eulerAngles(obj.rotation));
-
-        Write(out, euler);
+        Write(out, obj.rotation);
 
         Write(out, obj.min);
         Write(out, obj.max);
@@ -512,6 +510,7 @@ void Parser::save_scene(std::ofstream &out, const std::vector<Object> &scene, co
         Write(out, obj.tiling);
 
         Write(out, obj.visible);
+        Write(out, obj.renderBothSides);
 
         const uint32_t materialCount = static_cast<uint32_t>(obj.submeshes.size());
 
@@ -538,9 +537,7 @@ void Parser::save_scene(std::ofstream &out, const std::vector<Object> &scene, co
         Write(out, scene_lgh_obj[i].position);
         Write(out, scene_lgh_obj[i].scale);
 
-        glm::vec3 euler = glm::degrees(glm::eulerAngles(scene_lgh_obj[i].rotation));
-
-        Write(out, euler);
+        Write(out, scene_lgh_obj[i].rotation);
 
         Write(out, scene_lgh_obj[i].min);
         Write(out, scene_lgh_obj[i].max);
@@ -568,6 +565,7 @@ void Parser::save_scene(std::ofstream &out, const std::vector<Object> &scene, co
         Write(out, scene_lgh_obj[i].tiling);
 
         Write(out, scene_lgh_obj[i].visible);
+        Write(out, scene_lgh_obj[i].renderBothSides);
     }
 
     for (int i = 0; i < lightCount; ++i) {
@@ -581,8 +579,7 @@ void Parser::save_scene(std::ofstream &out, const std::vector<Object> &scene, co
         Write(out, scene_lgh[i].col);
         Write(out, scene_lgh[i].att);
 
-        glm::vec3 euler = glm::degrees(glm::eulerAngles(scene_lgh[i].rotation));
-        Write(out, euler);
+        Write(out, scene_lgh[i].rotation);
 
         Write(out, scene_lgh[i].ambient);
 
@@ -753,9 +750,13 @@ bool Parser::load_scene(std::ifstream &in, Settings *sceneSettings, camera *scen
         Read(in, obj.position);
         Read(in, obj.scale);
 
-        glm::vec3 euler{};
-        Read(in, euler);
-        obj.rotation = glm::quat(glm::radians(euler));
+        if (sceneVersion >= 8)
+            Read(in, obj.rotation);
+        else {
+            glm::vec3 euler{};
+            Read(in, euler);
+            obj.rotation = glm::quat(glm::radians(euler));
+        }
 
         Read(in, obj.min);
         Read(in, obj.max);
@@ -780,6 +781,8 @@ bool Parser::load_scene(std::ifstream &in, Settings *sceneSettings, camera *scen
         Read(in, obj.hasAnimation);
         Read(in, obj.tiling);
         Read(in, obj.visible);
+        if (sceneVersion >= 9)
+            Read(in, obj.renderBothSides);
 
         if (sceneVersion >= 3) {
 
@@ -822,11 +825,13 @@ bool Parser::load_scene(std::ifstream &in, Settings *sceneSettings, camera *scen
         Read(in, obj.position);
         Read(in, obj.scale);
 
-        glm::vec3 euler{};
-
-        Read(in, euler);
-
-        obj.rotation = glm::quat(glm::radians(euler));
+        if (sceneVersion >= 8)
+            Read(in, obj.rotation);
+        else {
+            glm::vec3 euler{};
+            Read(in, euler);
+            obj.rotation = glm::quat(glm::radians(euler));
+        }
 
         Read(in, obj.min);
         Read(in, obj.max);
@@ -852,6 +857,8 @@ bool Parser::load_scene(std::ifstream &in, Settings *sceneSettings, camera *scen
         Read(in, obj.hasAnimation);
         Read(in, obj.tiling);
         Read(in, obj.visible);
+        if (sceneVersion >= 9)
+            Read(in, obj.renderBothSides);
     }
 
     for (auto &lgh : lights) {
@@ -868,11 +875,13 @@ bool Parser::load_scene(std::ifstream &in, Settings *sceneSettings, camera *scen
         Read(in, lgh.col);
         Read(in, lgh.att);
 
-        glm::vec3 euler{};
-
-        Read(in, euler);
-
-        lgh.rotation = glm::quat(glm::radians(euler));
+        if (sceneVersion >= 8)
+            Read(in, lgh.rotation);
+        else {
+            glm::vec3 euler{};
+            Read(in, euler);
+            lgh.rotation = glm::quat(glm::radians(euler));
+        }
 
         Read(in, lgh.amb);
         Read(in, lgh.inner);

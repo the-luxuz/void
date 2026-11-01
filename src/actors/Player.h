@@ -7,10 +7,14 @@ namespace PlayerActor {
 	inline float jumpBufferDuration = 0.12f;
 	inline float jumpBufferRemaining = 0.0f;
 
-	inline float groundNormalThreshold = 0.5f;
+	inline float groundNormalThreshold = 0.35f;
 
 	inline bool jumpActionWasDown = false;
 	inline bool grounded = false;
+	inline glm::vec3 groundNormal(0.0f, 1.0f, 0.0f);
+	inline float groundNormalUpDot = 0.0f;
+	inline bool rampUphillBlock = false;
+	inline glm::vec3 rampUphillDownhillDirection(0.0f);
 
 	inline camera cameraState;
 	inline bool cameraInitialized = false;
@@ -38,7 +42,7 @@ namespace PlayerActor {
 	inline bool slideCarryActive = false;
 	inline float slideCarrySpeed = 0.0f;
 	inline glm::vec3 slideCarryDirection(0.0f);
-	inline float slideAirTurnDegreesPerSecond = 270.0f;
+	inline float slideAirTurnDegreesPerSecond = 320.0f;
 	inline float slideCarryLandingDecayDuration = 0.04f;
 	inline float slideCarryLandingDecayRemaining = 0.0f;
 	inline bool slideCarryLandingDecayStarted = false;
@@ -69,5 +73,5 @@ namespace PlayerActor {
 	void ResetJumpState();
 	void QueueJumpInput();
 	void BeginCollisionStep();
-	void RegisterCollision(const Object &a, const Object &b, const Contact &contact);
+	void RegisterCollision(Object &a, Object &b, const Contact &contact);
 }

@@ -81,6 +81,7 @@ static std::size_t BuildShadowSceneSignature() {
         HashShadowValue(signature, obj.id);
         HashShadowValue(signature, obj.parentID);
         HashShadowValue(signature, obj.visible);
+        HashShadowValue(signature, obj.renderBothSides);
         HashShadowValue(signature, obj.shadowGeometryRevision);
         HashShadowValue(signature, obj.vao);
         HashShadowValue(signature, obj.vertices.size());
@@ -147,6 +148,7 @@ void update_depthmap() {
     //--------------------------------------------------------------------
 
     const size_t shadowLightCount = std::min({lights.size(), lightObjects.size(), static_cast<size_t>(MAX_LIGHTS)});
+    const GLboolean cullingEnabledAtStart = glIsEnabled(GL_CULL_FACE);
     size_t sceneSignature = 0;
     bool sceneSignatureBuilt = false;
 
@@ -205,6 +207,10 @@ void update_depthmap() {
 
             glBindVertexArray(obj.vao);
 
+            const bool disableBackfaceCulling = obj.renderBothSides && cullingEnabledAtStart;
+            if (disableBackfaceCulling)
+                glDisable(GL_CULL_FACE);
+
             if (obj.submeshes.empty()) {
 
                 glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(obj.indices.size()), GL_UNSIGNED_INT, nullptr);
@@ -219,6 +225,9 @@ void update_depthmap() {
                         reinterpret_cast<const void *>(static_cast<uintptr_t>(submesh.firstIndex) * sizeof(GLuint)));
                 }
             }
+
+            if (disableBackfaceCulling)
+                glEnable(GL_CULL_FACE);
         }
 
         shadowMapSignatures[i] = signature;
@@ -319,6 +328,8 @@ void update_objects() {
     glUniform1i(shader_uniform.normal_map_active, st.normal_map_active);
     glUniform1i(shader_uniform.shadow_active, st.shadow_active);
 
+    const GLboolean cullingEnabledAtStart = glIsEnabled(GL_CULL_FACE);
+
     for (Object &obj : objects) {
 
         if (IsEmptyObject(obj))
@@ -350,6 +361,11 @@ void update_objects() {
 
         glUniformMatrix4fv(3, 1, GL_FALSE, glm::value_ptr(obj.mvp));
         glUniformMatrix4fv(4, 1, GL_FALSE, glm::value_ptr(obj.model));
+        glUniform1i(shader_uniform.renderBothSides, obj.renderBothSides);
+
+        const bool disableBackfaceCulling = obj.renderBothSides && cullingEnabledAtStart;
+        if (disableBackfaceCulling)
+            glDisable(GL_CULL_FACE);
 
         if (obj.tiling) {
 
@@ -437,6 +453,9 @@ void update_objects() {
                     reinterpret_cast<const void *>(static_cast<uintptr_t>(submesh.firstIndex) * sizeof(GLuint)));
             }
         }
+
+        if (disableBackfaceCulling)
+            glEnable(GL_CULL_FACE);
 
         glActiveTexture(GL_TEXTURE0);
     }
@@ -714,10 +733,10 @@ void CollisionUpdate() {
 
             if (contact.hit) {
 
-                PlayerActor::RegisterCollision(a, b, contact);
-
                 PositionalCorrection(a, b, contact);
                 ResolveVelocity(a, b, contact);
+
+                PlayerActor::RegisterCollision(a, b, contact);
 
                 //eventManager.Throw(std::make_unique<PlayAnimationEvent>(AnimationRefs::Anim_cubeMoves));
             }

@@ -114,6 +114,8 @@ struct Parser {
 
         bool visible = true;
 
+        bool renderBothSides = false;
+
         std::vector<Material> materials;
     };
 

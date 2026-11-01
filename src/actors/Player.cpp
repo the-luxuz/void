@@ -4,11 +4,53 @@
 
 namespace PlayerActor {
 
+    static constexpr float GroundSlopeUpDotThreshold = 0.999f;
+
+    static glm::vec3 GetDownhillDirection(const Physics &physics, const glm::vec3 &surfaceNormal) {
+
+        glm::vec3 gravity = physics.useGravity ? physics.gravity : glm::vec3(0.0f);
+        glm::vec3 normal = glm::normalize(surfaceNormal);
+        glm::vec3 downhill = gravity - normal * glm::dot(gravity, normal);
+
+        return glm::length2(downhill) > 0.0001f ? glm::normalize(downhill) : glm::vec3(0.0f);
+    }
+
+    static glm::vec3 GetDownhillDirection(const Physics &physics) {
+
+        return GetDownhillDirection(physics, groundNormal);
+    }
+
+    static void CounteractHorizontalDrag(Object &player, float dt) {
+
+        Physics &physics = player.physics;
+
+        if (dt <= 0.0f || physics.inverseMass <= 0.0f)
+            return;
+
+        glm::vec3 downhillDirection = GetDownhillDirection(physics);
+
+        if (glm::length2(downhillDirection) <= 0.0001f || glm::dot(physics.velocity, downhillDirection) <= 0.0f)
+            return;
+
+        float dragFactor = glm::clamp(1.0f - physics.drag * dt, 0.0f, 1.0f);
+        if (dragFactor <= 0.0001f)
+            return;
+
+        glm::vec3 horizontalVelocity(physics.velocity.x, 0.0f, physics.velocity.z);
+        glm::vec3 acceleration = (horizontalVelocity / dragFactor - horizontalVelocity) / dt;
+
+        AddForce(player, acceleration / physics.inverseMass);
+    }
+
     void ResetJumpState() {
 
         jumpActionWasDown = false;
 
         grounded = false;
+        groundNormal = glm::vec3(0.0f, 1.0f, 0.0f);
+        groundNormalUpDot = 0.0f;
+        rampUphillBlock = false;
+        rampUphillDownhillDirection = glm::vec3(0.0f);
 
         jumpBufferRemaining = 0.0f;
 
@@ -48,21 +90,57 @@ namespace PlayerActor {
     void BeginCollisionStep() {
 
         grounded = false;
+        groundNormal = glm::vec3(0.0f, 1.0f, 0.0f);
+        groundNormalUpDot = 0.0f;
+        rampUphillBlock = false;
     }
 
-    void RegisterCollision(const Object &a, const Object &b, const Contact &contact) {
+    void RegisterCollision(Object &a, Object &b, const Contact &contact) {
 
         if (!contact.hit || a.collider.isTrigger || b.collider.isTrigger)
             return;
 
         glm::vec3 up(0.0f, 1.0f, 0.0f);
         bool playerCollision = a.name == "Player" || b.name == "Player";
-        bool wallCollision = std::abs(glm::dot(contact.normal, up)) < groundNormalThreshold;
+        glm::vec3 supportNormal(0.0f);
 
-        if (playerCollision && wallCollision) {
+        Object *playerObject = nullptr;
+        if (a.name == "Player") {
+            playerObject = &a;
+            supportNormal = -contact.normal;
+        } else if (b.name == "Player") {
+            playerObject = &b;
+            supportNormal = contact.normal;
+        }
+
+        float supportUpDot = glm::dot(supportNormal, up);
+        bool wallCollision = std::abs(glm::dot(contact.normal, up)) < groundNormalThreshold;
+        bool slopeContact = playerCollision && std::abs(supportUpDot) < 0.9999f && std::abs(supportUpDot) > 0.001f;
+
+        bool nonWalkableSlopeContact = playerCollision && supportUpDot < groundNormalThreshold && std::abs(supportUpDot) < 0.9999f;
+        bool hitUndersideOfSlope = nonWalkableSlopeContact && supportUpDot < 0.0f;
+
+        glm::vec3 downhillDirection(0.0f);
+
+        bool uphillSlideMomentumHit = false;
+
+        if (slopeContact && playerObject && playerObject->hasPhysics && (slideCarryActive || sliding)) {
+
+            downhillDirection = GetDownhillDirection(playerObject->physics, supportNormal);
+
+            uphillSlideMomentumHit = glm::length2(downhillDirection) > 0.0001f && glm::dot(playerObject->physics.velocity, downhillDirection) < -0.001f;
+        }
+
+        if (playerCollision && (wallCollision || hitUndersideOfSlope || uphillSlideMomentumHit)) {
 
             if (sliding && !shiftWasDown)
                 sliding = false;
+
+            if (hitUndersideOfSlope || uphillSlideMomentumHit) {
+
+                sliding = false;
+                slideInputSuppressedUntilRelease = true;
+            }
 
             movingBeforeSlide = false;
             slideCurrentSpeed = 0.0f;
@@ -70,18 +148,36 @@ namespace PlayerActor {
             slideCarryActive = false;
             slideCarrySpeed = 0.0f;
             slideCarryDirection = glm::vec3(0.0f);
+            slideCarryLandingDecayRemaining = 0.0f;
+            slideCarryLandingDecayStarted = false;
             slideCarryLandingStartSpeed = 0.0f;
             slideJumpReleaseWindowRemaining = 0.0f;
             releasedSlideSpeed = 0.0f;
             releasedSlideDirection = glm::vec3(0.0f);
+
+            if ((hitUndersideOfSlope || uphillSlideMomentumHit) && playerObject && playerObject->hasPhysics) {
+
+                if (glm::length2(downhillDirection) <= 0.0001f)
+                    downhillDirection = GetDownhillDirection(playerObject->physics, supportNormal);
+
+                rampUphillBlock = true;
+                rampUphillDownhillDirection = downhillDirection;
+            }
+
+            if (nonWalkableSlopeContact && playerObject && playerObject->hasPhysics &&
+                (hitUndersideOfSlope || uphillSlideMomentumHit)) {
+
+                float velocityAlongDownhill = glm::dot(playerObject->physics.velocity, downhillDirection);
+
+                if (velocityAlongDownhill < 0.0f)
+                    playerObject->physics.velocity -= downhillDirection * velocityAlongDownhill;
+            }
         }
 
-        if (a.name == "Player" && glm::dot(contact.normal, up) < -groundNormalThreshold) {
+        if (supportUpDot > groundNormalThreshold && supportUpDot > groundNormalUpDot) {
             grounded = true;
-        }
-
-        if (b.name == "Player" && glm::dot(contact.normal, up) > groundNormalThreshold) {
-            grounded = true;
+            groundNormal = glm::normalize(supportNormal);
+            groundNormalUpDot = supportUpDot;
         }
     }
 
@@ -103,6 +199,12 @@ namespace PlayerActor {
 
         if (physics.inverseMass <= 0.0f)
             return;
+
+        if (rampUphillBlock && glm::length2(rampUphillDownhillDirection) > 0.0001f) {
+            const float velocityAlongDownhill = glm::dot(physics.velocity, rampUphillDownhillDirection);
+            if (velocityAlongDownhill < 0.0f)
+                physics.velocity -= rampUphillDownhillDirection * velocityAlongDownhill;
+        }
 
         if (!standingScaleInitialized || crouchPlayerID != player.id) {
 
@@ -134,6 +236,16 @@ namespace PlayerActor {
 
         if (keyboard[SDL_SCANCODE_D])
             moveDirection += right;
+
+        if (rampUphillBlock) {
+            glm::vec3 downhillHorizontal(rampUphillDownhillDirection.x, 0.0f, rampUphillDownhillDirection.z);
+            if (glm::length2(downhillHorizontal) > 0.0001f) {
+                downhillHorizontal = glm::normalize(downhillHorizontal);
+                const float inputAlongDownhill = glm::dot(moveDirection, downhillHorizontal);
+                if (inputAlongDownhill < 0.0f)
+                    moveDirection -= downhillHorizontal * inputAlongDownhill;
+            }
+        }
 
         //-----------------------------------------------------------------------------
         // slide
@@ -173,7 +285,7 @@ namespace PlayerActor {
         if (normalMaximumSpeed <= 0.0f)
             normalMaximumSpeed = physics.maxHorizontalSpeed;
 
-        if (shiftDown && grounded && movingBeforeSlide && hasMove && !sliding) {
+        if (shiftDown && !slideInputSuppressedUntilRelease && grounded && movingBeforeSlide && hasMove && !sliding) {
 
             sliding = true;
             slideCarryActive = false;
@@ -193,7 +305,19 @@ namespace PlayerActor {
 
             slideDirection = glm::length2(horizontalVelocity) > 0.0001f ? glm::normalize(horizontalVelocity) : glm::normalize(moveDirection);
 
-            slideCurrentSpeed = std::max(glm::length(horizontalVelocity), normalMaximumSpeed * 1.5f);
+            float currentSpeed = glm::length(horizontalVelocity);
+            bool onSlope = grounded && groundNormal.y < GroundSlopeUpDotThreshold;
+
+            glm::vec3 requestedDirection = moveDirection;
+
+            if (glm::length2(requestedDirection) > 0.0001f)
+                requestedDirection = glm::normalize(requestedDirection);
+
+            glm::vec3 downhillDirection = GetDownhillDirection(physics);
+
+            bool uphillIntent = onSlope && glm::length2(downhillDirection) > 0.0001f && (glm::dot(physics.velocity, downhillDirection) < -0.001f || glm::dot(requestedDirection, downhillDirection) < -0.001f);
+
+            slideCurrentSpeed = uphillIntent ? currentSpeed : std::max(currentSpeed, normalMaximumSpeed * 1.5f);
 
             slideSpeedCeiling = slideCurrentSpeed;
 
@@ -213,27 +337,34 @@ namespace PlayerActor {
         }
 
         if (shiftDown) {
+
             slideJumpReleaseWindowRemaining = 0.0f;
             releasedSlideSpeed = 0.0f;
             releasedSlideDirection = glm::vec3(0.0f);
+
         } else if (slideWasActive) {
+
             slideJumpReleaseWindowRemaining = std::max(slideJumpReleaseWindowDuration, 0.0f);
             releasedSlideSpeed = previousSlideCurrentSpeed;
             releasedSlideDirection = previousSlideVelocityDirection;
-        } else if (slideJumpReleaseWindowRemaining > 0.0f) {
+
+        } else if (slideJumpReleaseWindowRemaining > 0.0f)
             slideJumpReleaseWindowRemaining = std::max(0.0f, slideJumpReleaseWindowRemaining - dt);
-        }
 
         if (slideJumpReleaseWindowRemaining <= 0.0f) {
+
             releasedSlideSpeed = 0.0f;
             releasedSlideDirection = glm::vec3(0.0f);
         }
 
         float referenceSpeed = std::max(normalMaximumSpeed * speedFovReferenceMultiplier, 1.0f);
+
         glm::vec2 horizontalVelocity(physics.velocity.x, physics.velocity.z);
+
         float speedRatio = glm::clamp(glm::length(horizontalVelocity) / referenceSpeed, 0.0f, 1.0f);
         float targetFovOffset = speedFovIncrease * speedRatio;
         float maxFovStep = speedFovChangeSpeed * dt;
+
         speedFovOffset += glm::clamp(targetFovOffset - speedFovOffset, -maxFovStep, maxFovStep);
 
         if (grounded)
@@ -264,6 +395,7 @@ namespace PlayerActor {
             glm::vec3 slideDirectionForJump = releasedSlideDirection;
 
             if (slideSpeedForJump > slideCarrySpeed) {
+
                 slideCarrySpeed = slideSpeedForJump;
                 slideCarryDirection = slideDirectionForJump;
             }
@@ -292,6 +424,12 @@ namespace PlayerActor {
                 slideCarryLandingDecayStarted = false;
                 slideCarryLandingStartSpeed = 0.0f;
 
+            } else if (groundNormal.y < GroundSlopeUpDotThreshold) {
+
+                slideCarryLandingDecayRemaining = 0.0f;
+                slideCarryLandingDecayStarted = false;
+                slideCarryLandingStartSpeed = 0.0f;
+
             } else if (!sliding) {
 
                 float decayDuration = std::max(slideCarryLandingDecayDuration, 0.0f);
@@ -300,7 +438,9 @@ namespace PlayerActor {
 
                     slideCarryLandingDecayRemaining = decayDuration;
                     slideCarryLandingDecayStarted = true;
+
                     glm::vec2 horizontalVelocity(physics.velocity.x, physics.velocity.z);
+
                     slideCarryLandingStartSpeed = std::max(slideCarrySpeed, glm::length(horizontalVelocity));
 
                 } else
@@ -367,7 +507,7 @@ namespace PlayerActor {
                 float alignment01 = (alignment + 1.0f) * 0.5f;
                 turnFactor = glm::mix(0.4f, 1.0f, alignment01);
 
-                if (grounded)
+                if (grounded && groundNormal.y >= GroundSlopeUpDotThreshold)
                     slideSpeedCeiling = std::max(0.0f, slideSpeedCeiling - normalMaximumSpeed * 0.50f * dt);
 
                 float targetSpeed = slideSpeedCeiling * turnFactor;
@@ -376,12 +516,39 @@ namespace PlayerActor {
 
                 slideCurrentSpeed += glm::clamp(targetSpeed - slideCurrentSpeed, -response, response);
 
-            } else if (grounded)
+            } else if (grounded && groundNormal.y >= GroundSlopeUpDotThreshold)
                 slideCurrentSpeed = std::max(0.0f, slideCurrentSpeed - normalMaximumSpeed * 2.5f * dt);
+
+            bool groundedOnSlope = grounded && groundNormal.y < GroundSlopeUpDotThreshold;
+
+            if (groundedOnSlope) {
+
+                glm::vec3 downhillDirection = GetDownhillDirection(physics);
+                glm::vec3 requestedDirection = hasMove ? moveDirection : glm::vec3(0.0f);
+
+                if (glm::length2(requestedDirection) > 0.0001f)
+                    requestedDirection = glm::normalize(requestedDirection);
+
+                bool uphillIntent = glm::length2(downhillDirection) > 0.0001f && (glm::dot(physics.velocity, downhillDirection) < -0.001f || glm::dot(requestedDirection, downhillDirection) < -0.001f);
+
+                if (uphillIntent) {
+
+                    glm::vec2 horizontalVelocity(physics.velocity.x, physics.velocity.z);
+
+                    float currentSpeed = glm::length(horizontalVelocity);
+
+                    slideCurrentSpeed = std::min(slideCurrentSpeed, currentSpeed);
+                    slideSpeedCeiling = std::min(slideSpeedCeiling, currentSpeed);
+                }
+            }
 
             physics.maxHorizontalSpeed = normalMaximumSpeed * 2.f;
 
-            if (dt > 0.0f) {
+            if (grounded && groundNormal.y < GroundSlopeUpDotThreshold) {
+
+                CounteractHorizontalDrag(player, dt);
+
+            } else if (dt > 0.0f) {
 
                 float dragFactor = std::max(1.0f - physics.drag * dt, 0.01f);
 
@@ -413,9 +580,12 @@ namespace PlayerActor {
                 slideCarryDirection = glm::normalize(glm::vec3(c * oldDirection.x + s * oldDirection.z, 0.0f, -s * oldDirection.x + c * oldDirection.z));
             }
 
-            physics.maxHorizontalSpeed = std::max(normalMaximumSpeed, slideCarrySpeed);
+            bool groundedOnSlope = grounded && groundNormal.y < GroundSlopeUpDotThreshold;
+            physics.maxHorizontalSpeed = groundedOnSlope ? normalMaximumSpeed * 2.0f : std::max(normalMaximumSpeed, slideCarrySpeed);
 
-            if (dt > 0.0f && slideCarrySpeed > 0.001f) {
+            if (groundedOnSlope)
+                CounteractHorizontalDrag(player, dt);
+            else if (dt > 0.0f && slideCarrySpeed > 0.001f) {
 
                 float dragFactor = std::max(1.0f - physics.drag * dt, 0.01f);
 

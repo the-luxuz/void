@@ -27,6 +27,8 @@ void init_uniforms() {
 
     shader_uniform.tiling = glGetUniformLocation(program, "tiling");
 
+    shader_uniform.renderBothSides = glGetUniformLocation(program, "renderBothSides");
+
     shader_uniform.mapping = glGetUniformLocation(program, "mapping");
 
     shader_uniform.min = glGetUniformLocation(program, "objMin");
@@ -881,6 +883,7 @@ void init() {
         obj.tiling = p.tiling;
 
         obj.visible = p.visible;
+        obj.renderBothSides = p.renderBothSides;
 
         obj.model = GetModelMatrix(obj);
 
@@ -975,6 +978,7 @@ void init() {
             obj.tiling = savedObject.tiling;
 
             obj.visible = savedObject.visible;
+            obj.renderBothSides = savedObject.renderBothSides;
 
             obj.obj_texture = TextureManager::Get(obj.tex, false);
 

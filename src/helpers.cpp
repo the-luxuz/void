@@ -540,11 +540,10 @@ void Docking() {
         ImGui::SliderFloat("Crouch transition", &PlayerActor::crouchTransitionDuration, 0.05f, 0.5f, "%.2f s");
         ImGui::SliderFloat("Crouched speed multiplier", &PlayerActor::crouchedMoveSpeedMultiplier, 0.2f, 1.0f, "%.2f x");
         ImGui::SliderFloat("Air slide steering", &PlayerActor::slideAirTurnDegreesPerSecond, 0.0f, 540.0f, "%.0f deg/s");
-        ImGui::SliderFloat("Landing inertia decay", &PlayerActor::slideCarryLandingDecayDuration, 0.0f, 0.4f, "%.2f s");
+        ImGui::SliderFloat("Landing inertia decay", &PlayerActor::slideCarryLandingDecayDuration, 0.1f, 0.8f, "%.2f s");
         ImGui::SliderFloat("Slide release jump window", &PlayerActor::slideJumpReleaseWindowDuration, 0.0f, 0.3f, "%.2f s");
-        ImGui::SliderFloat("Speed FOV increase", &PlayerActor::speedFovIncrease, 0.0f, 20.0f, "%.1f°");
+        ImGui::SliderFloat("Speed FOV increase", &PlayerActor::speedFovIncrease, 0.0f, 12.0f, "%.1f°");
         ImGui::SliderFloat("FOV reference speed", &PlayerActor::speedFovReferenceMultiplier, 0.5f, 4.0f, "%.2f x normal");
-        ImGui::SliderFloat("Speed FOV response", &PlayerActor::speedFovChangeSpeed, 1.0f, 120.0f, "%.0f deg/s");
         ImGui::SliderFloat("Jump height", &PlayerActor::jumpHeight, 20.0f, 600.0f, "%.0f");
         ImGui::SliderFloat("Air gravity multiplier", &PlayerActor::jumpGravityMultiplier, 1.0f, 5.0f, "%.1f x");
 
@@ -1996,6 +1995,8 @@ void ReplaceMesh(Object &obj, const std::string &path) {
     mesh.tiling = obj.tiling;
 
     mesh.visible = obj.visible;
+
+    mesh.renderBothSides = obj.renderBothSides;
 
     mesh.name = obj.name;
     mesh.mesh = path;

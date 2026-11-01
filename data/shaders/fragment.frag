@@ -63,6 +63,7 @@ uniform vec3 objMax;
 uniform vec3 worldSize;
 
 uniform bool tiling;
+uniform bool renderBothSides;
 
 in vec2 uv;
 in vec3 normal;
@@ -263,6 +264,9 @@ void main() {
     // normal
 
     vec3 N = normalize(normal);
+
+    if (renderBothSides && !gl_FrontFacing)
+        N = -N;
 
     vec3 finalNormal = N;
 

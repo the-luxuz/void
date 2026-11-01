@@ -103,6 +103,9 @@ void Inspector(){
             ImGui::Checkbox("Visible", &obj->visible);
 
             HandleInspectorUndo(*obj);
+            ImGui::Checkbox("Render both sides", &obj->renderBothSides);
+
+            HandleInspectorUndo(*obj);
         }
 
         //------------------------------------------------------------
