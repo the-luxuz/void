@@ -714,10 +714,10 @@ int main(int argc, char *args[]) {
 
             case SDL_EVENT_MOUSE_WHEEL:
 
-                if (currentViewMode == view_Mode::PLAY && player && !free_cam && !ImGui::GetIO().WantCaptureMouse) {
+                if (currentViewMode == view_Mode::PLAY && player && !free_cam) {
 
                     if (event.wheel.y != 0.0f)
-                        PlayerActor::wheelJumpIntentRemaining = PlayerActor::wheelJumpIntentDuration;
+                        PlayerActor::QueueJumpInput();
 
                 } else if (viewport_scroll_active || (currentViewMode == view_Mode::PLAY && free_cam) || (currentViewMode == view_Mode::PLAY && !player)) {
 

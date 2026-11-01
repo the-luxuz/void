@@ -67,6 +67,8 @@ void buffer(Object& objects) {
 	CreateNormalBuffers(objects);
 
 	glBindVertexArray(0);
+
+	objects.shadowGeometryRevision++;
 }
 
 void CreateNormalBuffers(Object& obj) {

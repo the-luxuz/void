@@ -220,6 +220,8 @@ glm::vec3 get_cam_pos();
 Object *GetSelectedObject();
 
 Light *GetSelectedLight();
+float GetLightRange(const Light &light);
+void SetLightRange(Light &light, float range);
 
 //--------------------------------------------------------------------------
 // Ray-AABB intersection test

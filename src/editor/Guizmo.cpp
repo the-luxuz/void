@@ -1,5 +1,128 @@
 #include "Guizmo.h"
 
+#include <cmath>
+
+static bool ProjectLightGuidePoint(const glm::vec3 &world, ImVec2 &screen) {
+
+    glm::vec4 clip = projection * view * glm::vec4(world, 1.0f);
+
+    if (clip.w <= 0.001f)
+        return false;
+
+    glm::vec3 ndc = glm::vec3(clip) / clip.w;
+
+    screen.x = viewportPos.x + (ndc.x * 0.5f + 0.5f) * viewportSize.x;
+    screen.y = viewportPos.y + (0.5f - ndc.y * 0.5f) * viewportSize.y;
+
+    return true;
+}
+
+static void DrawLightGuideLine(ImDrawList *drawList, const glm::vec3 &a, const glm::vec3 &b, ImU32 color, float thickness = 1.5f) {
+
+    ImVec2 screenA;
+    ImVec2 screenB;
+
+    if (ProjectLightGuidePoint(a, screenA) && ProjectLightGuidePoint(b, screenB))
+        drawList->AddLine(screenA, screenB, color, thickness);
+}
+
+static void DrawLightGuides(const Light &light, const Object &lightObject) {
+
+    ImDrawList *drawList = ImGui::GetWindowDrawList();
+    ImVec2 clipMax(viewportPos.x + viewportSize.x, viewportPos.y + viewportSize.y);
+
+    drawList->PushClipRect(viewportPos, clipMax, true);
+
+    glm::vec3 origin = lightObject.position;
+    ImU32 rangeColor = IM_COL32(70, 210, 255, 190);
+    ImU32 directionColor = IM_COL32(255, 205, 80, 230);
+
+    constexpr int segments = 32;
+
+    if (light.typeID == 0) {
+
+        float radius = GetLightRange(light);
+
+        for (int plane = 0; plane < 3; ++plane) {
+
+            for (int i = 0; i < segments; ++i) {
+
+                float a = glm::two_pi<float>() * static_cast<float>(i) / segments;
+                float b = glm::two_pi<float>() * static_cast<float>(i + 1) / segments;
+
+                glm::vec3 pointA;
+                glm::vec3 pointB;
+
+                if (plane == 0) {
+
+                    pointA = origin + glm::vec3(0.0f, std::cos(a), std::sin(a)) * radius;
+                    pointB = origin + glm::vec3(0.0f, std::cos(b), std::sin(b)) * radius;
+
+                } else if (plane == 1) {
+
+                    pointA = origin + glm::vec3(std::cos(a), 0.0f, std::sin(a)) * radius;
+                    pointB = origin + glm::vec3(std::cos(b), 0.0f, std::sin(b)) * radius;
+
+                } else {
+
+                    pointA = origin + glm::vec3(std::cos(a), std::sin(a), 0.0f) * radius;
+                    pointB = origin + glm::vec3(std::cos(b), std::sin(b), 0.0f) * radius;
+                }
+
+                DrawLightGuideLine(drawList, pointA, pointB, rangeColor, 1.0f);
+            }
+        }
+
+    } else {
+
+        glm::vec3 direction = glm::normalize(lightObject.rotation * glm::vec3(0.0f, -1.0f, 0.0f));
+        float range = light.typeID == 2 ? GetLightRange(light) : 100.0f;
+        glm::vec3 end = origin + direction * range;
+
+        DrawLightGuideLine(drawList, origin, end, directionColor, 2.0f);
+
+        glm::vec3 referenceUp = std::abs(glm::dot(direction, glm::vec3(0.0f, 1.0f, 0.0f))) > 0.98f ? glm::vec3(1.0f, 0.0f, 0.0f) : glm::vec3(0.0f, 1.0f, 0.0f);
+        glm::vec3 right = glm::normalize(glm::cross(direction, referenceUp));
+        glm::vec3 up = glm::normalize(glm::cross(right, direction));
+
+        if (light.typeID == 2) {
+
+            float outerRadius = range * std::tan(glm::radians(glm::clamp(light.outer, 0.1f, 89.0f)));
+            float innerRadius = range * std::tan(glm::radians(glm::clamp(light.inner, 0.0f, light.outer)));
+
+            for (int i = 0; i < segments; ++i) {
+
+                float a = glm::two_pi<float>() * static_cast<float>(i) / segments;
+                float b = glm::two_pi<float>() * static_cast<float>(i + 1) / segments;
+
+                glm::vec3 ringA = end + (right * std::cos(a) + up * std::sin(a)) * outerRadius;
+                glm::vec3 ringB = end + (right * std::cos(b) + up * std::sin(b)) * outerRadius;
+
+                DrawLightGuideLine(drawList, ringA, ringB, rangeColor, 1.0f);
+
+                if (i % 4 == 0)
+                    DrawLightGuideLine(drawList, origin, ringA, rangeColor, 1.0f);
+
+                glm::vec3 innerA = end + (right * std::cos(a) + up * std::sin(a)) * innerRadius;
+                glm::vec3 innerB = end + (right * std::cos(b) + up * std::sin(b)) * innerRadius;
+
+                DrawLightGuideLine(drawList, innerA, innerB, directionColor, 1.0f);
+            }
+
+        } else {
+
+            glm::vec3 arrowBase = end - direction * 12.0f;
+
+            DrawLightGuideLine(drawList, end, arrowBase + right * 6.0f, directionColor, 2.0f);
+            DrawLightGuideLine(drawList, end, arrowBase - right * 6.0f, directionColor, 2.0f);
+            DrawLightGuideLine(drawList, end, arrowBase + up * 6.0f, directionColor, 2.0f);
+            DrawLightGuideLine(drawList, end, arrowBase - up * 6.0f, directionColor, 2.0f);
+        }
+    }
+
+    drawList->PopClipRect();
+}
+
 
 //--------------------------------------------------------------------------
 // Update Collisions
@@ -136,7 +259,10 @@ void Guizmo(){
 
         ImGuizmo::SetRect(viewportPos.x, viewportPos.y, viewportSize.x, viewportSize.y);
 
-        DrawColliderWireframe(*obj);
+        if (light)
+            DrawLightGuides(*light, *obj);
+        else
+            DrawColliderWireframe(*obj);
 
         float moveSnap[3] = {12.5, 12.5, 12.5};
         float scaleSnap[3] = {0.125, 0.125, 0.125};

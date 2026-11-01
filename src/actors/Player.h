@@ -5,13 +5,12 @@
 namespace PlayerActor {
 
 	inline float jumpBufferDuration = 0.12f;
-	inline float wheelJumpIntentDuration = 0.18f;
-	inline float wheelJumpIntentRemaining = 0.0f;
+	inline float jumpBufferRemaining = 0.0f;
+
 	inline float groundNormalThreshold = 0.5f;
 
-	inline bool jumpKeyWasDown = false;
+	inline bool jumpActionWasDown = false;
 	inline bool grounded = false;
-	inline float jumpBufferRemaining = 0.0f;
 
 	inline camera cameraState;
 	inline bool cameraInitialized = false;
@@ -40,9 +39,10 @@ namespace PlayerActor {
 	inline float slideCarrySpeed = 0.0f;
 	inline glm::vec3 slideCarryDirection(0.0f);
 	inline float slideAirTurnDegreesPerSecond = 270.0f;
-	inline float slideCarryLandingGraceDuration = 0.04f;
-	inline float slideCarryLandingGraceRemaining = 0.0f;
-	inline bool slideCarryLandingGraceStarted = false;
+	inline float slideCarryLandingDecayDuration = 0.04f;
+	inline float slideCarryLandingDecayRemaining = 0.0f;
+	inline bool slideCarryLandingDecayStarted = false;
+	inline float slideCarryLandingStartSpeed = 0.0f;
 	inline float slideJumpReleaseWindowDuration = 0.12f;
 	inline float slideJumpReleaseWindowRemaining = 0.0f;
 	inline float releasedSlideSpeed = 0.0f;
@@ -67,6 +67,7 @@ namespace PlayerActor {
 	void Control(const bool *keyboard, float dt, Object &player);
 	void UpdateCamera(Object &player, float dt);
 	void ResetJumpState();
+	void QueueJumpInput();
 	void BeginCollisionStep();
 	void RegisterCollision(const Object &a, const Object &b, const Contact &contact);
 }

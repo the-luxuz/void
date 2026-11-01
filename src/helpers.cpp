@@ -535,13 +535,12 @@ void Docking() {
 
         ImGui::Separator();
         ImGui::TextUnformatted("Player Movement");
-        ImGui::SliderFloat("Bunny-hop wheel window", &PlayerActor::wheelJumpIntentDuration, 0.05f, 0.5f, "%.2f s");
         ImGui::SliderFloat("Default max speed", &PlayerActor::defaultMaximumSpeed, 100.0f, 10000.0f, "%.0f");
         ImGui::SliderFloat("Slide crouch scale", &PlayerActor::slideCrouchScale, 0.4f, 1.0f, "%.2f");
         ImGui::SliderFloat("Crouch transition", &PlayerActor::crouchTransitionDuration, 0.05f, 0.5f, "%.2f s");
         ImGui::SliderFloat("Crouched speed multiplier", &PlayerActor::crouchedMoveSpeedMultiplier, 0.2f, 1.0f, "%.2f x");
         ImGui::SliderFloat("Air slide steering", &PlayerActor::slideAirTurnDegreesPerSecond, 0.0f, 540.0f, "%.0f deg/s");
-        ImGui::SliderFloat("Landing inertia grace", &PlayerActor::slideCarryLandingGraceDuration, 0.0f, 0.4f, "%.2f s");
+        ImGui::SliderFloat("Landing inertia decay", &PlayerActor::slideCarryLandingDecayDuration, 0.0f, 0.4f, "%.2f s");
         ImGui::SliderFloat("Slide release jump window", &PlayerActor::slideJumpReleaseWindowDuration, 0.0f, 0.3f, "%.2f s");
         ImGui::SliderFloat("Speed FOV increase", &PlayerActor::speedFovIncrease, 0.0f, 20.0f, "%.1f°");
         ImGui::SliderFloat("FOV reference speed", &PlayerActor::speedFovReferenceMultiplier, 0.5f, 4.0f, "%.2f x normal");
@@ -1214,6 +1213,39 @@ Light *GetSelectedLight() {
         return nullptr;
 
     return &lights[lightIndex];
+}
+
+float GetLightRange(const Light &light) {
+
+    const float constant = std::max(light.att.x, 0.001f);
+    const float linear = std::max(light.att.y, 0.0f);
+    const float quadratic = std::max(light.att.z, 0.0f);
+    const float targetDenominator = 80.0f * constant;
+    const float remainingDenominator = targetDenominator - constant;
+
+    float range = 10000.0f;
+
+    if (quadratic > 1e-8f) {
+
+        const float discriminant = linear * linear + 4.0f * quadratic * remainingDenominator;
+        range = (-linear + std::sqrt(std::max(discriminant, 0.0f))) / (2.0f * quadratic);
+
+    } else if (linear > 1e-8f) {
+
+        range = remainingDenominator / linear;
+    }
+
+    return glm::clamp(range, 1.0f, 10000.0f);
+}
+
+void SetLightRange(Light &light, float range) {
+
+    range = glm::clamp(range, 1.0f, 10000.0f);
+
+    const float constant = std::max(light.att.x, 0.001f);
+    light.att.x = constant;
+    light.att.y = 4.5f * constant / range;
+    light.att.z = 75.0f * constant / (range * range);
 }
 
 GLuint TextureManager::Get(const std::string &path, bool sRGB) {

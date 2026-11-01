@@ -353,6 +353,7 @@ struct Object {
     glm::vec3 scale = glm::vec3(1.0f);
 
     EntityID parentID = 0;
+    uint64_t shadowGeometryRevision = 0;
 
     float importScale = 1.0f;
 

@@ -1,7 +1,9 @@
 #include "headers/updates.h"
 #include "actors/Player.h"
 
+#include <array>
 #include <cstring>
+#include <functional>
 
 // texture manager
 std::unordered_map<std::string, GLuint> TextureManager::textures;
@@ -31,6 +33,82 @@ static bool IsBoundsVisible(const glm::mat4 &clipMatrix, const glm::vec3 &min, c
            !allOutside([](const glm::vec4 &p) { return p.y > p.w; }) &&
            !allOutside([](const glm::vec4 &p) { return p.z < -p.w; }) &&
            !allOutside([](const glm::vec4 &p) { return p.z > p.w; });
+}
+
+//--------------------------------------------------------------------------
+// this is crazy work from ai
+
+static std::array<std::size_t, MAX_LIGHTS> shadowMapSignatures{};
+static std::array<bool, MAX_LIGHTS> shadowMapSignatureValid{};
+
+static void CombineShadowHash(std::size_t &seed, std::size_t value) {
+
+    seed ^= value + 0x9e3779b97f4a7c15ull + (seed << 6) + (seed >> 2);
+}
+
+template <typename T> static void HashShadowValue(std::size_t &seed, const T &value) {
+
+    CombineShadowHash(seed, std::hash<T>{}(value));
+}
+
+static void HashShadowVector(std::size_t &seed, const glm::vec3 &value) {
+
+    HashShadowValue(seed, value.x);
+    HashShadowValue(seed, value.y);
+    HashShadowValue(seed, value.z);
+}
+
+static void HashShadowRotation(std::size_t &seed, const glm::quat &value) {
+
+    HashShadowValue(seed, value.x);
+    HashShadowValue(seed, value.y);
+    HashShadowValue(seed, value.z);
+    HashShadowValue(seed, value.w);
+}
+
+static std::size_t BuildShadowSceneSignature() {
+
+    std::size_t signature = 0;
+
+    HashShadowValue(signature, objects.size());
+    HashShadowValue(signature, viewport_width);
+    HashShadowValue(signature, viewport_height);
+    HashShadowValue(signature, cam.nearPlane);
+    HashShadowValue(signature, cam.farPlane);
+
+    for (const Object &obj : objects) {
+
+        HashShadowValue(signature, obj.id);
+        HashShadowValue(signature, obj.parentID);
+        HashShadowValue(signature, obj.visible);
+        HashShadowValue(signature, obj.shadowGeometryRevision);
+        HashShadowValue(signature, obj.vao);
+        HashShadowValue(signature, obj.vertices.size());
+        HashShadowValue(signature, obj.indices.size());
+        HashShadowValue(signature, obj.submeshes.size());
+        HashShadowVector(signature, obj.position);
+        HashShadowRotation(signature, obj.rotation);
+        HashShadowVector(signature, obj.scale);
+    }
+
+    return signature;
+}
+
+static std::size_t BuildShadowLightSignature(size_t sceneSignature, size_t lightIndex) {
+
+    std::size_t signature = sceneSignature;
+    const Light &light = lights[lightIndex];
+    const Object &lightObject = lightObjects[lightIndex];
+
+    HashShadowValue(signature, light.typeID);
+    HashShadowValue(signature, lightObject.id);
+    HashShadowVector(signature, light.pos);
+    HashShadowVector(signature, light.dir);
+    HashShadowValue(signature, light.outer);
+    HashShadowValue(signature, depthFBO[lightIndex]);
+    HashShadowValue(signature, depth_texture[lightIndex]);
+
+    return signature;
 }
 
 //--------------------------------------------------------------------------
@@ -69,9 +147,12 @@ void update_depthmap() {
     //--------------------------------------------------------------------
 
     const size_t shadowLightCount = std::min({lights.size(), lightObjects.size(), static_cast<size_t>(MAX_LIGHTS)});
+    size_t sceneSignature = 0;
+    bool sceneSignatureBuilt = false;
 
     for (size_t i = 0; i < shadowLightCount; ++i) {
 
+        lights[i].pos = lightObjects[i].position;
         lights[i].dir = glm::normalize(lightObjects[i].rotation * glm::vec3(0.0f, -1.0f, 0.0f));
 
         glm::vec3 forward = glm::normalize(lights[i].dir);
@@ -91,6 +172,15 @@ void update_depthmap() {
         if (lights[i].typeID != 2)
             continue;
 
+        if (!sceneSignatureBuilt) {
+            sceneSignature = BuildShadowSceneSignature();
+            sceneSignatureBuilt = true;
+        }
+
+        const size_t signature = BuildShadowLightSignature(sceneSignature, i);
+        if (shadowMapSignatureValid[i] && shadowMapSignatures[i] == signature)
+            continue;
+
         glBindFramebuffer(GL_FRAMEBUFFER, depthFBO[i]);
 
         glViewport(0, 0, viewport_width, viewport_height);
@@ -101,7 +191,7 @@ void update_depthmap() {
 
         for (auto &obj : objects) {
 
-            if (IsEmptyObject(obj))
+            if (IsEmptyObject(obj) || !obj.visible)
                 continue;
 
             const glm::mat4 model = GetModelMatrix(obj);
@@ -130,6 +220,9 @@ void update_depthmap() {
                 }
             }
         }
+
+        shadowMapSignatures[i] = signature;
+        shadowMapSignatureValid[i] = true;
     }
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -174,6 +267,17 @@ void update_objects() {
     glUniform1i(shader_uniform.program_texture, 0);
 
     const int numLights = static_cast<int>(std::min({lights.size(), lightObjects.size(), static_cast<size_t>(MAX_LIGHTS)}));
+
+    // Keep the render data in sync with the editor transform before uploading
+    // uniforms, even when shadow rendering is disabled.
+    for (int i = 0; i < numLights; ++i) {
+
+        lights[i].pos = lightObjects[i].position;
+
+        glm::vec3 direction = lightObjects[i].rotation * glm::vec3(0.0f, -1.0f, 0.0f);
+        if (glm::length2(direction) > 0.000001f)
+            lights[i].dir = glm::normalize(direction);
+    }
 
     for (int i = 0; i < numLights; ++i) {
 
@@ -388,8 +492,6 @@ void update_objects() {
 
             glUniform3f(colorLoc, 1.f, 1.f, 1.f); // white
         }
-
-        lights[i].pos = lightObjects[i].position;
 
         glm::mat4 model(1.0f);
 

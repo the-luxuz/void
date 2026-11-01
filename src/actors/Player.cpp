@@ -6,12 +6,11 @@ namespace PlayerActor {
 
     void ResetJumpState() {
 
-        jumpKeyWasDown = false;
+        jumpActionWasDown = false;
 
         grounded = false;
 
         jumpBufferRemaining = 0.0f;
-        wheelJumpIntentRemaining = 0.0f;
 
         shiftWasDown = false;
         slideInputSuppressedUntilRelease = false;
@@ -25,8 +24,9 @@ namespace PlayerActor {
         slideCarryActive = false;
         slideCarrySpeed = 0.0f;
         slideCarryDirection = glm::vec3(0.0f);
-        slideCarryLandingGraceRemaining = 0.0f;
-        slideCarryLandingGraceStarted = false;
+        slideCarryLandingDecayRemaining = 0.0f;
+        slideCarryLandingDecayStarted = false;
+        slideCarryLandingStartSpeed = 0.0f;
         slideJumpReleaseWindowRemaining = 0.0f;
         releasedSlideSpeed = 0.0f;
         releasedSlideDirection = glm::vec3(0.0f);
@@ -38,6 +38,11 @@ namespace PlayerActor {
         speedFovOffset = 0.0f;
 
         coyoteRemaining = 0.0f;
+    }
+
+    void QueueJumpInput() {
+
+        jumpBufferRemaining = jumpBufferDuration;
     }
 
     void BeginCollisionStep() {
@@ -56,11 +61,8 @@ namespace PlayerActor {
 
         if (playerCollision && wallCollision) {
 
-            if (sliding && !shiftWasDown) {
-
-                
+            if (sliding && !shiftWasDown)
                 sliding = false;
-            }
 
             movingBeforeSlide = false;
             slideCurrentSpeed = 0.0f;
@@ -68,6 +70,7 @@ namespace PlayerActor {
             slideCarryActive = false;
             slideCarrySpeed = 0.0f;
             slideCarryDirection = glm::vec3(0.0f);
+            slideCarryLandingStartSpeed = 0.0f;
             slideJumpReleaseWindowRemaining = 0.0f;
             releasedSlideSpeed = 0.0f;
             releasedSlideDirection = glm::vec3(0.0f);
@@ -84,20 +87,14 @@ namespace PlayerActor {
 
     void Control(const bool *keyboard, float dt, Object &player) {
 
-        bool jumpKeyDown = keyboard[SDL_SCANCODE_SPACE];
+        bool jumpActionDown = keyboard[SDL_SCANCODE_SPACE];
 
-        if (jumpKeyDown && !jumpKeyWasDown)
-            jumpBufferRemaining = jumpBufferDuration;
+        if (jumpActionDown && !jumpActionWasDown)
+            QueueJumpInput();
         else if (jumpBufferRemaining > 0.0f)
             jumpBufferRemaining = std::max(0.0f, jumpBufferRemaining - dt);
 
-        if (wheelJumpIntentRemaining > 0.0f) {
-
-            jumpBufferRemaining = jumpBufferDuration;
-            wheelJumpIntentRemaining = std::max(0.0f, wheelJumpIntentRemaining - dt);
-        }
-
-        jumpKeyWasDown = jumpKeyDown;
+        jumpActionWasDown = jumpActionDown;
 
         if (!player.hasPhysics || player.physics.isStatic)
             return;
@@ -184,9 +181,10 @@ namespace PlayerActor {
             slideCarrySpeed = 0.0f;
 
             slideCarryDirection = glm::vec3(0.0f);
-            slideCarryLandingGraceRemaining = 0.0f;
+            slideCarryLandingDecayRemaining = 0.0f;
 
-            slideCarryLandingGraceStarted = false;
+            slideCarryLandingDecayStarted = false;
+            slideCarryLandingStartSpeed = 0.0f;
             slideJumpReleaseWindowRemaining = 0.0f;
             releasedSlideSpeed = 0.0f;
             releasedSlideDirection = glm::vec3(0.0f);
@@ -290,20 +288,32 @@ namespace PlayerActor {
 
             if (!grounded || jumpLaunchedThisStep) {
 
-                slideCarryLandingGraceRemaining = 0.0f;
-                slideCarryLandingGraceStarted = false;
+                slideCarryLandingDecayRemaining = 0.0f;
+                slideCarryLandingDecayStarted = false;
+                slideCarryLandingStartSpeed = 0.0f;
 
             } else if (!sliding) {
 
-                if (!slideCarryLandingGraceStarted) {
+                float decayDuration = std::max(slideCarryLandingDecayDuration, 0.0f);
 
-                    slideCarryLandingGraceRemaining = std::max(slideCarryLandingGraceDuration, 0.0f);
-                    slideCarryLandingGraceStarted = true;
+                if (!slideCarryLandingDecayStarted) {
+
+                    slideCarryLandingDecayRemaining = decayDuration;
+                    slideCarryLandingDecayStarted = true;
+                    glm::vec2 horizontalVelocity(physics.velocity.x, physics.velocity.z);
+                    slideCarryLandingStartSpeed = std::max(slideCarrySpeed, glm::length(horizontalVelocity));
 
                 } else
-                    slideCarryLandingGraceRemaining = std::max(0.0f, slideCarryLandingGraceRemaining - dt);
+                    slideCarryLandingDecayRemaining = std::max(0.0f, slideCarryLandingDecayRemaining - dt);
 
-                if (slideCarryLandingGraceRemaining <= 0.0f) {
+                float landingProgress = decayDuration > 0.0f ? 1.0f - slideCarryLandingDecayRemaining / decayDuration : 1.0f;
+
+                landingProgress = glm::clamp(landingProgress, 0.0f, 1.0f);
+                landingProgress = landingProgress * landingProgress * (3.0f - 2.0f * landingProgress);
+
+                slideCarrySpeed = glm::mix(slideCarryLandingStartSpeed, normalMaximumSpeed, landingProgress);
+
+                if (slideCarryLandingDecayRemaining <= 0.0f) {
 
                     slideCarryActive = false;
 
@@ -311,7 +321,8 @@ namespace PlayerActor {
 
                     slideCarryDirection = glm::vec3(0.0f);
 
-                    slideCarryLandingGraceStarted = false;
+                    slideCarryLandingDecayStarted = false;
+                    slideCarryLandingStartSpeed = 0.0f;
                 }
             }
         }
@@ -383,7 +394,7 @@ namespace PlayerActor {
                 AddForce(player, acceleration / physics.inverseMass);
             }
 
-        } else if (slideCarryActive && (!grounded || slideCarryLandingGraceRemaining > 0.0f)) {
+        } else if (slideCarryActive && (!grounded || slideCarryLandingDecayRemaining > 0.0f)) {
 
             if (!grounded && hasMove && glm::length2(slideCarryDirection) > 0.0001f) {
 

@@ -1,5 +1,16 @@
 #include "Inspector.h"
 
+static glm::quat LightRotationFromDirection(glm::vec3 direction) {
+
+    const glm::vec3 localDirection(0.0f, -1.0f, 0.0f);
+    direction = glm::normalize(direction);
+
+    if (glm::dot(localDirection, direction) < -0.9999f)
+        return glm::angleAxis(glm::pi<float>(), glm::vec3(1.0f, 0.0f, 0.0f));
+
+    return glm::normalize(glm::rotation(localDirection, direction));
+}
+
 void Inspector(){
 
     //----------------------------------------------------
@@ -899,85 +910,112 @@ void Inspector(){
 
         if (light) {
 
+            const int lightIndex = selectedObject - static_cast<int>(objects.size());
+            Object &lightObject = lightObjects[lightIndex];
+
+            ImGui::PushID(reinterpret_cast<void *>(static_cast<uintptr_t>(lightObject.id)));
+
             if (ImGui::CollapsingHeader("General", ImGuiTreeNodeFlags_DefaultOpen)) {
 
-                ImGui::PushID(reinterpret_cast<void *>(static_cast<uintptr_t>(
-                    lightObjects[selectedObject - objects.size()].id)));
+                static EntityID nameBufferLightID = 0;
+                static char lightName[256] = {};
 
-                static char name[256];
-                strncpy_s(name, lightObjects[selectedObject - objects.size()].name.c_str(), sizeof(name));
-                name[255] = '\0';
-
-                if (ImGui::InputText("Name", name, sizeof(name))) {
-
-                    lightObjects[selectedObject - objects.size()].name = name;
+                if (nameBufferLightID != lightObject.id) {
+                    strncpy_s(lightName, lightObject.name.c_str(), sizeof(lightName) - 1);
+                    lightName[sizeof(lightName) - 1] = '\0';
+                    nameBufferLightID = lightObject.id;
                 }
 
-                ImGui::PopID();
+                if (ImGui::InputText("Name", lightName, sizeof(lightName)))
+                    lightObject.name = lightName;
+
+                static const char *types[] = {"Point", "Directional", "Spot"};
+                int currentType = static_cast<int>(light->typeID);
+
+                if (ImGui::Combo("Type", &currentType, types, IM_ARRAYSIZE(types))) {
+
+                    light->undoStack.push_back(CaptureLightState(*light));
+                    light->redoStack.clear();
+                    lightObject.undoStack.push_back(CaptureState(lightObject));
+                    lightObject.redoStack.clear();
+
+                    light->typeID = static_cast<GLuint>(currentType);
+                    light->type = currentType == 0 ? "POINT" : currentType == 1 ? "DIR" : "SPOT";
+                }
 
                 ImGui::ColorEdit3("Color", &light->col.x);
+                HandleInspectorUndo(*light, lightObject);
 
-                HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
-                ImGui::DragFloat3("Position", &obj->position.x, 0.1f);
+                ImGui::DragFloat3("Position", &lightObject.position.x, 1.0f, 0.0f, 0.0f, "%.1f");
+                HandleInspectorUndo(*light, lightObject);
 
-                HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
-                glm::vec3 euler = glm::degrees(glm::eulerAngles(obj->rotation));
+                if (light->typeID != 0) {
 
-                if (ImGui::DragFloat3("Rotation", &euler.x, 1.0f)) {
+                    glm::vec3 direction = glm::normalize(lightObject.rotation * glm::vec3(0.0f, -1.0f, 0.0f));
 
-                    obj->rotation = glm::quat(glm::radians(euler));
+                    if (ImGui::DragFloat3("Direction", &direction.x, 0.01f, -1.0f, 1.0f, "%.3f") &&
+                        glm::length2(direction) > 0.000001f) {
 
-                    HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
+                        direction = glm::normalize(direction);
+                        lightObject.rotation = LightRotationFromDirection(direction);
+                        light->dir = direction;
+                    }
+
+                    HandleInspectorUndo(*light, lightObject);
                 }
 
+                ImGui::DragFloat("Ambient", &light->ambient, 0.01f, 0.0f, 1.0f, "%.2f");
+                HandleInspectorUndo(*light, lightObject);
 
-                ImGui::DragFloat3("Direction", &light->dir.x, 0.01f);
-
-
-                HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
-                ImGui::DragFloat("Ambient", &light->ambient, 0.01f, 0.f, 1.f);
-
-                HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
-                ImGui::Checkbox("Visible", &obj->visible);
-
-                HandleInspectorUndo(*obj);
+                ImGui::Checkbox("Show gizmo", &lightObject.visible);
+                HandleInspectorUndo(*light, lightObject);
             }
 
-            if (ImGui::CollapsingHeader("Attenuation", ImGuiTreeNodeFlags_DefaultOpen)) {
+            if (light->typeID != 1 && ImGui::CollapsingHeader("Range", ImGuiTreeNodeFlags_DefaultOpen)) {
 
-                ImGui::DragFloat("Constant", &light->att.x, 0.001f, 0.f, 10.f);
+                float range = GetLightRange(*light);
+                const float dragSpeed = std::max(range * 0.005f, 0.1f);
 
-                HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
-                ImGui::DragFloat("Linear", &light->att.y, 0.0001f, 0.f, 1.f);
+                if (ImGui::DragFloat("Distance", &range, dragSpeed, 1.0f, 10000.0f, "%.1f units"))
+                    SetLightRange(*light, range);
 
-                HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
-                ImGui::DragFloat("Quadratic", &light->att.z, 0.00001f, 0.f, 1.f);
-
-                HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
-                if (light->type == "SPOT") {
-
-                    ImGui::SeparatorText("Spot");
-
-                    ImGui::DragFloat("Inner", &light->inner, 0.25f, 0.f, 90.f);
-
-                    HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
-                    ImGui::DragFloat("Outer", &light->outer, 0.25f, 0.f, 90.f);
-
-                    HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
-                    ImGui::DragFloat("Falloff", &light->falloff, 0.05f, 0.f, 16.f);
-
-                    HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
-                }
+                HandleInspectorUndo(*light, lightObject);
             }
 
-            if (ImGui::CollapsingHeader("Shadow", ImGuiTreeNodeFlags_DefaultOpen)) {
+            if (light->typeID == 2 && ImGui::CollapsingHeader("Spot cone", ImGuiTreeNodeFlags_DefaultOpen)) {
 
-                ImGui::DragFloat("Bias", &light->bias, 0.000001f, 0.f, 0.01f, "%.6f");
+                const float maxSpotAngle = glm::clamp(light->outer, 0.1f, 89.0f);
+                const float minOuterAngle = glm::clamp(light->inner, 0.1f, 89.0f);
 
-                HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
-                ImGui::DragFloat("PCF", &light->pcf, 0.1f, 1.f, 16.f);
+                ImGui::SliderFloat("Inner angle", &light->inner, 0.0f, maxSpotAngle, "%.1f deg");
+                HandleInspectorUndo(*light, lightObject);
 
-                HandleInspectorUndo(*light, lightObjects[selectedObject - objects.size()]);
+                ImGui::SliderFloat("Outer angle", &light->outer, minOuterAngle, 89.0f, "%.1f deg");
+                HandleInspectorUndo(*light, lightObject);
+
+                ImGui::SliderFloat("Falloff", &light->falloff, 0.1f, 16.0f, "%.2f");
+                HandleInspectorUndo(*light, lightObject);
+            }
+
+            if (ImGui::CollapsingHeader("Advanced attenuation")) {
+
+                ImGui::DragFloat("Constant", &light->att.x, 0.001f, 0.001f, 10.0f, "%.4f");
+                HandleInspectorUndo(*light, lightObject);
+
+                ImGui::DragFloat("Linear", &light->att.y, 0.0001f, 0.0f, 1.0f, "%.5f");
+                HandleInspectorUndo(*light, lightObject);
+
+                ImGui::DragFloat("Quadratic", &light->att.z, 0.00001f, 0.0f, 1.0f, "%.7f");
+                HandleInspectorUndo(*light, lightObject);
+            }
+
+            if (light->typeID == 2 && ImGui::CollapsingHeader("Shadows")) {
+
+                ImGui::DragFloat("Bias", &light->bias, 0.000001f, 0.0f, 0.01f, "%.7f");
+                HandleInspectorUndo(*light, lightObject);
+
+                ImGui::SliderFloat("PCF radius", &light->pcf, 1.0f, 8.0f, "%.0f");
+                HandleInspectorUndo(*light, lightObject);
             }
 
             ImGui::Separator();
@@ -991,36 +1029,9 @@ void Inspector(){
                     DrawObjectAnimationButtons(*obj);
             }
 
-            if (ImGui::CollapsingHeader("Type", ImGuiTreeNodeFlags_DefaultOpen)) {
-
-                static const char *types[] = {"Point", "Directional", "Spot"};
-
-                int current = light->typeID;
-
-                if (ImGui::Combo("Light Type", &current, types, IM_ARRAYSIZE(types))) {
-
-                    light->typeID = current;
-
-                    switch (current) {
-
-                    case 0:
-                        light->type = "POINT";
-                        break;
-
-                    case 1:
-                        light->type = "DIR";
-                        break;
-
-                    case 2:
-                        light->type = "SPOT";
-                        break;
-                    }
-                }
-            }
-
             if (ImGui::Button("Delete Light")) {
 
-                int index = selectedObject - objects.size();
+                int index = selectedObject - static_cast<int>(objects.size());
 
                 DestroyBuffers(lightObjects[index]);
 
@@ -1041,6 +1052,8 @@ void Inspector(){
 
                 selectedObject = -1;
             }
+
+            ImGui::PopID();
         }
     }
 
