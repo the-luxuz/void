@@ -57,7 +57,7 @@ inline glm::vec3 rayOrigin{};
 inline glm::vec3 rayDir{};
 
 // movement
-inline float moveSpeed = 10.0f;
+inline float moveSpeed = 1000.0f;
 inline float mouseSensitivity = 0.004f;
 
 // skybox

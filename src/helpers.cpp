@@ -531,7 +531,7 @@ void Docking() {
         ImGui::TextUnformatted("Player Camera");
         ImGui::SliderFloat("Eye height", &PlayerActor::cameraEyeHeight, 0.5f, 3.0f, "%.2f");
         ImGui::SliderFloat("Follow response", &PlayerActor::cameraFollowSpeed, 1.0f, 30.0f, "%.1f");
-        ImGui::SliderFloat("Look sensitivity", &PlayerActor::lookSensitivity, 0.0001f, 0.005f, "%.4f");
+        ImGui::SliderFloat("Look sensitivity", &PlayerActor::lookSensitivity, 0.0001f, 0.003f, "%.4f");
 
         ImGui::Separator();
         ImGui::TextUnformatted("Player Movement");
@@ -1419,34 +1419,42 @@ void select_object(glm::vec3 &rayOrigin, glm::vec3 &rayDir) {
 void controls(const bool *keyboard, float angle_step, float radius_step, float dt) {
 
     glm::vec3 cameraPos = get_cam_pos();
-    
-    glm::vec3 forward = glm::normalize(cam.cam_target - cameraPos);
-    
-    forward.y = 0.0f;
-    
-    if (glm::length2(forward) > 0.0001f)
-        forward = glm::normalize(forward);
-    
-    glm::vec3 right = glm::normalize(glm::cross(forward, glm::vec3(0, 1, 0)));
-    
-    float speed = moveSpeed * (cam.radius * 0.09f);
-    
+
+    glm::vec3 forward = cam.cam_target - cameraPos;
+
+    if (glm::length2(forward) < 0.0001f)
+        return;
+
+    forward = glm::normalize(forward);
+
+    const glm::vec3 worldUp(0.0f, 1.0f, 0.0f);
+    glm::vec3 right = glm::cross(forward, worldUp);
+
+    if (glm::length2(right) > 0.0001f)
+        right = glm::normalize(right);
+    else
+        right = glm::vec3(1.0f, 0.0f, 0.0f);
+
+    glm::vec3 movement(0.0f);
+
     if (keyboard[SDL_SCANCODE_W])
-        cam.cam_target += forward * speed * dt;
-    
+        movement += forward * moveSpeed * dt;
+
     if (keyboard[SDL_SCANCODE_S])
-        cam.cam_target -= forward * speed * dt;
-    
+        movement -= forward * moveSpeed * dt;
+
     if (keyboard[SDL_SCANCODE_A])
-        cam.cam_target -= right * speed * dt;
-    
+        movement -= right * moveSpeed * dt;
+
     if (keyboard[SDL_SCANCODE_D])
-        cam.cam_target += right * speed * dt;
-    
+        movement += right * moveSpeed * dt;
+
+    if (glm::length2(movement) > 0.0001f) {
+        movement = glm::normalize(movement);
+        cam.cam_target += movement * moveSpeed * dt;
+    }
+
     cam.beta = glm::clamp(cam.beta, 0.01f, glm::pi<float>() - 0.1f);
-    
-    cam.radius = std::max(cam.radius, 0.5f);
-    
 }
 
 //--------------------------------------------------------------------------

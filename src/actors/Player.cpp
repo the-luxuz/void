@@ -105,38 +105,37 @@ namespace PlayerActor {
         glm::vec3 supportNormal(0.0f);
 
         Object *playerObject = nullptr;
+
         if (a.name == "Player") {
             playerObject = &a;
             supportNormal = -contact.normal;
+
         } else if (b.name == "Player") {
             playerObject = &b;
             supportNormal = contact.normal;
         }
 
         float supportUpDot = glm::dot(supportNormal, up);
-        bool wallCollision = std::abs(glm::dot(contact.normal, up)) < groundNormalThreshold;
-        bool slopeContact = playerCollision && std::abs(supportUpDot) < 0.9999f && std::abs(supportUpDot) > 0.001f;
+        // Keep steep ramps distinct from near-vertical walls so sliding uphill
+        // on a ramp is slowed by gravity instead of being cancelled as a wall hit.
+        bool wallCollision = std::abs(glm::dot(contact.normal, up)) < 0.1f;
 
         bool nonWalkableSlopeContact = playerCollision && supportUpDot < groundNormalThreshold && std::abs(supportUpDot) < 0.9999f;
         bool hitUndersideOfSlope = nonWalkableSlopeContact && supportUpDot < 0.0f;
 
         glm::vec3 downhillDirection(0.0f);
 
-        bool uphillSlideMomentumHit = false;
-
-        if (slopeContact && playerObject && playerObject->hasPhysics && (slideCarryActive || sliding)) {
-
+        if (hitUndersideOfSlope && playerObject && playerObject->hasPhysics)
             downhillDirection = GetDownhillDirection(playerObject->physics, supportNormal);
 
-            uphillSlideMomentumHit = glm::length2(downhillDirection) > 0.0001f && glm::dot(playerObject->physics.velocity, downhillDirection) < -0.001f;
-        }
-
-        if (playerCollision && (wallCollision || hitUndersideOfSlope || uphillSlideMomentumHit)) {
+        // Ordinary ramp contact must not cancel a slide: gravity slows uphill
+        // movement, then reverses it and accelerates the player downhill.
+        if (playerCollision && (wallCollision || hitUndersideOfSlope)) {
 
             if (sliding && !shiftWasDown)
                 sliding = false;
 
-            if (hitUndersideOfSlope || uphillSlideMomentumHit) {
+            if (hitUndersideOfSlope) {
 
                 sliding = false;
                 slideInputSuppressedUntilRelease = true;
@@ -155,7 +154,7 @@ namespace PlayerActor {
             releasedSlideSpeed = 0.0f;
             releasedSlideDirection = glm::vec3(0.0f);
 
-            if ((hitUndersideOfSlope || uphillSlideMomentumHit) && playerObject && playerObject->hasPhysics) {
+            if (hitUndersideOfSlope && playerObject && playerObject->hasPhysics) {
 
                 if (glm::length2(downhillDirection) <= 0.0001f)
                     downhillDirection = GetDownhillDirection(playerObject->physics, supportNormal);
@@ -164,8 +163,7 @@ namespace PlayerActor {
                 rampUphillDownhillDirection = downhillDirection;
             }
 
-            if (nonWalkableSlopeContact && playerObject && playerObject->hasPhysics &&
-                (hitUndersideOfSlope || uphillSlideMomentumHit)) {
+            if (nonWalkableSlopeContact && playerObject && playerObject->hasPhysics && hitUndersideOfSlope) {
 
                 float velocityAlongDownhill = glm::dot(playerObject->physics.velocity, downhillDirection);
 
@@ -175,6 +173,7 @@ namespace PlayerActor {
         }
 
         if (supportUpDot > groundNormalThreshold && supportUpDot > groundNormalUpDot) {
+
             grounded = true;
             groundNormal = glm::normalize(supportNormal);
             groundNormalUpDot = supportUpDot;
@@ -265,11 +264,13 @@ namespace PlayerActor {
         if (!shiftDown) {
             slideInputSuppressedUntilRelease = false;
             crouched = false;
-        } else if (slideInputSuppressedUntilRelease) {
+        } else if (slideInputSuppressedUntilRelease)
             crouched = false;
-        } else if (grounded) {
+        else if (grounded)
             crouched = true;
-        }
+
+        if (shiftDown && !grounded && physics.velocity.y <= 0.0f)
+            AddForce(player, glm::vec3(0.0f, (physics.gravity.y * physics.inverseMass * 8.f), 0.0f));
 
         float previousAmount = crouchAmount;
         float targetAmount = crouched ? 1.0f : 0.0f;
@@ -466,9 +467,6 @@ namespace PlayerActor {
                 }
             }
         }
-
-        if (shiftDown && !grounded && physics.velocity.y <= 0.0f)
-            AddForce(player, glm::vec3(0.0f, -4000.0f, 0.0f));
 
         if (!grounded && physics.useGravity && jumpGravityMultiplier > 1.0f) {
 

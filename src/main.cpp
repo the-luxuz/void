@@ -7,6 +7,18 @@
 #include <crtdbg.h>
 #include <cstdlib>
 
+#ifdef _WIN32
+#include <Windows.h>
+
+extern "C" {
+// NVIDIA Optimus
+__declspec(dllexport) DWORD NvOptimusEnablement = 0x00000001;
+
+// AMD PowerXpress
+__declspec(dllexport) DWORD AmdPowerXpressRequestHighPerformance = 0x00000001;
+}
+#endif
+
 #include "Parser.h"
 #include "actors/Player.h"
 #include "buffers.h"
@@ -89,8 +101,7 @@ void update(SDL_Window *window, float dt) {
 
         if (camera_update || std::abs(activeFov - lastProjectionFov) > 0.001f) {
 
-            projection = glm::perspective(glm::radians(activeFov), (float)viewport_width / viewport_height, cam.nearPlane,
-                                          cam.farPlane);
+            projection = glm::perspective(glm::radians(activeFov), (float)viewport_width / viewport_height, cam.nearPlane, cam.farPlane);
 
             camera_update = false;
             lastProjectionFov = activeFov;
@@ -173,7 +184,9 @@ void update(SDL_Window *window, float dt) {
         ImGui::NewFrame();
 
         if (currentViewMode == view_Mode::EDITOR) {
+
             io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+
             Docking();
         }
 
@@ -306,6 +319,16 @@ int main(int argc, char *args[]) {
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 
     init_("../data/settings.bin", "../data/scene/scene.bin");
+
+    std::cout << "\n========== OPENGL INFO ==========\n";
+
+    std::cout << "Vendor: " << glGetString(GL_VENDOR) << '\n';
+
+    std::cout << "Renderer: " << glGetString(GL_RENDERER) << '\n';
+
+    std::cout << "Version: " << glGetString(GL_VERSION) << '\n';
+
+    std::cout << "=================================\n\n";
 
     Uint64 lastCounter = SDL_GetPerformanceCounter();
     float simulationAccumulator = 0.0f;
@@ -676,6 +699,8 @@ int main(int argc, char *args[]) {
                     if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_LCTRL]) {
                     
                         SDL_SetWindowRelativeMouseMode(window, true);
+
+                        SDL_WarpMouseInWindow(window, viewport_width / 2.0f, viewport_height / 2.0f);
 
                         cam.alpha += event.motion.xrel * mouseSensitivity;
 

@@ -13,6 +13,7 @@ namespace PlayerActor {
 	inline bool grounded = false;
 	inline glm::vec3 groundNormal(0.0f, 1.0f, 0.0f);
 	inline float groundNormalUpDot = 0.0f;
+
 	inline bool rampUphillBlock = false;
 	inline glm::vec3 rampUphillDownhillDirection(0.0f);
 
@@ -21,7 +22,7 @@ namespace PlayerActor {
 	inline float cameraEyeHeight = 1.7f;
 	inline float cameraFollowSpeed = 16.0f;
 
-	inline float lookSensitivity = 0.002f;
+	inline float lookSensitivity = 0.001f;
 
 	inline float defaultMaximumSpeed = 450.0f;
 
@@ -54,7 +55,7 @@ namespace PlayerActor {
 	inline bool standingScaleInitialized = false;
 	inline glm::vec3 standingScale(1.0f);
 	inline float speedFovOffset = 0.0f;
-	inline float speedFovIncrease = 7.0f;
+	inline float speedFovIncrease = 15.0f;
 	inline float speedFovReferenceMultiplier = 1.5f;
 	inline float speedFovChangeSpeed = 80.0f;
 
