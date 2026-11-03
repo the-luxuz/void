@@ -45030,4 +45030,9 @@ size_t ZSTD_decompressBlock(ZSTD_DCtx* dctx,
 {
     return ZSTD_decompressBlock_deprecated(dctx, dst, dstCapacity, src, srcSize);
 }
+
+unsigned long long tinyexr_zstd_decompress_bound(const void *src, size_t srcSize)
+{
+    return ZSTD_decompressBound(src, srcSize);
+}
 /**** ended inlining decompress/zstd_decompress_block.c ****/

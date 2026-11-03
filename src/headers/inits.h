@@ -30,7 +30,7 @@ void init_skybox(const char* skyboxFile, bool create_vaos);
 
 void init_camera();
 
-void init_model(const char *modelFile, Object &obj);
+void init_model(const char *modelFile, Object &obj, bool normalizeImportedSize = false);
 bool ImportModel(const std::string &path, std::vector<Object> &importedObjects,
                  std::vector<AnimationClip> *importedAnimations = nullptr, bool normalizeForEditor = true);
 bool IsModelFormatSupported(const std::string &extension);

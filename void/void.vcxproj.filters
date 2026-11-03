@@ -54,6 +54,9 @@
     <ClCompile Include="..\external\tinyexr\deps\miniz\miniz.c">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
+    <ClCompile Include="..\external\tinyexr\deps\zstd\tinyexr_zstd.c">
+      <Filter>Archivos de origen</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\buffers.cpp">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
@@ -141,6 +144,9 @@
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
     <ClInclude Include="..\external\tinyexr\deps\miniz\miniz.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\tinyexr\deps\zstd\tinyexr_zstd.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
     <ClInclude Include="..\src\headers\updates.h">

@@ -2011,7 +2011,7 @@ void ReplaceMesh(Object &obj, const std::string &path) {
 
     Object mesh;
 
-    init_model(path.c_str(), mesh);
+    init_model(path.c_str(), mesh, true);
     if (!mesh.vertices.empty() && !mesh.indices.empty())
         buffer(mesh);
 

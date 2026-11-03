@@ -18,6 +18,8 @@ size_t tinyexr_zstd_compress(void *dst, size_t dst_capacity, const void *src,
                              size_t src_size, int compression_level);
 size_t tinyexr_zstd_decompress(void *dst, size_t dst_capacity, const void *src,
                                size_t src_size);
+unsigned long long tinyexr_zstd_decompress_bound(const void *src,
+                                                  size_t src_size);
 size_t tinyexr_zstd_compress_bound(size_t src_size);
 unsigned tinyexr_zstd_is_error(size_t code);
 

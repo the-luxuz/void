@@ -155,6 +155,7 @@
     <ClCompile Include="..\external\imgui\imgui_widgets.cpp" />
     <ClCompile Include="..\external\nativefiledialog\nfd_win.cpp" />
     <ClCompile Include="..\external\tinyexr\deps\miniz\miniz.c" />
+    <ClCompile Include="..\external\tinyexr\deps\zstd\tinyexr_zstd.c" />
     <ClCompile Include="..\external\tinyexr\tinyexr.cc" />
     <ClCompile Include="..\src\buffers.cpp" />
     <ClCompile Include="..\src\classes.cpp" />
@@ -180,6 +181,7 @@
   <ItemGroup>
     <ClInclude Include="..\src\actors\Player.h" />
     <ClInclude Include="..\external\tinyexr\deps\miniz\miniz.h" />
+    <ClInclude Include="..\external\tinyexr\deps\zstd\tinyexr_zstd.h" />
     <ClInclude Include="..\external\tinyexr\tinyexr.h" />
     <ClInclude Include="..\src\editor\Browser.h" />
     <ClInclude Include="..\src\editor\Editor.h" />

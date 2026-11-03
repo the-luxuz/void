@@ -6,10 +6,14 @@
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
 #include <assimp/texture.h>
+#include <tinyexr_zstd.h>
 
 #include <algorithm>
 #include <cctype>
+#include <cstring>
 #include <filesystem>
+#include <fstream>
+#include <iterator>
 #include <limits>
 #include <unordered_map>
 
@@ -62,6 +66,63 @@ bool ReadColor(const aiMaterial *material, const char *key, unsigned int type, u
         return false;
     value = {color.r, color.g, color.b};
     return true;
+}
+
+std::string NormalizedExtension(const std::string &extension);
+
+const aiScene *ImportAssimpFile(const std::string &path, unsigned int flags,
+                                std::vector<char> &decompressedBlend) {
+    constexpr unsigned char ZstdMagic[] = {0x28, 0xB5, 0x2F, 0xFD};
+    constexpr unsigned long long MaxDecompressedBlendSize = 1024ull * 1024ull * 1024ull;
+
+    std::ifstream input(path, std::ios::binary);
+    if (!input)
+        return aiImportFile(path.c_str(), flags);
+
+    unsigned char magic[sizeof(ZstdMagic)]{};
+    input.read(reinterpret_cast<char *>(magic), sizeof(magic));
+    if (input.gcount() != sizeof(magic) || std::memcmp(magic, ZstdMagic, sizeof(magic)) != 0)
+        return aiImportFile(path.c_str(), flags);
+
+    input.seekg(0, std::ios::end);
+    const std::streamoff fileSize = input.tellg();
+    if (fileSize <= 0 || static_cast<unsigned long long>(fileSize) > std::numeric_limits<unsigned int>::max()) {
+        std::cerr << "Compressed Blender file is too large to import: " << path << '\n';
+        return nullptr;
+    }
+    input.seekg(0, std::ios::beg);
+    std::vector<char> compressed(static_cast<size_t>(fileSize));
+    if (!input.read(compressed.data(), fileSize)) {
+        std::cerr << "Could not read compressed Blender file: " << path << '\n';
+        return nullptr;
+    }
+
+    const unsigned long long decompressedSize = tinyexr_zstd_decompress_bound(compressed.data(), compressed.size());
+    if (decompressedSize == 0 || decompressedSize > MaxDecompressedBlendSize ||
+        decompressedSize > std::numeric_limits<unsigned int>::max()) {
+        std::cerr << "Could not determine a safe decompressed size for Blender file: " << path << '\n';
+        return nullptr;
+    }
+
+    decompressedBlend.resize(static_cast<size_t>(decompressedSize));
+    const size_t actualSize = tinyexr_zstd_decompress(decompressedBlend.data(), decompressedBlend.size(),
+                                                       compressed.data(), compressed.size());
+    if (tinyexr_zstd_is_error(actualSize) || actualSize > decompressedBlend.size() || actualSize < 7 ||
+        std::memcmp(decompressedBlend.data(), "BLENDER", 7) != 0) {
+        decompressedBlend.clear();
+        std::cerr << "Could not decompress Blender Zstandard file: " << path << '\n';
+        return nullptr;
+    }
+    decompressedBlend.resize(actualSize);
+
+    std::string extension = NormalizedExtension(std::filesystem::path(path).extension().string());
+    if (!extension.empty() && extension.front() == '.')
+        extension.erase(extension.begin());
+    const aiScene *scene = aiImportFileFromMemory(decompressedBlend.data(), static_cast<unsigned int>(actualSize),
+                                                   flags, extension.c_str());
+    if (!scene)
+        std::cerr << "Assimp could not import decompressed Blender file '" << path << "': " << aiGetErrorString() << '\n';
+    return scene;
 }
 
 std::string NormalizedExtension(const std::string &extension) {
@@ -386,7 +447,8 @@ bool ImportModel(const std::string &path, std::vector<Object> &importedObjects,
     // account for image row orientation in TextureManager.
     const unsigned int flags = aiProcess_Triangulate | aiProcess_GenSmoothNormals |
                                aiProcess_SortByPType | aiProcess_ValidateDataStructure | aiProcess_JoinIdenticalVertices;
-    const aiScene *scene = aiImportFile(path.c_str(), flags);
+    std::vector<char> decompressedBlend;
+    const aiScene *scene = ImportAssimpFile(path, flags, decompressedBlend);
     if (!scene || !scene->mRootNode) {
         std::cerr << "Assimp could not import '" << path << "': " << aiGetErrorString() << '\n';
         if (scene)
@@ -437,11 +499,11 @@ bool ImportModel(const std::string &path, std::vector<Object> &importedObjects,
     return !importedObjects.empty();
 }
 
-void init_model(const char *modelFile, Object &object) {
+void init_model(const char *modelFile, Object &object, bool normalizeImportedSize) {
     if (!modelFile)
         return;
     std::vector<Object> imported;
-    if (!ImportModel(modelFile, imported, nullptr, false))
+    if (!ImportModel(modelFile, imported, nullptr, normalizeImportedSize))
         return;
 
     object.vertices.clear();
