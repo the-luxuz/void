@@ -1,1 +1,0 @@
-#include "headers/tiny_obj_loader.h"

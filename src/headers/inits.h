@@ -30,9 +30,10 @@ void init_skybox(const char* skyboxFile, bool create_vaos);
 
 void init_camera();
 
-void init_obj(const char* objFile, Object& obj);
-bool ImportGltf(const std::string& path, std::vector<Object>& importedObjects);
-void PrepareImportedObject(Object& obj);
+void init_model(const char *modelFile, Object &obj);
+bool ImportModel(const std::string &path, std::vector<Object> &importedObjects,
+                 std::vector<AnimationClip> *importedAnimations = nullptr, bool normalizeForEditor = true);
+bool IsModelFormatSupported(const std::string &extension);
 
 bool init_lights(Object& obj);
 

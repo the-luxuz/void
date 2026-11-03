@@ -420,6 +420,8 @@ void update_objects() {
             glUniform1i(shader_uniform.hasNormalMap, normal != 0);
             glUniform1i(shader_uniform.hasRoughnessMap, material.roughnessTexture != 0);
             glUniform1i(shader_uniform.hasMetallicMap, material.metallicTexture != 0);
+            glUniform1i(shader_uniform.packedMetallicRoughnessMap,
+                        material.roughnessTexture != 0 && material.roughnessTexture == material.metallicTexture);
             glUniform1i(shader_uniform.hasEmissionMap, material.emissionTexture != 0);
             glUniform1i(shader_uniform.hasOpacityMap, material.opacityTexture != 0);
             glUniform3fv(shader_uniform.color, 1, glm::value_ptr(material.diffuse));

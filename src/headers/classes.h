@@ -41,6 +41,7 @@ class TextureManager {
   public:
     static GLuint Get(const std::string &path, bool sRGB = false);
     static GLuint GetEmbedded(const std::string &key, const unsigned char *data, size_t size, bool sRGB = false);
+    static GLuint GetEmbeddedRawBGRA(const std::string &key, int width, int height, const unsigned char *data, bool sRGB = false);
     static void Clear();
 };
 
@@ -560,6 +561,7 @@ struct Shader_Uniform {
     GLint hasNormalMap;
     GLint hasRoughnessMap;
     GLint hasMetallicMap;
+    GLint packedMetallicRoughnessMap;
     GLint hasEmissionMap;
     GLint hasOpacityMap;
     GLint materialRoughness;

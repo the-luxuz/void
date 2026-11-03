@@ -31,26 +31,7 @@ void ClearModelThumbnailCache() {
 }
 
 bool LoadPreviewModel(const std::string &path, std::vector<Object> &previewObjects) {
-
-    std::string extension = std::filesystem::path(path).extension().string();
-
-    if (extension == ".obj") {
-
-        Object object;
-
-        init_obj(path.c_str(), object);
-        PrepareImportedObject(object);
-
-        if (!object.vertices.empty() && !object.indices.empty())
-            previewObjects.push_back(std::move(object));
-
-        return !previewObjects.empty();
-    }
-
-    if (extension == ".gltf" || extension == ".glb")
-        return ImportGltf(path, previewObjects);
-
-    return false;
+    return ImportModel(path, previewObjects, nullptr, true);
 }
 
 GLuint CreatePreviewMesh(Object &object, PreviewMesh &mesh) {
@@ -88,9 +69,17 @@ GLuint RenderModelThumbnail(const std::string &path) {
     std::vector<glm::mat4> objectModels;
     objectModels.reserve(previewObjects.size());
 
-    for (Object &object : previewObjects) {
+    std::unordered_map<EntityID, size_t> objectIndices;
+    for (size_t i = 0; i < previewObjects.size(); ++i)
+        objectIndices[previewObjects[i].id] = i;
 
-        const glm::mat4 objectModel = glm::translate(glm::mat4(1.0f), object.position) * glm::toMat4(object.rotation) * glm::scale(glm::mat4(1.0f), object.scale);
+    for (size_t objectIndex = 0; objectIndex < previewObjects.size(); ++objectIndex) {
+
+        Object &object = previewObjects[objectIndex];
+        glm::mat4 objectModel = glm::translate(glm::mat4(1.0f), object.position) * glm::toMat4(object.rotation) * glm::scale(glm::mat4(1.0f), object.scale);
+        const auto parent = objectIndices.find(object.parentID);
+        if (parent != objectIndices.end() && parent->second < objectIndex)
+            objectModel = objectModels[parent->second] * objectModel;
         objectModels.push_back(objectModel);
 
         if (!object.visible)
@@ -478,7 +467,7 @@ void Browser() {
         for (auto &entry : folderEntries) {
 
             std::string ext = entry.path().extension().string();
-            bool supportedAsset = entry.is_directory() || ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".obj" || ext == ".gltf" || ext == ".glb" || ext == ".exr" || ext == ".hdr" || ext == ".bin" || ext == ".mp4";
+            bool supportedAsset = entry.is_directory() || ext == ".png" || ext == ".jpg" || ext == ".jpeg" || IsModelFormatSupported(ext) || ext == ".exr" || ext == ".hdr" || ext == ".bin" || ext == ".mp4";
 
             if (!supportedAsset)
                 continue;
@@ -553,9 +542,9 @@ void Browser() {
                 }
 
                 //------------------------------------------------
-                // OBJ models
+                // 3D models supported by Assimp
 
-                else if (ext == ".obj" || ext == ".gltf" || ext == ".glb") {
+                else if (IsModelFormatSupported(ext)) {
 
                     std::string path = entry.path().string();
 
@@ -568,35 +557,27 @@ void Browser() {
 
                         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
 
-                        clicked = ImGui::ImageButton("##obj", (ImTextureID)(intptr_t)modelIcon, ImVec2(64, 64), ImVec2(0, 1), ImVec2(1, 0));
+                        clicked = ImGui::ImageButton("##model", (ImTextureID)(intptr_t)modelIcon, ImVec2(64, 64), ImVec2(0, 1), ImVec2(1, 0));
 
                         ImGui::PopStyleColor(1);
 
                     } else {
 
-                        clicked = ImGui::Button("OBJ", ImVec2(64, 64));
+                        clicked = ImGui::Button("MODEL", ImVec2(64, 64));
                     }
 
                     if (clicked) {
 
                         std::vector<Object> imported;
-
-                        if (ext == ".obj") {
-
-                            Object obj;
-
-                            init_obj(path.c_str(), obj);
-
-                            imported.push_back(std::move(obj));
-
-                        } else if (!ImportGltf(path, imported))
-                            std::cerr << "Could not import glTF model: " << path << '\n';
+                        std::vector<AnimationClip> importedAnimations;
+                        if (!ImportModel(path, imported, &importedAnimations, true))
+                            std::cerr << "Could not import model: " << path << '\n';
 
                         size_t firstImported = objects.size();
 
                         EntityID importGroupID = 0;
 
-                        if (!imported.empty() && (ext == ".gltf" || ext == ".glb")) {
+                        if (!imported.empty()) {
 
                             Object group = CreateEmptyObject();
 
@@ -612,23 +593,15 @@ void Browser() {
                         for (size_t importedIndex = 0; importedIndex < imported.size(); ++importedIndex) {
 
                             Object &obj = imported[importedIndex];
-
-                            if (ext == ".obj")
-                                PrepareImportedObject(obj);
-
-                            obj.id = GenerateEntityID();
-                            obj.parentID = importGroupID;
-                            obj.importedMeshIndex = static_cast<uint32_t>(importedIndex);
+                            if (obj.parentID == 0)
+                                obj.parentID = importGroupID;
 
                             obj.name = GenerateObjectName(obj.name.empty() ? entry.path().stem().string() : obj.name);
 
                             obj.mesh = path;
 
-                            buffer(obj);
-
-                            if (importGroupID == 0)
-                                obj.position += glm::vec3(0.0f, 50.0f, 0.0f);
-                            obj.scale *= glm::vec3(obj.importScale);
+                            if (!obj.vertices.empty() && !obj.indices.empty())
+                                buffer(obj);
 
                             obj.shininess = 20.0f;
                             obj.hasNormalMap = false;
@@ -642,13 +615,32 @@ void Browser() {
                             objects.push_back(std::move(obj));
                         }
 
-                        if (objects.size() > firstImported)
+                        if (importGroupID != 0) {
+                            const std::string groupName = objects[firstImported].name;
+                            for (AnimationClip &clip : importedAnimations) {
+                                clip.name = groupName + " / " + clip.name;
+                                const std::string baseName = clip.name;
+                                unsigned int suffix = 2;
+                                while (FindAnimationByName(clip.name) >= 0)
+                                    clip.name = baseName + " (" + std::to_string(suffix++) + ")";
+                                animations.push_back(std::move(clip));
+                            }
+                        }
+
+                        if (objects.size() > firstImported) {
                             selectedObject = static_cast<int>(firstImported);
+                            for (size_t objectIndex = firstImported + 1; objectIndex < objects.size(); ++objectIndex) {
+                                if (!objects[objectIndex].vertices.empty()) {
+                                    selectedObject = static_cast<int>(objectIndex);
+                                    break;
+                                }
+                            }
+                        }
                     }
 
                     if (ImGui::BeginDragDropSource()) {
 
-                        ImGui::SetDragDropPayload("OBJ_FILE", path.c_str(), path.size() + 1);
+                        ImGui::SetDragDropPayload("MODEL_FILE", path.c_str(), path.size() + 1);
 
                         if (modelIcon) {
 
@@ -656,7 +648,7 @@ void Browser() {
 
                         } else {
 
-                            ImGui::TextUnformatted("OBJ");
+                            ImGui::TextUnformatted("MODEL");
                         }
 
                         ImGui::Text("%s", entry.path().filename().string().c_str());

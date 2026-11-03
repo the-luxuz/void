@@ -109,15 +109,15 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;ASSIMP_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)external\cgltf;$(SolutionDir)external\tinyexr\deps\libdeflate\lib;$(SolutionDir)include\stb;$(SolutionDir)src\headers;$(SolutionDir)external\tinyexr\deps\zstd;$(SolutionDir)external\tinyexr\deps\miniz;$(SolutionDir)external\tinyexr;$(SolutionDir)external\imgui\backends;$(SolutionDir)external\imgui;$(SolutionDir)include;$(SolutionDir)external\nativefiledialog\include;$(SolutionDir)external\nativefiledialog;$(SolutionDir)external\ffmpeg\include;$(SolutionDir)external\tinyexr\deps\zstd;$(SolutionDir)external\tinyexr\deps\miniz;$(SolutionDir)external\tinyexr;$(SolutionDir)external\imgui\backends;$(SolutionDir)external\imgui;$(SolutionDir)include;$(SolutionDir)external\nativefiledialog\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)external\tinyexr\deps\libdeflate\lib;$(SolutionDir)include\stb;$(SolutionDir)src\headers;$(SolutionDir)external\tinyexr\deps\zstd;$(SolutionDir)external\tinyexr\deps\miniz;$(SolutionDir)external\assimp\include;$(SolutionDir)external\tinyexr;$(SolutionDir)external\imgui\backends;$(SolutionDir)external\imgui;$(SolutionDir)include;$(SolutionDir)external\nativefiledialog\include;$(SolutionDir)external\nativefiledialog;$(SolutionDir)external\ffmpeg\include;$(SolutionDir)external\tinyexr\deps\zstd;$(SolutionDir)external\tinyexr\deps\miniz;$(SolutionDir)external\tinyexr;$(SolutionDir)external\imgui\backends;$(SolutionDir)external\imgui;$(SolutionDir)include;$(SolutionDir)external\nativefiledialog\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>SDL3.lib;glew32.lib;opengl32.lib;avcodec.lib;avdevice.lib;avfilter.lib;avformat.lib;avutil.lib;swresample.lib;swscale.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>SDL3.lib;glew32.lib;opengl32.lib;avcodec.lib;avdevice.lib;avfilter.lib;avformat.lib;avutil.lib;swresample.lib;swscale.lib;assimp-vc143-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <Manifest>
@@ -130,15 +130,15 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;ASSIMP_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)external\cgltf;$(SolutionDir)external\tinyexr\deps\libdeflate\lib;$(SolutionDir)include\stb;$(SolutionDir)src\headers;$(SolutionDir)external\tinyexr\deps\zstd;$(SolutionDir)external\tinyexr\deps\miniz;$(SolutionDir)external\tinyexr;$(SolutionDir)external\imgui\backends;$(SolutionDir)external\imgui;$(SolutionDir)include;$(SolutionDir)external\nativefiledialog\include;$(SolutionDir)external\nativefiledialog;$(SolutionDir)external\ffmpeg\include;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)external\tinyexr\deps\libdeflate\lib;$(SolutionDir)include\stb;$(SolutionDir)src\headers;$(SolutionDir)external\tinyexr\deps\zstd;$(SolutionDir)external\tinyexr\deps\miniz;$(SolutionDir)external\assimp\include;$(SolutionDir)external\tinyexr;$(SolutionDir)external\imgui\backends;$(SolutionDir)external\imgui;$(SolutionDir)include;$(SolutionDir)external\nativefiledialog\include;$(SolutionDir)external\nativefiledialog;$(SolutionDir)external\ffmpeg\include;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>SDL3.lib;glew32.lib;opengl32.lib;avcodec.lib;avdevice.lib;avfilter.lib;avformat.lib;avutil.lib;swresample.lib;swscale.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>SDL3.lib;glew32.lib;opengl32.lib;avcodec.lib;avdevice.lib;avfilter.lib;avformat.lib;avutil.lib;swresample.lib;swscale.lib;assimp-vc143-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <Manifest>
@@ -173,7 +173,7 @@
     <ClCompile Include="..\src\programs.cpp" />
     <ClCompile Include="..\src\scene_hierarchy.cpp" />
     <ClCompile Include="..\src\textures.cpp" />
-    <ClCompile Include="..\src\tinyobjloader.cpp" />
+    <ClCompile Include="..\src\model_importer.cpp" />
     <ClCompile Include="..\src\updates.cpp" />
     <ClCompile Include="..\src\video_player.cpp" />
   </ItemGroup>
@@ -198,9 +198,13 @@
     <ClInclude Include="..\src\headers\programs.h" />
     <ClInclude Include="..\src\headers\scene_hierarchy.h" />
     <ClInclude Include="..\src\headers\textures.h" />
-    <ClInclude Include="..\src\headers\tiny_obj_loader.h" />
     <ClInclude Include="..\src\headers\updates.h" />
     <ClInclude Include="..\src\headers\video_player.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="$(SolutionDir)void\assimp-vc143-mt.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\data\shaders\fragment.frag" />

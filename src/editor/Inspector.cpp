@@ -705,11 +705,11 @@ void Inspector(){
 
             ImGui::Text("Mesh:");
 
-            ImGui::Button("Drop .obj here##Mesh", ImVec2(200, 80));
+            ImGui::Button("Drop model here##Mesh", ImVec2(200, 80));
 
             if (ImGui::BeginDragDropTarget()) {
 
-                if (const ImGuiPayload *payload = ImGui::AcceptDragDropPayload("OBJ_FILE")) {
+                if (const ImGuiPayload *payload = ImGui::AcceptDragDropPayload("MODEL_FILE")) {
 
                     HandleInspectorUndo(*obj);
 

@@ -40,6 +40,7 @@ uniform sampler2D depthData[MAX_LIGHTS];
 uniform bool hasNormalMap;
 uniform bool hasRoughnessMap;
 uniform bool hasMetallicMap;
+uniform bool packedMetallicRoughnessMap;
 uniform bool hasEmissionMap;
 uniform bool hasOpacityMap;
 uniform float materialRoughness;
@@ -238,13 +239,19 @@ void main() {
 
     float roughness = clamp(materialRoughness, 0.04, 1.0);
 
-    if (hasRoughnessMap)
-        roughness = clamp(texture(roughnessMap, tiledUV).r, 0.04, 1.0);
+    if (hasRoughnessMap) {
+        vec4 roughnessSample = texture(roughnessMap, tiledUV);
+        roughness *= packedMetallicRoughnessMap ? roughnessSample.g : roughnessSample.r;
+        roughness = clamp(roughness, 0.04, 1.0);
+    }
 
     float metallic = clamp(materialMetallic, 0.0, 1.0);
 
-    if (hasMetallicMap)
-        metallic = clamp(texture(metallicMap, tiledUV).r, 0.0, 1.0);
+    if (hasMetallicMap) {
+        vec4 metallicSample = texture(metallicMap, tiledUV);
+        metallic *= packedMetallicRoughnessMap ? metallicSample.b : metallicSample.r;
+        metallic = clamp(metallic, 0.0, 1.0);
+    }
 
     vec3 emission = materialEmission;
 

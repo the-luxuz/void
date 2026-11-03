@@ -1,8 +1,3 @@
-#define TINYOBJLOADER_IMPLEMENTATION
-#define _CRT_SECURE_NO_WARNINGS
-#define CGLTF_IMPLEMENTATION
-#include "cgltf.h"
-#undef _CRT_SECURE_NO_WARNINGS
 #define _CRTDBG_MAP_ALLOC
 #include <crtdbg.h>
 #include <cstdlib>
@@ -30,6 +25,7 @@ __declspec(dllexport) DWORD AmdPowerXpressRequestHighPerformance = 0x00000001;
 #include "programs.h"
 #include "textures.h"
 #include "updates.h"
+
 
 float totalTime = 0.0f;
 
@@ -314,7 +310,7 @@ void update(SDL_Window *window, float dt) {
     SDL_GL_SwapWindow(window);
 }
 
-int main(int argc, char *args[]) {
+int main() {
 
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 

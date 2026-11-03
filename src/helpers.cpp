@@ -1,6 +1,7 @@
 #include "headers/helpers.h"
 #include "actors/Player.h"
 
+#include <cstring>
 #include <limits>
 
 // Kept local because it is only consumed by this translation unit.
@@ -1296,6 +1297,47 @@ GLuint TextureManager::GetEmbedded(const std::string &key, const unsigned char *
     return texture;
 }
 
+GLuint TextureManager::GetEmbeddedRawBGRA(const std::string &key, int width, int height, const unsigned char *data, bool sRGB) {
+
+    if (!data || width <= 0 || height <= 0)
+        return 0;
+
+    const size_t pixelCount = static_cast<size_t>(width) * static_cast<size_t>(height);
+    if (pixelCount > std::numeric_limits<size_t>::max() / 4)
+        return 0;
+
+    const std::string cacheKey = key + (sRGB ? "|srgb" : "|linear");
+    if (const auto found = textures.find(cacheKey); found != textures.end())
+        return found->second;
+
+    std::vector<unsigned char> flippedPixels(pixelCount * 4);
+    const size_t rowSize = static_cast<size_t>(width) * 4;
+    for (int row = 0; row < height; ++row) {
+        const unsigned char *sourceRow = data + static_cast<size_t>(height - 1 - row) * rowSize;
+        unsigned char *destinationRow = flippedPixels.data() + static_cast<size_t>(row) * rowSize;
+        std::memcpy(destinationRow, sourceRow, rowSize);
+    }
+
+    GLuint texture = 0;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexImage2D(GL_TEXTURE_2D, 0, sRGB ? GL_SRGB8_ALPHA8 : GL_RGBA8, width, height, 0, GL_BGRA, GL_UNSIGNED_BYTE,
+                 flippedPixels.data());
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    if (texture)
+        textures.emplace(cacheKey, texture);
+
+    return texture;
+}
+
 void TextureManager::Clear() {
 
     for (auto &[path, id] : textures) {
@@ -1969,8 +2011,9 @@ void ReplaceMesh(Object &obj, const std::string &path) {
 
     Object mesh;
 
-    init_obj(path.c_str(), mesh);
-    buffer(mesh);
+    init_model(path.c_str(), mesh);
+    if (!mesh.vertices.empty() && !mesh.indices.empty())
+        buffer(mesh);
 
     mesh.position = obj.position;
     mesh.rotation = obj.rotation;
@@ -2008,6 +2051,9 @@ void ReplaceMesh(Object &obj, const std::string &path) {
 
     mesh.name = obj.name;
     mesh.mesh = path;
+    mesh.id = obj.id;
+    mesh.parentID = obj.parentID;
+    mesh.importedMeshIndex = 0;
 
     mesh.mapping = obj.mapping;
     mesh.coordType = obj.coordType;
@@ -2017,6 +2063,7 @@ void ReplaceMesh(Object &obj, const std::string &path) {
     DestroyBuffers(obj);
 
     obj = std::move(mesh);
+    obj.model = GetModelMatrix(obj);
 }
 
 //--------------------------------------------------------------------------
