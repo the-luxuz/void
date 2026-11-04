@@ -55,13 +55,13 @@ namespace PlayerActor {
 	inline bool standingScaleInitialized = false;
 	inline glm::vec3 standingScale(1.0f);
 	inline float speedFovOffset = 0.0f;
-	inline float speedFovIncrease = 15.0f;
+	inline float speedFovIncrease = 8.0f;
 	inline float speedFovReferenceMultiplier = 1.5f;
 	inline float speedFovChangeSpeed = 80.0f;
 
 	inline bool crouched = false;
 	inline EntityID crouchPlayerID = 0;
-	inline float slideCrouchScale = 0.70f;
+	inline float slideCrouchScale = 0.50f;
     inline float crouchAmount = 0.0f;
     inline float crouchTransitionDuration = 0.18f;
     inline float crouchedMoveSpeedMultiplier = 0.55f;
