@@ -105,9 +105,12 @@ void update(SDL_Window *window, float dt) {
         if (usePlayerCamera) {
 
             gameAPI->GetCameraState(&playerCamera);
+
             cameraPos = glm::vec3(playerCamera.position[0], playerCamera.position[1], playerCamera.position[2]);
+
             glm::vec3 cameraTarget(playerCamera.target[0], playerCamera.target[1], playerCamera.target[2]);
             glm::vec3 cameraUp(playerCamera.up[0], playerCamera.up[1], playerCamera.up[2]);
+
             view = glm::lookAt(cameraPos, cameraTarget, cameraUp);
 
             // ray cast of player camera to shoot
