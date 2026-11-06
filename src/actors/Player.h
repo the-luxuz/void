@@ -26,7 +26,7 @@ namespace PlayerActor {
 	inline float lookSensitivity = 0.001f;
 
 	inline float defaultMaximumSpeed = 450.0f;
-	inline float airControlStrength = 0.1f;
+	inline float airControlStrength = 0.4f;
 
 	inline float jumpHeight = 150.0f;
 	inline float jumpGravityMultiplier = 7.f;
@@ -45,7 +45,7 @@ namespace PlayerActor {
 	inline bool slideCarryActive = false;
 	inline float slideCarrySpeed = 0.0f;
 	inline glm::vec3 slideCarryDirection(0.0f);
-	inline float slideAirTurnDegreesPerSecond = 360.0f;
+	inline float slideAirTurnDegreesPerSecond = 330.0f;
 	inline float slideCarryLandingDecayDuration = 0.04f;
 	inline float slideCarryLandingDecayRemaining = 0.0f;
 	inline bool slideCarryLandingDecayStarted = false;
@@ -60,7 +60,7 @@ namespace PlayerActor {
 	inline glm::vec3 standingScale(1.0f);
 
 	inline float speedFovOffset = 0.0f;
-	inline float speedFovIncrease = 5.0f;
+	inline float speedFovIncrease = 9.0f;
 	inline float speedFovReferenceMultiplier = 1.5f;
 	inline float speedFovChangeSpeed = 80.0f;
 

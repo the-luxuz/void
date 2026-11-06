@@ -714,6 +714,73 @@ void UpdateAnimation(float dt) {
     UpdateAnimationPreview(dt);
 }
 
+static void StabilizePlayerRampContact(const Object &a, const Object &b, const Object &colliderA, const Object &colliderB,
+                                      Contact &contact) {
+
+    bool playerIsA = a.id == playerEntityID;
+
+    if (!playerIsA && b.id != playerEntityID)
+        return;
+
+    const Object &playerCollider = playerIsA ? colliderA : colliderB;
+    const Object &rampObject = playerIsA ? b : a;
+    const Object &rampCollider = playerIsA ? colliderB : colliderA;
+
+    if (rampObject.collider.type != ColliderType::AABB)
+        return;
+
+    const glm::vec3 up(0.0f, 1.0f, 0.0f);
+    const glm::vec3 playerAxes[3] = {playerCollider.rotation * glm::vec3(1.0f, 0.0f, 0.0f),
+                                     playerCollider.rotation * glm::vec3(0.0f, 1.0f, 0.0f),
+                                     playerCollider.rotation * glm::vec3(0.0f, 0.0f, 1.0f)};
+    const glm::vec3 rampAxes[3] = {rampCollider.rotation * glm::vec3(1.0f, 0.0f, 0.0f),
+                                   rampCollider.rotation * glm::vec3(0.0f, 1.0f, 0.0f),
+                                   rampCollider.rotation * glm::vec3(0.0f, 0.0f, 1.0f)};
+
+    glm::vec3 rampUp = glm::normalize(rampAxes[1]);
+
+    if (rampUp.y <= 0.1f || rampUp.y >= 0.9999f)
+        return;
+
+    glm::vec3 playerHalf = glm::abs(playerCollider.scale);
+    glm::vec3 rampHalf = glm::abs(rampCollider.scale);
+    glm::vec3 playerFromRamp = playerCollider.position - rampCollider.position;
+    glm::vec3 localPlayerPosition = glm::inverse(rampCollider.rotation) * playerFromRamp;
+
+    float playerRadiusUp = 0.0f;
+    float playerRadiusX = 0.0f;
+    float playerRadiusZ = 0.0f;
+
+    for (int axis = 0; axis < 3; ++axis) {
+
+        playerRadiusUp += playerHalf[axis] * std::abs(glm::dot(playerAxes[axis], rampUp));
+        playerRadiusX += playerHalf[axis] * std::abs(glm::dot(playerAxes[axis], rampAxes[0]));
+        playerRadiusZ += playerHalf[axis] * std::abs(glm::dot(playerAxes[axis], rampAxes[2]));
+    }
+
+    if (std::abs(localPlayerPosition.x) > rampHalf.x + playerRadiusX ||
+        std::abs(localPlayerPosition.z) > rampHalf.z + playerRadiusZ)
+        return;
+
+    float distanceFromRampTop = glm::dot(playerFromRamp, rampUp);
+
+    if (distanceFromRampTop <= 0.0f)
+        return;
+
+    float rampRadiusUp = 0.0f;
+
+    for (int axis = 0; axis < 3; ++axis)
+        rampRadiusUp += rampHalf[axis] * std::abs(glm::dot(rampAxes[axis], rampUp));
+
+    float penetration = playerRadiusUp + rampRadiusUp - distanceFromRampTop;
+
+    if (penetration <= 0.0f)
+        return;
+
+    contact.normal = playerIsA ? -rampUp : rampUp;
+    contact.penetration = penetration;
+}
+
 void CollisionUpdate() {
 
     GetGameAPI()->BeginSimulationStep();
@@ -811,6 +878,8 @@ void CollisionUpdate() {
             }
 
             if (contact.hit) {
+
+                StabilizePlayerRampContact(a, b, colliderA, colliderB, contact);
 
                 PositionalCorrection(a, b, contact);
                 ResolveVelocity(a, b, contact);

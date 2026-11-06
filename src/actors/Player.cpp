@@ -655,7 +655,8 @@ namespace PlayerActor {
 
                 if (std::abs(cameraYawDelta) > 0.000001f) {
 
-                    float cameraTurn = -cameraYawDelta;
+                    float maxCameraTurn = glm::radians(slideAirTurnDegreesPerSecond) * dt;
+                    float cameraTurn = glm::clamp(-cameraYawDelta, -maxCameraTurn, maxCameraTurn);
                     float cameraCos = std::cos(cameraTurn);
                     float cameraSin = std::sin(cameraTurn);
 
