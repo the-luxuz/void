@@ -306,7 +306,7 @@ void Docking() {
 
                     } else {
 
-                        int lightIndex = selectedObject - (int)objects.size();
+                        size_t lightIndex = selectedObject - objects.size();
 
                         objCopy = lightObjects[lightIndex];
                         lightCopy = lights[lightIndex];
@@ -399,7 +399,7 @@ void Docking() {
                         }
                     } else {
 
-                        int lightIndex = selectedObject - objects.size();
+                        size_t lightIndex = selectedObject - objects.size();
 
                         Object &obj = lightObjects[lightIndex];
                         Light &light = lights[lightIndex];
@@ -442,7 +442,7 @@ void Docking() {
                         }
                     } else {
 
-                        int lightIndex = selectedObject - objects.size();
+                        size_t lightIndex = selectedObject - objects.size();
 
                         Object &obj = lightObjects[lightIndex];
                         Light &light = lights[lightIndex];
@@ -894,11 +894,8 @@ void GenerateSphericalUV(Object &obj) {
 
 void UpdateMapping(Object &obj) {
 
-    // Mapping must never replace a valid mesh with empty geometry. This can
-    // happen for objects created by older scene versions that have no cached
-    // original mesh yet.
-    if ((obj.original_vertices.empty() || obj.original_indices.empty()) &&
-        !obj.vertices.empty() && !obj.indices.empty()) {
+    if ((obj.original_vertices.empty() || obj.original_indices.empty()) && !obj.vertices.empty() && !obj.indices.empty()) {
+
         obj.original_vertices = obj.vertices;
         obj.original_indices = obj.indices;
     }
@@ -906,52 +903,55 @@ void UpdateMapping(Object &obj) {
     if (obj.original_vertices.empty() || obj.original_indices.empty())
         return;
 
-    const std::vector<Vertex> previousVertices = obj.vertices;
-    const std::vector<GLuint> previousIndices = obj.indices;
+    std::vector<Vertex> previousVertices = obj.vertices;
+    std::vector<GLuint> previousIndices = obj.indices;
 
     switch (obj.mapping) {
 
-    case TextureMapping::UV:
-        RestoreOriginalUV(obj);
-        break;
+        case TextureMapping::UV:
+            RestoreOriginalUV(obj);
+            break;
 
-    case TextureMapping::Planar:
-        GeneratePlanarUV(obj, obj.coordType);
-        break;
+        case TextureMapping::Planar:
+            GeneratePlanarUV(obj, obj.coordType);
+            break;
 
-    case TextureMapping::Cubic:
-        GenerateCubeUV(obj);
-        break;
+        case TextureMapping::Cubic:
+            GenerateCubeUV(obj);
+            break;
 
-    case TextureMapping::Cylindrical:
-        GenerateCylindricalUV(obj, obj.cyaxisType);
-        break;
+        case TextureMapping::Cylindrical:
+            GenerateCylindricalUV(obj, obj.cyaxisType);
+            break;
 
-    case TextureMapping::Spherical:
-        GenerateSphericalUV(obj);
-        break;
+        case TextureMapping::Spherical:
+            GenerateSphericalUV(obj);
+            break;
     }
 
-    const bool validGeometry = !obj.vertices.empty() && !obj.indices.empty() &&
-        obj.indices.size() % 3 == 0 &&
+    const bool validGeometry = !obj.vertices.empty() && !obj.indices.empty() && obj.indices.size() % 3 == 0 &&
         std::all_of(obj.indices.begin(), obj.indices.end(), [&](GLuint index) {
             return index < obj.vertices.size();
         });
+
     const bool finiteUVs = std::all_of(obj.vertices.begin(), obj.vertices.end(), [](const Vertex &vertex) {
+
         return std::isfinite(vertex.uv.x) && std::isfinite(vertex.uv.y);
     });
 
     if (!validGeometry) {
+
         obj.vertices = previousVertices.empty() ? obj.original_vertices : previousVertices;
         obj.indices = previousIndices.empty() ? obj.original_indices : previousIndices;
+
     } else if (!finiteUVs) {
-        // Keep the new mapping where possible, but replace invalid coordinates
-        // with the mesh's original UVs so alpha textures cannot discard it.
+
         for (size_t i = 0; i < obj.vertices.size(); ++i) {
+
             if (std::isfinite(obj.vertices[i].uv.x) && std::isfinite(obj.vertices[i].uv.y))
                 continue;
-            obj.vertices[i].uv = i < obj.original_vertices.size()
-                ? obj.original_vertices[i].uv : glm::vec2(0.0f);
+
+            obj.vertices[i].uv = i < obj.original_vertices.size() ? obj.original_vertices[i].uv : glm::vec2(0.0f);
         }
     }
 
@@ -963,8 +963,7 @@ void UpdateMapping(Object &obj) {
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, obj.ebo);
 
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, obj.indices.size() * sizeof(unsigned int), obj.indices.data(),
-                 GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, obj.indices.size() * sizeof(unsigned int), obj.indices.data(), GL_STATIC_DRAW);
 
     glBindVertexArray(0);
 }
@@ -1136,7 +1135,7 @@ Object *GetSelectedObject() {
     if (selectedObject < objects.size())
         return &objects[selectedObject];
 
-    int lightIndex = selectedObject - objects.size();
+    size_t lightIndex = selectedObject - objects.size();
 
     if (lightIndex >= lightObjects.size())
         return nullptr;
@@ -1149,7 +1148,7 @@ Light *GetSelectedLight() {
     if (selectedObject < objects.size())
         return nullptr;
 
-    int lightIndex = selectedObject - objects.size();
+    size_t lightIndex = selectedObject - objects.size();
 
     if (lightIndex >= lights.size())
         return nullptr;
@@ -1459,7 +1458,7 @@ void Create_Grid() {
         vertices.push_back(glm::vec3(SIZE * STEP, 0.0f, i * STEP));
     }
 
-    gridVertexCount = vertices.size();
+    gridVertexCount = (GLsizei)vertices.size();
 
     glGenVertexArrays(1, &gridVAO);
     glGenBuffers(1, &gridVBO);
@@ -1634,13 +1633,13 @@ glm::vec3 Compute_Normal(const glm::vec3 &a, const glm::vec3 &b, const glm::vec3
 void Add_Vertex(Object &obj, const Vertex &v) {
 
     obj.vertices.push_back(v);
-    obj.indices.push_back(obj.indices.size());
+    obj.indices.push_back((GLuint)obj.indices.size());
 }
 
 void Add_Vertex(Light &lgh, const Vertex &v) {
 
     lgh.vertices.push_back(v);
-    lgh.indices.push_back(lgh.indices.size());
+    lgh.indices.push_back((GLuint)lgh.indices.size());
 }
 
 void Add_Tri(Object &obj, const Vertex &in_v0, const Vertex &in_v1, const Vertex &in_v2) {

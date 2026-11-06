@@ -128,8 +128,14 @@
       <EnableSegmentHeap>true</EnableSegmentHeap>
     </Manifest>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <DisableSpecificWarnings>4251;26497;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\src\actors\player.cpp" />
+    <ClCompile Include="..\src\game.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\actors\player.h" />

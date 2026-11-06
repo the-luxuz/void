@@ -913,7 +913,7 @@ void Inspector(){
 
         if (light) {
 
-            const int lightIndex = selectedObject - static_cast<int>(objects.size());
+            size_t lightIndex = selectedObject - objects.size();
             Object &lightObject = lightObjects[lightIndex];
 
             ImGui::PushID(reinterpret_cast<void *>(static_cast<uintptr_t>(lightObject.id)));
@@ -1034,7 +1034,7 @@ void Inspector(){
 
             if (ImGui::Button("Delete Light")) {
 
-                int index = selectedObject - static_cast<int>(objects.size());
+                size_t index = selectedObject - static_cast<int>(objects.size());
 
                 DestroyBuffers(lightObjects[index]);
 

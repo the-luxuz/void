@@ -128,6 +128,11 @@
       <EnableSegmentHeap>true</EnableSegmentHeap>
     </Manifest>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <DisableSpecificWarnings>4251;26497;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\external\imgui\backends\imgui_impl_opengl3.cpp" />
     <ClCompile Include="..\external\imgui\backends\imgui_impl_sdl3.cpp" />
@@ -171,6 +176,8 @@
     <ClInclude Include="..\src\editor\inspector.h" />
     <ClInclude Include="..\src\headers\buffers.h" />
     <ClInclude Include="..\src\headers\classes.h" />
+    <ClInclude Include="..\src\headers\entity_id.h" />
+    <ClInclude Include="..\src\headers\game_api.h" />
     <ClInclude Include="..\src\headers\helpers.h" />
     <ClInclude Include="..\src\headers\ImGuizmo.h" />
     <ClInclude Include="..\src\headers\imgui_helpers.h" />

@@ -12,6 +12,9 @@
     <ClCompile Include="..\src\actors\player.cpp">
       <Filter>src\actors</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\game.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\actors\player.h">

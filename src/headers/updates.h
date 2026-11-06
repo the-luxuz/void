@@ -14,7 +14,7 @@
 inline int currentMesh = 0;
 inline GLuint currentTexture = 0;
 
-inline Object *player = nullptr;
+inline EntityID playerEntityID = 0;
 
 //--------------------------------------------------------------------------
 // Update Grid

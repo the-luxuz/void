@@ -15,7 +15,6 @@ __declspec(dllexport) DWORD AmdPowerXpressRequestHighPerformance = 0x00000001;
 #endif
 
 #include "Parser.h"
-#include "actors/Player.h"
 #include "buffers.h"
 #include "classes.h"
 #include "editor/Browser.h"
@@ -46,7 +45,28 @@ static const char *GetImGuiLayoutPath(window_mode mode) {
 constexpr float angle_speed = glm::radians(90.0f);
 float radius_speed = 20.0f;
 
+static void RefreshPlayerEntityID() {
+
+    Object *playerObject = search_obj_by_name("Player");
+    playerEntityID = playerObject ? playerObject->id : 0;
+}
+
+static PlayerInput BuildPlayerInput(const bool *keyboard) {
+
+    PlayerInput input{};
+    input.moveForward = keyboard[SDL_SCANCODE_W];
+    input.moveBackward = keyboard[SDL_SCANCODE_S];
+    input.moveLeft = keyboard[SDL_SCANCODE_A];
+    input.moveRight = keyboard[SDL_SCANCODE_D];
+    input.jump = keyboard[SDL_SCANCODE_SPACE];
+    input.slide = keyboard[SDL_SCANCODE_LSHIFT];
+
+    return input;
+}
+
 void update(SDL_Window *window, float dt) {
+
+    const GameAPI *gameAPI = GetGameAPI();
 
     if (!isCinematicActive) {
 
@@ -56,39 +76,43 @@ void update(SDL_Window *window, float dt) {
             update_depthmap();
 
         if (currentViewMode == view_Mode::PLAY)
-            player = search_obj_by_name("Player");
+            RefreshPlayerEntityID();
 
         if (currentViewMode != prevViewMode) {
 
             if (currentViewMode == view_Mode::PLAY) {
 
                 save_scene_state();
-                PlayerActor::cameraInitialized = false;
+                gameAPI->OnPlayStart();
 
-                if (player)
-                    PlayerActor::UpdateCamera(*player, 0.0f);
+                if (playerEntityID != 0)
+                    gameAPI->UpdatePlayerCamera(playerEntityID, 0.0f);
 
                 playerRayFired = false;
 
             } else {
 
                 load_scene_state();
-                PlayerActor::cameraInitialized = false;
+                gameAPI->OnPlayStop();
             }
 
             prevViewMode = currentViewMode;
         }
 
-        const bool usePlayerCamera = currentViewMode == view_Mode::PLAY && player && !free_cam;
+        const bool usePlayerCamera = currentViewMode == view_Mode::PLAY && playerEntityID != 0 && !free_cam;
+        GameCameraState playerCamera{};
 
         if (usePlayerCamera) {
 
-            cameraPos = PlayerActor::cameraState.cam_position;
-            view = glm::lookAt(cameraPos, PlayerActor::cameraState.cam_target, PlayerActor::cameraState.cam_up);
+            gameAPI->GetCameraState(&playerCamera);
+            cameraPos = glm::vec3(playerCamera.position[0], playerCamera.position[1], playerCamera.position[2]);
+            glm::vec3 cameraTarget(playerCamera.target[0], playerCamera.target[1], playerCamera.target[2]);
+            glm::vec3 cameraUp(playerCamera.up[0], playerCamera.up[1], playerCamera.up[2]);
+            view = glm::lookAt(cameraPos, cameraTarget, cameraUp);
 
             // ray cast of player camera to shoot
             BuildRay(viewport_width * 0.5f, viewport_height * 0.5f, rayOrigin, rayDir);
-            rayOrigin = PlayerActor::cameraState.cam_position;
+            rayOrigin = cameraPos;
 
         } else {
 
@@ -96,7 +120,7 @@ void update(SDL_Window *window, float dt) {
             view = glm::lookAt(cameraPos, cam.cam_target, cam.cam_up);
         }
 
-        float activeFov = st.fov + (usePlayerCamera ? PlayerActor::speedFovOffset : 0.0f);
+        float activeFov = st.fov + (usePlayerCamera ? playerCamera.speedFovOffset : 0.0f);
         static float lastProjectionFov = -1.0f;
 
         if (camera_update || std::abs(activeFov - lastProjectionFov) > 0.001f) {
@@ -320,6 +344,14 @@ int main() {
 
     init_("../data/settings.bin", "../data/scene/scene.bin");
 
+    const GameAPI *gameAPI = GetGameAPI();
+
+    if (!gameAPI || gameAPI->version != GAME_API_VERSION || !gameAPI->Load()) {
+
+        clean();
+        return 1;
+    }
+
     std::cout << "\n========== OPENGL INFO ==========\n";
 
     std::cout << "Vendor: " << glGetString(GL_VENDOR) << '\n';
@@ -366,7 +398,6 @@ int main() {
                         free_cam = false;
                         SDL_SetWindowRelativeMouseMode(window, false);
                         SDL_ShowCursor();
-                        PlayerActor::ResetJumpState();
                     }
                 }
 
@@ -398,7 +429,7 @@ int main() {
 
                             } else {
 
-                                int lightIndex = selectedObject - (int)objects.size();
+                                size_t lightIndex = selectedObject - objects.size();
 
                                 if (lightIndex >= 0 && lightIndex < (int)lightObjects.size()) {
 
@@ -446,7 +477,7 @@ int main() {
                                 }
                             } else {
 
-                                int lightIndex = selectedObject - objects.size();
+                                size_t lightIndex = selectedObject - objects.size();
 
                                 Object &obj = lightObjects[lightIndex];
                                 Light &light = lights[lightIndex];
@@ -489,7 +520,7 @@ int main() {
                                 }
                             } else {
 
-                                int lightIndex = selectedObject - objects.size();
+                                size_t lightIndex = selectedObject - objects.size();
 
                                 Object &obj = lightObjects[lightIndex];
                                 Light &light = lights[lightIndex];
@@ -527,7 +558,7 @@ int main() {
 
                             } else {
 
-                                int lightIndex = selectedObject - (int)objects.size();
+                                size_t lightIndex = selectedObject - objects.size();
 
                                 objCopy = lightObjects[lightIndex];
                                 lightCopy = lights[lightIndex];
@@ -677,16 +708,14 @@ int main() {
                     if (currentViewMode == view_Mode::EDITOR) {
 
                         currentViewMode = view_Mode::PLAY;
-                        player = search_obj_by_name("Player");
-                        PlayerActor::ResetJumpState();
-                        SDL_SetWindowRelativeMouseMode(window, player != nullptr);
+                        RefreshPlayerEntityID();
+                        SDL_SetWindowRelativeMouseMode(window, playerEntityID != 0);
 
                     } else {
 
                         currentViewMode = view_Mode::EDITOR;
                         SDL_SetWindowRelativeMouseMode(window, false);
                         free_cam = false;
-                        PlayerActor::ResetJumpState();
                     }
                 }
 
@@ -694,7 +723,7 @@ int main() {
 
             case SDL_EVENT_MOUSE_MOTION:
 
-                if (currentViewMode == view_Mode::EDITOR || free_cam || (currentViewMode == view_Mode::PLAY && !player)) {
+                if (currentViewMode == view_Mode::EDITOR || free_cam || (currentViewMode == view_Mode::PLAY && playerEntityID == 0)) {
                     
                     if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_LCTRL]) {
                     
@@ -712,9 +741,7 @@ int main() {
                 
                     if (SDL_GetWindowRelativeMouseMode(window)) {
 
-                        PlayerActor::cameraState.alpha += event.motion.xrel * PlayerActor::lookSensitivity;
-                        PlayerActor::cameraState.beta -= event.motion.yrel * PlayerActor::lookSensitivity;
-                        PlayerActor::cameraState.beta = glm::clamp(PlayerActor::cameraState.beta, -glm::radians(89.0f), glm::radians(89.0f));
+                        GetGameAPI()->OnMouseLook(event.motion.xrel, event.motion.yrel);
                     }
 
                 }
@@ -723,7 +750,7 @@ int main() {
 
             case SDL_EVENT_KEY_UP:
 
-                if (event.key.scancode == SDL_SCANCODE_LCTRL && (currentViewMode == view_Mode::EDITOR || free_cam || (currentViewMode == view_Mode::PLAY && !player))) {
+                if (event.key.scancode == SDL_SCANCODE_LCTRL && (currentViewMode == view_Mode::EDITOR || free_cam || (currentViewMode == view_Mode::PLAY && playerEntityID == 0))) {
 
                     SDL_SetWindowRelativeMouseMode(window, false);
                     //SDL_WarpMouseInWindow(window, st.w / 2.0f, st.h / 2.0f);
@@ -739,12 +766,12 @@ int main() {
 
             case SDL_EVENT_MOUSE_WHEEL:
 
-                if (currentViewMode == view_Mode::PLAY && player && !free_cam) {
+                if (currentViewMode == view_Mode::PLAY && playerEntityID != 0 && !free_cam) {
 
                     if (event.wheel.y != 0.0f)
-                        PlayerActor::QueueJumpInput();
+                        GetGameAPI()->OnJumpPressed();
 
-                } else if (viewport_scroll_active || (currentViewMode == view_Mode::PLAY && free_cam) || (currentViewMode == view_Mode::PLAY && !player)) {
+                } else if (viewport_scroll_active || (currentViewMode == view_Mode::PLAY && free_cam) || (currentViewMode == view_Mode::PLAY && playerEntityID == 0)) {
 
                     cam.radius -= (event.wheel.y * 20);
 
@@ -822,7 +849,7 @@ int main() {
 
                     break;
 
-                } else if (currentViewMode == view_Mode::PLAY && player) {
+                } else if (currentViewMode == view_Mode::PLAY && playerEntityID != 0) {
                 
                     if (event.button.button == SDL_BUTTON_LEFT) {
 
@@ -838,6 +865,7 @@ int main() {
         simulationAccumulator += dt;
 
         const bool *keyboard = SDL_GetKeyboardState(nullptr);
+        const PlayerInput playerInput = BuildPlayerInput(keyboard);
 
         ImGuiIO &io = ImGui::GetIO();
 
@@ -852,13 +880,13 @@ int main() {
 
                 if (currentViewMode == view_Mode::PLAY) {
 
-                    player = search_obj_by_name("Player");
+                    RefreshPlayerEntityID();
 
-                    if (player && !free_cam && !io.WantCaptureKeyboard) {
+                    if (playerEntityID != 0 && !free_cam && !io.WantCaptureKeyboard) {
 
-                        PlayerActor::Control(keyboard, fixedDt, *player);
+                        GetGameAPI()->Update(playerEntityID, &playerInput, fixedDt);
 
-                    } else if (!player && !free_cam && !io.WantCaptureKeyboard) {
+                    } else if (playerEntityID == 0 && !free_cam && !io.WantCaptureKeyboard) {
 
                         controls(keyboard, angle_speed, radius_speed, fixedDt);
                     }
@@ -868,10 +896,10 @@ int main() {
                     if (st.collision_active)
                         CollisionUpdate();
                     else
-                        PlayerActor::BeginCollisionStep();
+                        GetGameAPI()->BeginSimulationStep();
 
-                    if (player && !free_cam)
-                        PlayerActor::UpdateCamera(*player, fixedDt);
+                    if (playerEntityID != 0 && !free_cam)
+                        GetGameAPI()->UpdatePlayerCamera(playerEntityID, fixedDt);
                 }
 
                 UpdateAnimation(fixedDt);
@@ -890,6 +918,8 @@ int main() {
 
         update(window, dt);
     }
+
+    gameAPI->Shutdown();
 
     CleanBrowserThumbnails();
     clean();

@@ -73,10 +73,10 @@ namespace PlayerActor {
 	inline float coyoteDuration = 0.25f;
     inline float coyoteRemaining = 0.0f;
 
-	void Control(const bool *keyboard, float dt, Object &player);
-	void UpdateCamera(Object &player, float dt);
+	void Control(EntityID playerID, const PlayerInput &input, float dt);
+	void UpdateCamera(EntityID playerID, float dt);
 	void ResetJumpState();
 	void QueueJumpInput();
 	void BeginCollisionStep();
-	void RegisterCollision(Object &a, Object &b, const Contact &contact);
+	void RegisterCollision(EntityID aID, EntityID bID, const Contact &contact);
 }

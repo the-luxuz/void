@@ -1,6 +1,4 @@
 #include "headers/updates.h"
-#include "actors/Player.h"
-
 #include <array>
 #include <cstring>
 #include <functional>
@@ -40,7 +38,7 @@ static GLuint playerRayVBO = 0;
 
 static void DrawPlayerRay() {
 
-    if (currentViewMode != view_Mode::PLAY || !player)
+    if (currentViewMode != view_Mode::PLAY || playerEntityID == 0 || !FindObjectByID(playerEntityID))
         return;
 
     if (!playerRayVAO) {
@@ -253,6 +251,7 @@ void update_depthmap() {
             continue;
 
         if (!sceneSignatureBuilt) {
+
             sceneSignature = BuildShadowSceneSignature();
             sceneSignatureBuilt = true;
         }
@@ -719,7 +718,7 @@ void UpdateAnimation(float dt) {
 
 void CollisionUpdate() {
 
-    PlayerActor::BeginCollisionStep();
+    GetGameAPI()->BeginSimulationStep();
 
     for (size_t i = 0; i < objects.size(); i++) {
 
@@ -818,7 +817,17 @@ void CollisionUpdate() {
                 PositionalCorrection(a, b, contact);
                 ResolveVelocity(a, b, contact);
 
-                PlayerActor::RegisterCollision(a, b, contact);
+                GameContact gameContact{};
+                gameContact.hit = contact.hit;
+                gameContact.normal[0] = contact.normal.x;
+                gameContact.normal[1] = contact.normal.y;
+                gameContact.normal[2] = contact.normal.z;
+                gameContact.penetration = contact.penetration;
+                gameContact.point[0] = contact.point.x;
+                gameContact.point[1] = contact.point.y;
+                gameContact.point[2] = contact.point.z;
+
+                GetGameAPI()->OnCollision(a.id, b.id, &gameContact);
 
                 //eventManager.Throw(std::make_unique<PlayAnimationEvent>(AnimationRefs::Anim_cubeMoves));
             }

@@ -1,13 +1,13 @@
 #pragma once
 
 #include "classes.h"
+#include "game_api.h"
 #include "inits.h"
 #include "local.h"
 #include "parser.h"
 #include "programs.h"
 #include "scene_hierarchy.h"
 #include "textures.h"
-#include "../actors/Player.h"
 #include "../editor/Editor.h"
 
 // structures
@@ -53,7 +53,7 @@ inline glm::mat4 view{1.0f};
 inline glm::mat4 projection{1.0f};
 
 // selected object and ray casting
-inline int selectedObject = -1;
+inline size_t selectedObject = -1;
 
 inline glm::vec3 rayOrigin{};
 inline glm::vec3 rayDir{};
@@ -76,7 +76,7 @@ inline glm::mat4 captureViews[] = {
 // grid
 inline constexpr float STEP = 25.0f;
 inline constexpr float cellSize = 90.0f;
-inline int gridVertexCount = 0;
+inline GLsizei gridVertexCount = 0;
 
 // folder and textures
 inline std::string dirPath = "data/textures";

@@ -148,7 +148,7 @@ namespace PlayerActor {
         rampUphillBlock = false;
     }
 
-    void RegisterCollision(Object &a, Object &b, const Contact &contact) {
+    static void RegisterCollisionObjects(Object &a, Object &b, const Contact &contact) {
 
         if (!contact.hit || a.collider.isTrigger || b.collider.isTrigger)
             return;
@@ -160,10 +160,12 @@ namespace PlayerActor {
         Object *playerObject = nullptr;
 
         if (a.name == "Player") {
+
             playerObject = &a;
             supportNormal = -contact.normal;
 
         } else if (b.name == "Player") {
+
             playerObject = &b;
             supportNormal = contact.normal;
         }
@@ -231,9 +233,20 @@ namespace PlayerActor {
         }
     }
 
-    void Control(const bool *keyboard, float dt, Object &player) {
+    void RegisterCollision(EntityID aID, EntityID bID, const Contact &contact) {
 
-        bool jumpActionDown = keyboard[SDL_SCANCODE_SPACE];
+        Object *a = FindObjectByID(aID);
+        Object *b = FindObjectByID(bID);
+
+        if (!a || !b)
+            return;
+
+        RegisterCollisionObjects(*a, *b, contact);
+    }
+
+    static void ControlObject(const PlayerInput &input, float dt, Object &player) {
+
+        bool jumpActionDown = input.jump;
 
         if (jumpActionDown && !jumpActionWasDown)
             QueueJumpInput();
@@ -282,16 +295,16 @@ namespace PlayerActor {
         glm::vec3 right = glm::normalize(glm::cross(forward, glm::vec3(0.0f, 1.0f, 0.0f)));
         glm::vec3 moveDirection(0.0f);
 
-        if (keyboard[SDL_SCANCODE_W])
+        if (input.moveForward)
             moveDirection += forward;
 
-        if (keyboard[SDL_SCANCODE_S])
+        if (input.moveBackward)
             moveDirection -= forward;
 
-        if (keyboard[SDL_SCANCODE_A])
+        if (input.moveLeft)
             moveDirection -= right;
 
-        if (keyboard[SDL_SCANCODE_D])
+        if (input.moveRight)
             moveDirection += right;
 
         if (rampUphillBlock) {
@@ -312,7 +325,7 @@ namespace PlayerActor {
         //-----------------------------------------------------------------------------
         // slide
 
-        bool shiftDown = keyboard[SDL_SCANCODE_LSHIFT];
+        bool shiftDown = input.slide;
         bool shiftPressed = shiftDown && !shiftWasDown;
         bool hasMove = glm::length2(moveDirection) > 0.0001f;
         bool slideWasActive = sliding;
@@ -694,7 +707,17 @@ namespace PlayerActor {
         }
     }
 
-    void UpdateCamera(Object &player, float dt) {
+    void Control(EntityID playerID, const PlayerInput &input, float dt) {
+
+        Object *playerObject = FindObjectByID(playerID);
+
+        if (!playerObject)
+            return;
+
+        ControlObject(input, dt, *playerObject);
+    }
+
+    static void UpdateCameraObject(Object &player, float dt) {
 
         constexpr float maxPitch = glm::radians(89.0f);
 
@@ -760,4 +783,17 @@ namespace PlayerActor {
         cameraState.cam_up = glm::vec3(0.0f, 1.0f, 0.0f);
     }
 
+    void UpdateCamera(EntityID playerID, float dt) {
+
+        Object *playerObject = FindObjectByID(playerID);
+
+        if (!playerObject)
+            return;
+
+        UpdateCameraObject(*playerObject, dt);
+    }
+
+    
+
 }
+

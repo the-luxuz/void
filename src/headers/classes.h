@@ -2,13 +2,12 @@
 
 #include "local.h"
 #include "video_player.h"
+#include "entity_id.h"
 
 #include <algorithm>
 #include <glm/gtx/quaternion.hpp>
 #include <unordered_map>
 #include <variant>
-
-using EntityID = uint64_t;
 
 inline EntityID nextEntityID = 1;
 
@@ -60,10 +59,10 @@ struct VideoQuad {
 
 struct Program {
 
-    GLuint id;
+    GLuint id = 0;
 
-    GLint mvpLoc;
-    GLint textureLoc;
+    GLint mvpLoc = 0;
+    GLint textureLoc = 0;
 };
 
 enum class window_mode {
@@ -88,13 +87,13 @@ enum CollisionLayer {
 
 struct Contact {
 
-    bool hit;
+    bool hit = false;
 
-    glm::vec3 normal;
+    glm::vec3 normal = glm::vec3(0.0f);
 
-    float penetration;
+    float penetration = 0.0f;
 
-    glm::vec3 point;
+    glm::vec3 point = glm::vec3(0.0f);
 };
 
 struct Collider {
@@ -122,14 +121,14 @@ struct ColliderTransform {
 
 struct Vertex {
 
-    glm::vec3 position;
-    glm::vec3 normal;
-    glm::vec2 uv;
+    glm::vec3 position = glm::vec3(0.0f);
+    glm::vec3 normal = glm::vec3(0.0f);
+    glm::vec2 uv = glm::vec2(0.0f);
 
     glm::vec2 originalUV = uv;
 
-    glm::vec3 tangent;
-    glm::vec3 bitangent;
+    glm::vec3 tangent = glm::vec3(0.0f);
+    glm::vec3 bitangent = glm::vec3(0.0f);
 };
 
 struct Physics {
@@ -155,32 +154,33 @@ struct Physics {
 
 struct ObjectState {
 
-    glm::vec3 position;
-    glm::quat rotation;
-    glm::vec3 scale;
+    glm::vec3 position = glm::vec3(0.0f);
+    glm::quat rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+    glm::vec3 scale = glm::vec3(1.0f);
     EntityID parentID = 0;
 
     std::string name;
     std::string mesh;
 
-    GLuint obj_texture;
+    GLuint obj_texture = 0;
     std::string tex; // has the texture path
 
-    glm::vec3 min, max;
+    glm::vec3 min = glm::vec3(0.0f);
+    glm::vec3 max = glm::vec3(0.0f);
 
-    TextureMapping mapping;
-    coord_types coordType;
-    cylinder_axis cyaxisType;
+    TextureMapping mapping = TextureMapping::UV;
+    coord_types coordType = coord_types::XZ;
+    cylinder_axis cyaxisType = cylinder_axis::Y;
 
-    GLuint normalTexture;
+    GLuint normalTexture = 0;
     std::string norm_map;
 
-    bool hasNormalMap;
+    bool hasNormalMap = false;
 
-    float shininess;
+    float shininess = 20.0f;
 
     Physics physics;
-    bool hasPhysics;
+    bool hasPhysics = false;
 
     Collider collider;
     ColliderTransform colliderTransform;
@@ -201,28 +201,28 @@ struct ObjectState {
 
 struct LightState {
 
-    glm::vec3 col;
-    glm::vec3 att;
+    glm::vec3 col = glm::vec3(1.0f);
+    glm::vec3 att = glm::vec3(1.0f, 0.0f, 0.0f);
 
-    float ambient;
+    float ambient = 0.0f;
 
-    float inner;
-    float outer;
-    float falloff;
+    float inner = 0.0f;
+    float outer = 0.0f;
+    float falloff = 0.0f;
 
-    float bias;
-    float pcf;
+    float bias = 0.0f;
+    float pcf = 0.0f;
 
     std::string type;
 
-    GLuint typeID;
+    GLuint typeID = 0;
 
     bool hasAnimation = true;
 };
 
 struct LineVertex {
 
-    glm::vec3 position;
+    glm::vec3 position = glm::vec3(0.0f);
 };
 
 struct Material {
@@ -257,14 +257,20 @@ struct Material {
 };
 
 struct Submesh {
+
     GLuint firstIndex = 0;
     GLuint indexCount = 0;
+
     Material material;
+
     glm::vec3 min = glm::vec3(0.0f);
     glm::vec3 max = glm::vec3(0.0f);
 };
 
 struct Settings {
+
+    Settings() : win_mode(window_mode::WINDOWED), last_win_mode(window_mode::WINDOWED), win_name("Void Engine"), skybox(""),
+                 w(1280), h(720), windowed_w(0), windowed_h(0), fov(90.0f), VSync(true) {}
 
     window_mode win_mode;
 
@@ -303,7 +309,9 @@ struct camera {
     float nearPlane;
     float farPlane;
 
-    float alpha, beta, radius;
+    float alpha = 0.0f;
+    float beta = 0.0f;
+    float radius = 0.0f;
 
     glm::vec3 cam_position;
     glm::vec3 cam_target;
@@ -364,7 +372,8 @@ struct Object {
 
     uint32_t importedMeshIndex = 0;
 
-    glm::vec3 min, max;
+    glm::vec3 min = glm::vec3(0.0f);
+    glm::vec3 max = glm::vec3(0.0f);
 
     TextureMapping mapping = TextureMapping::UV;
     coord_types coordType = coord_types::XZ;
@@ -373,8 +382,8 @@ struct Object {
     std::vector<ObjectState> undoStack;
     std::vector<ObjectState> redoStack;
 
-    glm::mat4 model;
-    glm::mat4 mvp;
+    glm::mat4 model = glm::mat4(1.0f);
+    glm::mat4 mvp = glm::mat4(1.0f);
 
     std::string type;
 
@@ -415,25 +424,25 @@ struct Light {
 
     std::string name;
 
-    glm::vec3 pos;
-    glm::vec3 dir;
-    glm::vec3 col;
-    glm::vec3 att;
+    glm::vec3 pos = glm::vec3(0.0f);
+    glm::vec3 dir = glm::vec3(0.0f, -1.0f, 0.0f);
+    glm::vec3 col = glm::vec3(1.0f);
+    glm::vec3 att = glm::vec3(1.0f, 0.0f, 0.0f);
 
-    glm::quat rotation;
+    glm::quat rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
 
-    float ambient;
+    float ambient = 0.0f;
 
-    float inner;
-    float outer;
-    float falloff;
+    float inner = 0.0f;
+    float outer = 0.0f;
+    float falloff = 0.0f;
 
-    float bias;
-    float pcf;
+    float bias = 0.0f;
+    float pcf = 0.0f;
 
     std::string type;
 
-    GLuint typeID;
+    GLuint typeID = 0;
 
     std::vector<Vertex> vertices;
     std::vector<GLuint> indices;
@@ -524,77 +533,77 @@ inline void ApplyState(Object &o, const ObjectState &s) {
 
 struct Shader_Uniform {
 
-    GLint grid_MVP;
+    GLint grid_MVP = 0;
 
-    GLint program_texture;
+    GLint program_texture = 0;
 
-    GLint depthdata[MAX_LIGHTS];
+    GLint depthdata[MAX_LIGHTS] = {};
 
-    GLint light_type[MAX_LIGHTS];
-    GLint light_pos[MAX_LIGHTS];
-    GLint light_dir[MAX_LIGHTS];
-    GLint light_col[MAX_LIGHTS];
-    GLint light_att[MAX_LIGHTS];
-    GLint light_ambient[MAX_LIGHTS];
-    GLint light_bias[MAX_LIGHTS];
-    GLint light_pcf[MAX_LIGHTS];
-    GLint light_inner[MAX_LIGHTS];
-    GLint light_outer[MAX_LIGHTS];
-    GLint light_falloff[MAX_LIGHTS];
+    GLint light_type[MAX_LIGHTS] = {};
+    GLint light_pos[MAX_LIGHTS] = {};
+    GLint light_dir[MAX_LIGHTS] = {};
+    GLint light_col[MAX_LIGHTS] = {};
+    GLint light_att[MAX_LIGHTS] = {};
+    GLint light_ambient[MAX_LIGHTS] = {};
+    GLint light_bias[MAX_LIGHTS] = {};
+    GLint light_pcf[MAX_LIGHTS] = {};
+    GLint light_inner[MAX_LIGHTS] = {};
+    GLint light_outer[MAX_LIGHTS] = {};
+    GLint light_falloff[MAX_LIGHTS] = {};
 
-    GLint lightVP;
+    GLint lightVP = 0;
 
-    GLint normalMap;
-    GLint roughnessMap;
-    GLint metallicMap;
-    GLint emissionMap;
-    GLint opacityMap;
+    GLint normalMap = 0;
+    GLint roughnessMap = 0;
+    GLint metallicMap = 0;
+    GLint emissionMap = 0;
+    GLint opacityMap = 0;
 
-    GLint numLights;
+    GLint numLights = 0;
 
-    GLint light_active;
-    GLint normal_map_active;
-    GLint shadow_active;
+    GLint light_active = 0;
+    GLint normal_map_active = 0;
+    GLint shadow_active = 0;
 
-    GLint cameraPos;
+    GLint cameraPos = 0;
 
-    GLint hasNormalMap;
-    GLint hasRoughnessMap;
-    GLint hasMetallicMap;
-    GLint packedMetallicRoughnessMap;
-    GLint hasEmissionMap;
-    GLint hasOpacityMap;
-    GLint materialRoughness;
-    GLint materialMetallic;
-    GLint materialEmission;
-    GLint materialOpacity;
+    GLint hasNormalMap = 0;
+    GLint hasRoughnessMap = 0;
+    GLint hasMetallicMap = 0;
+    GLint packedMetallicRoughnessMap = 0;
+    GLint hasEmissionMap = 0;
+    GLint hasOpacityMap = 0;
+    GLint materialRoughness = 0;
+    GLint materialMetallic = 0;
+    GLint materialEmission = 0;
+    GLint materialOpacity = 0;
 
-    GLint program_line_color;
+    GLint program_line_color = 0;
 
-    GLint skybox_view;
+    GLint skybox_view = 0;
 
-    GLint skybox_projection;
+    GLint skybox_projection = 0;
 
-    GLint is_hdr;
+    GLint is_hdr = 0;
 
-    GLint program_skybox_skybox;
+    GLint program_skybox_skybox = 0;
 
-    GLint color;
+    GLint color = 0;
 
-    GLint useTexture;
+    GLint useTexture = 0;
 
-    GLint textureTiling;
+    GLint textureTiling = 0;
 
-    GLint mapping;
+    GLint mapping = 0;
 
-    GLint min;
-    GLint max;
+    GLint min = 0;
+    GLint max = 0;
 
-    GLint worldSize;
+    GLint worldSize = 0;
 
-    GLint tiling;
+    GLint tiling = 0;
 
-    GLint renderBothSides;
+    GLint renderBothSides = 0;
 
     bool class_uniforms_initialized = false;
 };
@@ -638,16 +647,16 @@ using AnimationValue = std::variant<float, int, bool, glm::vec3, glm::quat, std:
 struct AnimationKey {
 
     float time = 0.0f;
-    AnimationValue value;
+    AnimationValue value = 0.0f;
 };
 
 struct AnimationTrack {
 
-    AnimationTargetType targetType;
+    AnimationTargetType targetType = AnimationTargetType::Object;
 
-    EntityID targetID;
+    EntityID targetID = 0;
 
-    AnimationProperty property;
+    AnimationProperty property = AnimationProperty::Position;
 
     std::vector<AnimationKey> keys;
 };
@@ -669,7 +678,7 @@ using AnimationPlayerID = uint32_t;
 
 struct AnimationPlayer {
 
-    AnimationPlayerID id;
+    AnimationPlayerID id = 0;
 
     int current_animation = -1;
 
