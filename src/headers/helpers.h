@@ -7,6 +7,7 @@
 #include "programs.h"
 #include "scene_hierarchy.h"
 #include "textures.h"
+#include "../actors/Player.h"
 
 // structures
 inline camera cam;
@@ -55,6 +56,7 @@ inline int selectedObject = -1;
 
 inline glm::vec3 rayOrigin{};
 inline glm::vec3 rayDir{};
+inline bool playerRayFired = false;
 
 // movement
 inline float moveSpeed = 1000.0f;

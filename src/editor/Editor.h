@@ -1,9 +1,8 @@
 #pragma once
 
-#include "Inspector.h"
-#include "Hierarchy.h"
-#include "Guizmo.h"
-#include "Browser.h"
-
+#include "inspector.h"
+#include "hierarchy.h"
+#include "guizmo_editor.h"
+#include "browser.h"
 
 void Editor();

@@ -1,8 +1,9 @@
-#include "Player.h"
-
-#include "../headers/helpers.h"
+#include "player.h"
 
 namespace PlayerActor {
+
+    static EntityID eyeHeightTrackedPlayerID = 0;
+    static float previousCameraEyeHeight = cameraEyeHeight;
 
     static constexpr float GroundSlopeUpDotThreshold = 0.999f;
     static EntityID viewRotationPlayerID = 0;
@@ -697,9 +698,29 @@ namespace PlayerActor {
 
         constexpr float maxPitch = glm::radians(89.0f);
 
-        float effectiveEyeHeight = cameraEyeHeight * (1.0f - (1.0f - slideCrouchScale) * crouchAmount);
+        glm::vec3 playerBoundsMin;
+        glm::vec3 playerBoundsMax;
+        GetWorldBounds(player, playerBoundsMin, playerBoundsMax);
 
-        glm::vec3 desiredPosition = player.position + glm::vec3(0.0f, effectiveEyeHeight, 0.0f);
+        const float playerWorldHeight = playerBoundsMax.y - playerBoundsMin.y;
+        const float eyeHeightRatio = glm::clamp(cameraEyeHeight / 2.0f, 0.05f, 0.98f);
+        const float eyeY = playerWorldHeight > 0.001f
+            ? playerBoundsMin.y + playerWorldHeight * eyeHeightRatio
+            : player.position.y + cameraEyeHeight;
+
+        glm::vec3 desiredPosition = glm::vec3(player.position.x, eyeY, player.position.z);
+
+        // Apply runtime edits to Eye height immediately instead of waiting for camera follow smoothing.
+        if (eyeHeightTrackedPlayerID != player.id) {
+            eyeHeightTrackedPlayerID = player.id;
+            previousCameraEyeHeight = cameraEyeHeight;
+        } else if (!cameraInitialized) {
+            previousCameraEyeHeight = cameraEyeHeight;
+        } else if (cameraInitialized && cameraEyeHeight != previousCameraEyeHeight) {
+            float heightPerEyeUnit = playerWorldHeight * 0.5f;
+            cameraState.cam_position.y += (cameraEyeHeight - previousCameraEyeHeight) * heightPerEyeUnit;
+            previousCameraEyeHeight = cameraEyeHeight;
+        }
 
         if (!cameraInitialized) {
 

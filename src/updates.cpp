@@ -35,6 +35,84 @@ static bool IsBoundsVisible(const glm::mat4 &clipMatrix, const glm::vec3 &min, c
            !allOutside([](const glm::vec4 &p) { return p.z > p.w; });
 }
 
+static GLuint playerRayVAO = 0;
+static GLuint playerRayVBO = 0;
+
+static void DrawPlayerRay() {
+
+    if (currentViewMode != view_Mode::PLAY || !player)
+        return;
+
+    if (!playerRayVAO) {
+
+        glGenVertexArrays(1, &playerRayVAO);
+        glGenBuffers(1, &playerRayVBO);
+
+        glBindVertexArray(playerRayVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, playerRayVBO);
+
+        glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 36, nullptr, GL_DYNAMIC_DRAW);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), nullptr);
+
+        glEnableVertexAttribArray(0);
+        glBindVertexArray(0);
+    }
+
+    constexpr float rayLength = 100.0f;
+
+    glm::vec3 rayEnd = rayOrigin + rayDir * rayLength;
+    glm::mat4 inverseView = glm::inverse(view);
+
+    glm::vec3 cameraRight = glm::normalize(glm::vec3(inverseView[0]));
+    glm::vec3 cameraUp = glm::normalize(glm::vec3(inverseView[1]));
+
+    constexpr float startWidth = 0.025f;
+    constexpr float endWidth = 0.35f;
+
+    glm::vec3 startRight = cameraRight * startWidth;
+    glm::vec3 endRight = cameraRight * endWidth;
+
+    glm::vec3 startUp = cameraUp * startWidth;
+    glm::vec3 endUp = cameraUp * endWidth;
+
+    glm::vec3 points[] = {
+
+        rayOrigin - startRight, rayEnd - endRight, rayEnd + endRight,
+        rayOrigin - startRight, rayEnd + endRight, rayOrigin + startRight,
+        rayOrigin - startUp, rayEnd - endUp, rayEnd + endUp,
+        rayOrigin - startUp, rayEnd + endUp, rayOrigin + startUp,
+    };
+
+    glUseProgram(program_line);
+
+    glm::mat4 mvp = projection * view;
+
+    glUniformMatrix4fv(3, 1, GL_FALSE, glm::value_ptr(mvp));
+
+    glUniform3f(shader_uniform.program_line_color, playerRayFired ? 0.0f : 1.0f, playerRayFired ? 1.0f : 0.0f, 0.0f);
+
+    bool depthTestWasEnabled = glIsEnabled(GL_DEPTH_TEST);
+    bool cullingWasEnabled = glIsEnabled(GL_CULL_FACE);
+
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
+
+    glBindVertexArray(playerRayVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, playerRayVBO);
+
+    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(points), points);
+
+    glDrawArrays(GL_TRIANGLES, 0, 12);
+
+    glBindVertexArray(0);
+
+    if (depthTestWasEnabled)
+        glEnable(GL_DEPTH_TEST);
+
+    if (cullingWasEnabled)
+        glEnable(GL_CULL_FACE);
+}
+
 //--------------------------------------------------------------------------
 // this is crazy work from ai
 
@@ -533,6 +611,8 @@ void update_objects() {
 
     if (!st.wireframe_active)
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+    DrawPlayerRay();
 }
 
 //--------------------------------------------------------------------------

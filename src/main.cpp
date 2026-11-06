@@ -34,8 +34,6 @@ static float fps = 0.0f;
 constexpr float fixedDt = 1.0f / 60.0f;
 constexpr int maxSimulationStepsPerFrame = 6;
 
-Object *player = nullptr;
-
 SDL_DisplayID display;
 SDL_Rect rect;
 
@@ -70,6 +68,8 @@ void update(SDL_Window *window, float dt) {
                 if (player)
                     PlayerActor::UpdateCamera(*player, 0.0f);
 
+                playerRayFired = false;
+
             } else {
 
                 load_scene_state();
@@ -85,6 +85,10 @@ void update(SDL_Window *window, float dt) {
 
             cameraPos = PlayerActor::cameraState.cam_position;
             view = glm::lookAt(cameraPos, PlayerActor::cameraState.cam_target, PlayerActor::cameraState.cam_up);
+
+            // Keep the weapon ray aligned with the center of the player's view.
+            BuildRay(viewport_width * 0.5f, viewport_height * 0.5f, rayOrigin, rayDir);
+            rayOrigin = PlayerActor::cameraState.cam_position;
 
         } else {
 
@@ -817,6 +821,14 @@ int main() {
                     }
 
                     break;
+
+                } else if (currentViewMode == view_Mode::PLAY && player) {
+                
+                    if (event.button.button == SDL_BUTTON_LEFT) {
+
+                        playerRayFired = true;
+
+                    }
                 }
 
                 break;

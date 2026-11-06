@@ -1,4 +1,4 @@
-#include "Hierarchy.h"
+#include "hierarchy.h"
 
 static int FindObjectIndex(EntityID id) {
 

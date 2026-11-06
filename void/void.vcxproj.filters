@@ -81,9 +81,6 @@
     <ClCompile Include="..\src\classes.cpp">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\actors\Player.cpp">
-      <Filter>Archivos de origen</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\imgui_helpers.cpp">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
@@ -93,26 +90,26 @@
     <ClCompile Include="..\src\scene_hierarchy.cpp">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\editor\Browser.cpp">
+    <ClCompile Include="..\src\editor\guizmo_editor.cpp">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\editor\Editor.cpp">
+    <ClCompile Include="..\src\editor\hierarchy.cpp">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\editor\Guizmo.cpp">
+    <ClCompile Include="..\src\editor\inspector.cpp">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\editor\Hierarchy.cpp">
+    <ClCompile Include="..\src\editor\browser.cpp">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\editor\Inspector.cpp">
+    <ClCompile Include="..\src\editor\editor.cpp">
+      <Filter>Archivos de origen</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\actors\player.cpp">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\actors\Player.h">
-      <Filter>Archivos de encabezado</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\headers\classes.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
@@ -161,22 +158,25 @@
     <ClInclude Include="..\src\headers\scene_hierarchy.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\editor\Browser.h">
-      <Filter>Archivos de encabezado</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\editor\Editor.h">
-      <Filter>Archivos de encabezado</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\editor\editorLocal.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\editor\Guizmo.h">
+    <ClInclude Include="..\src\editor\guizmo_editor.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\editor\Hierarchy.h">
+    <ClInclude Include="..\src\editor\hierarchy.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\editor\Inspector.h">
+    <ClInclude Include="..\src\editor\inspector.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\browser.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\editor.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\actors\player.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
   </ItemGroup>

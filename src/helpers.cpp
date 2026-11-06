@@ -1,5 +1,4 @@
 #include "headers/helpers.h"
-#include "actors/Player.h"
 
 #include <cstring>
 #include <limits>
@@ -1386,7 +1385,7 @@ bool RayVsAABB(const glm::vec3 &rayOrigin, const glm::vec3 &rayDir, const glm::v
     return true;
 }
 
-void BuildRay(float mouseX, float mouseY, glm::vec3 &rayOrigin, glm::vec3 &rayDir) {
+void BuildRay(float mouseX, float mouseY, glm::vec3& rayOrigin, glm::vec3& rayDir) {
 
     float x = (2.0f * mouseX) / viewport_width - 1.0f;
     float y = 1.0f - (2.0f * mouseY) / viewport_height;

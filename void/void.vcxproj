@@ -157,14 +157,14 @@
     <ClCompile Include="..\external\tinyexr\deps\miniz\miniz.c" />
     <ClCompile Include="..\external\tinyexr\deps\zstd\tinyexr_zstd.c" />
     <ClCompile Include="..\external\tinyexr\tinyexr.cc" />
+    <ClCompile Include="..\src\actors\player.cpp" />
     <ClCompile Include="..\src\buffers.cpp" />
     <ClCompile Include="..\src\classes.cpp" />
-    <ClCompile Include="..\src\actors\Player.cpp" />
-    <ClCompile Include="..\src\editor\Browser.cpp" />
-    <ClCompile Include="..\src\editor\Editor.cpp" />
-    <ClCompile Include="..\src\editor\Guizmo.cpp" />
-    <ClCompile Include="..\src\editor\Hierarchy.cpp" />
-    <ClCompile Include="..\src\editor\Inspector.cpp" />
+    <ClCompile Include="..\src\editor\browser.cpp" />
+    <ClCompile Include="..\src\editor\editor.cpp" />
+    <ClCompile Include="..\src\editor\guizmo_editor.cpp" />
+    <ClCompile Include="..\src\editor\hierarchy.cpp" />
+    <ClCompile Include="..\src\editor\inspector.cpp" />
     <ClCompile Include="..\src\helpers.cpp" />
     <ClCompile Include="..\src\ImGuizmo.cpp" />
     <ClCompile Include="..\src\imgui_helpers.cpp" />
@@ -179,16 +179,16 @@
     <ClCompile Include="..\src\video_player.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\actors\Player.h" />
     <ClInclude Include="..\external\tinyexr\deps\miniz\miniz.h" />
     <ClInclude Include="..\external\tinyexr\deps\zstd\tinyexr_zstd.h" />
     <ClInclude Include="..\external\tinyexr\tinyexr.h" />
-    <ClInclude Include="..\src\editor\Browser.h" />
-    <ClInclude Include="..\src\editor\Editor.h" />
+    <ClInclude Include="..\src\actors\player.h" />
+    <ClInclude Include="..\src\editor\browser.h" />
+    <ClInclude Include="..\src\editor\editor.h" />
     <ClInclude Include="..\src\editor\editorLocal.h" />
-    <ClInclude Include="..\src\editor\Guizmo.h" />
-    <ClInclude Include="..\src\editor\Hierarchy.h" />
-    <ClInclude Include="..\src\editor\Inspector.h" />
+    <ClInclude Include="..\src\editor\guizmo_editor.h" />
+    <ClInclude Include="..\src\editor\hierarchy.h" />
+    <ClInclude Include="..\src\editor\inspector.h" />
     <ClInclude Include="..\src\headers\buffers.h" />
     <ClInclude Include="..\src\headers\classes.h" />
     <ClInclude Include="..\src\headers\helpers.h" />

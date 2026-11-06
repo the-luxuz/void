@@ -1,4 +1,4 @@
-#include "Inspector.h"
+#include "inspector.h"
 
 static glm::quat LightRotationFromDirection(glm::vec3 direction) {
 

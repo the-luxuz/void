@@ -1,4 +1,4 @@
-#include "Editor.h"
+#include "editor.h"
 
 void Editor(){
 

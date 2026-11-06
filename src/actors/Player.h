@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../headers/classes.h"
+#include "../headers/helpers.h"
 
 namespace PlayerActor {
 
@@ -50,12 +51,15 @@ namespace PlayerActor {
 	inline float slideCarryLandingStartSpeed = 0.0f;
 	inline float slideJumpReleaseWindowDuration = 0.12f;
 	inline float slideJumpReleaseWindowRemaining = 0.0f;
+
 	inline float releasedSlideSpeed = 0.0f;
 	inline glm::vec3 releasedSlideDirection(0.0f);
+
 	inline bool standingScaleInitialized = false;
 	inline glm::vec3 standingScale(1.0f);
+
 	inline float speedFovOffset = 0.0f;
-	inline float speedFovIncrease = 8.0f;
+	inline float speedFovIncrease = 5.0f;
 	inline float speedFovReferenceMultiplier = 1.5f;
 	inline float speedFovChangeSpeed = 80.0f;
 
