@@ -6,7 +6,6 @@
 #include "inits.h"
 #include "buffers.h"
 #include "imgui_helpers.h"
-#include "editor/Editor.h"
 
 //--------------------------------------------------------------------------
 // global variables

@@ -781,11 +781,11 @@ struct Event {
 
 struct PlaySoundEvent : public Event {
 
-    PlaySoundEvent(std::string p, float v) : path(p), volume(v) {
-    }
+    PlaySoundEvent(std::string p, float v) : path(p), volume(v) {}
 
     EventType GetType() const override {
-  return EventType::PlaySound;
+
+        return EventType::PlaySound;
     }
 
     std::string path;
@@ -797,11 +797,11 @@ int FindAnimations(std::string name, EntityID objId);
 //
 // struct StopSoundEvent : public Event{
 //
-//    StopSoundEvent(std::string p, float v) : path(p), volume(v)
-//    {}
+//    StopSoundEvent(std::string p, float v) : path(p), volume(v) {}
 //
 //    EventType GetType() const override {
-//  return EventType::StopSound;
+// 
+//      return EventType::StopSound;
 //    }
 //
 //    std::string path;
@@ -810,12 +810,11 @@ int FindAnimations(std::string name, EntityID objId);
 
 struct PlayAnimationEvent : public Event {
 
-    PlayAnimationEvent(const std::string &animation) : animation(animation) {
-    }
+    PlayAnimationEvent(const std::string &animation) : animation(animation) {}
 
     EventType GetType() const override {
 
-  return EventType::PlayAnimation;
+        return EventType::PlayAnimation;
     }
 
     std::string animation;
@@ -823,12 +822,11 @@ struct PlayAnimationEvent : public Event {
 
 struct PlayCinematicEvent : public Event {
 
-    PlayCinematicEvent(const std::string &p) : path(p) {
-    }
+    PlayCinematicEvent(const std::string &p) : path(p) {}
 
     EventType GetType() const override {
 
-  return EventType::StartCinematic;
+         return EventType::StartCinematic;
     }
 
     std::string path;

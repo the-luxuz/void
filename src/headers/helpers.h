@@ -8,6 +8,7 @@
 #include "scene_hierarchy.h"
 #include "textures.h"
 #include "../actors/Player.h"
+#include "../editor/Editor.h"
 
 // structures
 inline camera cam;
@@ -160,7 +161,7 @@ bool load_scene_ok(const char *scene);
 //--------------------------------------------------------------------------
 // ImGui docking
 
-inline bool animationWindow = false;
+inline bool animationWindow = true;
 
 void Docking();
 

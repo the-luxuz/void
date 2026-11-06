@@ -123,7 +123,6 @@ static void DrawLightGuides(const Light &light, const Object &lightObject) {
     drawList->PopClipRect();
 }
 
-
 //--------------------------------------------------------------------------
 // Update Collisions
 
@@ -150,7 +149,6 @@ Object GetColliderProxy(const Object &object) {
 
     return proxy;
 }
-
 
 static void DrawColliderWireframe(Object &object) {
 

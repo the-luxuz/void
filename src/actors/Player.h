@@ -44,7 +44,7 @@ namespace PlayerActor {
 	inline bool slideCarryActive = false;
 	inline float slideCarrySpeed = 0.0f;
 	inline glm::vec3 slideCarryDirection(0.0f);
-	inline float slideAirTurnDegreesPerSecond = 320.0f;
+	inline float slideAirTurnDegreesPerSecond = 360.0f;
 	inline float slideCarryLandingDecayDuration = 0.04f;
 	inline float slideCarryLandingDecayRemaining = 0.0f;
 	inline bool slideCarryLandingDecayStarted = false;

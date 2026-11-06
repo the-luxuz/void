@@ -55,6 +55,22 @@ void UpdateAnimationImGui() {
         animationPreviewPlayer.playing = false;
     }
 
+    ImGui::SameLine();
+
+    if (ImGui::Button("Delete")) {
+
+        if (animationPreviewPlayer.current_animation >= 0 && animationPreviewPlayer.current_animation < static_cast<int>(animations.size())) {
+
+            animations.erase(animations.begin() + animationPreviewPlayer.current_animation);
+
+            animationPreviewPlayer.current_animation = -1;
+
+            animationPreviewPlayer.time = 0.0f;
+
+            animationPreviewPlayer.playing = false;
+        }
+    }
+
     if (ImGui::Button(animationPreviewPlayer.playing ? "Pause" : "Play")) {
 
         animationPreviewPlayer.playing = !animationPreviewPlayer.playing;
