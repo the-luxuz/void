@@ -36,7 +36,7 @@ struct GameAPI {
 
     std::uint32_t version = GAME_API_VERSION;
 
-    // Game module lifecycle and player fixed-step update.
+    // game module lifecycle and player fixed-step update
     bool (*Load)() = nullptr;
     void (*Update)(EntityID playerID, const PlayerInput *input, float dt) = nullptr;
     void (*UpdatePlayerCamera)(EntityID playerID, float dt) = nullptr;
@@ -45,15 +45,15 @@ struct GameAPI {
     void (*OnPlayStart)() = nullptr;
     void (*OnPlayStop)() = nullptr;
 
-    // Player input and camera callbacks.
+    // player input and camera callbacks
     void (*OnMouseLook)(float deltaX, float deltaY) = nullptr;
     void (*OnJumpPressed)() = nullptr;
 
-    // Simulation callbacks. The game module routes these to the actors/systems that need them.
+    // simulation callbacks. The game module routes these to the actors/systems that need them
     void (*BeginSimulationStep)() = nullptr;
     void (*OnCollision)(EntityID aID, EntityID bID, const GameContact *contact) = nullptr;
 
-    // Data/UI requested by the Runtime.
+    // data/UI requested by the Runtime
     void (*GetCameraState)(GameCameraState *cameraState) = nullptr;
     void (*DrawSettingsUI)() = nullptr;
 };
