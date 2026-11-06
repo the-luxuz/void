@@ -54,6 +54,7 @@ static void RefreshPlayerEntityID() {
 static PlayerInput BuildPlayerInput(const bool *keyboard) {
 
     PlayerInput input{};
+
     input.moveForward = keyboard[SDL_SCANCODE_W];
     input.moveBackward = keyboard[SDL_SCANCODE_S];
     input.moveLeft = keyboard[SDL_SCANCODE_A];
@@ -62,6 +63,30 @@ static PlayerInput BuildPlayerInput(const bool *keyboard) {
     input.slide = keyboard[SDL_SCANCODE_LSHIFT];
 
     return input;
+}
+
+static void FirePlayerShot(const glm::vec3 &origin, const glm::vec3 &target) {
+
+    constexpr float shotRange = 2000.0f;
+
+    glm::vec3 shotDirection = target - origin;
+
+    if (glm::length2(shotDirection) <= 0.000001f)
+        return;
+
+    shotDirection = glm::normalize(shotDirection);
+
+    playerShotRayOrigin = origin;
+
+    RaycastHit hit{};
+
+    playerRayHit = shoot_object(playerShotRayOrigin, shotDirection, shotRange, hit);
+    playerShotRayEnd = playerRayHit ? hit.point : playerShotRayOrigin + shotDirection * shotRange;
+
+    rayOrigin = playerShotRayOrigin;
+    rayDir = shotDirection;
+
+    playerRayFired = true;
 }
 
 void update(SDL_Window *window, float dt) {
@@ -88,12 +113,15 @@ void update(SDL_Window *window, float dt) {
                 if (playerEntityID != 0)
                     gameAPI->UpdatePlayerCamera(playerEntityID, 0.0f);
 
+                playerShotPending = false;
                 playerRayFired = false;
 
             } else {
 
                 load_scene_state();
                 gameAPI->OnPlayStop();
+                playerShotPending = false;
+                playerRayFired = false;
             }
 
             prevViewMode = currentViewMode;
@@ -125,13 +153,31 @@ void update(SDL_Window *window, float dt) {
 
         float activeFov = st.fov + (usePlayerCamera ? playerCamera.speedFovOffset : 0.0f);
         static float lastProjectionFov = -1.0f;
+        static float lastProjectionAspect = -1.0f;
 
-        if (camera_update || std::abs(activeFov - lastProjectionFov) > 0.001f) {
+        float renderWidth = currentViewMode == view_Mode::PLAY ? static_cast<float>(st.w) : static_cast<float>(viewport_width);
+        float renderHeight = currentViewMode == view_Mode::PLAY ? static_cast<float>(st.h) : static_cast<float>(viewport_height);
+        float aspectRatio = renderHeight > 0.0f ? renderWidth / renderHeight : 1.0f;
 
-            projection = glm::perspective(glm::radians(activeFov), (float)viewport_width / viewport_height, cam.nearPlane, cam.farPlane);
+        if (camera_update || std::abs(activeFov - lastProjectionFov) > 0.001f ||
+            std::abs(aspectRatio - lastProjectionAspect) > 0.001f) {
+
+            projection = glm::perspective(glm::radians(activeFov), aspectRatio, cam.nearPlane, cam.farPlane);
 
             camera_update = false;
             lastProjectionFov = activeFov;
+            lastProjectionAspect = aspectRatio;
+        }
+
+        if (playerShotPending) {
+
+            playerShotPending = false;
+
+            if (usePlayerCamera) {
+
+                glm::vec3 cameraTarget(playerCamera.target[0], playerCamera.target[1], playerCamera.target[2]);
+                FirePlayerShot(cameraPos, cameraTarget);
+            }
         }
 
         if (currentViewMode == view_Mode::EDITOR) {
@@ -259,6 +305,18 @@ void update(SDL_Window *window, float dt) {
             ImGui::Text("High: %.1f", fpsHigh);
         }
 
+        if (currentViewMode == view_Mode::PLAY) {
+        
+            ImDrawList *hud = ImGui::GetForegroundDrawList();
+
+            ImVec2 displaySize = ImGui::GetIO().DisplaySize;
+            ImVec2 center(displaySize.x * 0.5f, displaySize.y * 0.5f);
+
+            hud->AddLine(ImVec2(center.x - 8, center.y), ImVec2(center.x + 8, center.y), IM_COL32(255, 255, 255, 255), 2.0f);
+            hud->AddLine(ImVec2(center.x, center.y - 8), ImVec2(center.x, center.y + 8), IM_COL32(255, 255, 255, 255), 2.0f);
+        }
+
+
         ImGui::End();
 
         if (currentViewMode == view_Mode::EDITOR)
@@ -292,9 +350,8 @@ void update(SDL_Window *window, float dt) {
         const char *previousLayout = GetImGuiLayoutPath(st.last_win_mode);
         const char *nextLayout = GetImGuiLayoutPath(st.win_mode);
 
-        // Keep separate dock layouts for desktop windowed and fullscreen
-        // windowed sizes, so changing display mode doesn't distort the panels.
         ImGui::SaveIniSettingsToDisk(previousLayout);
+
         ApplyWindowMode(window);
         init_viewport();
 
@@ -852,12 +909,11 @@ int main() {
 
                     break;
 
-                } else if (currentViewMode == view_Mode::PLAY && playerEntityID != 0) {
+                } else if (currentViewMode == view_Mode::PLAY && playerEntityID != 0 && !free_cam) {
                 
                     if (event.button.button == SDL_BUTTON_LEFT) {
 
-                        playerRayFired = true;
-
+                        playerShotPending = true;
                     }
                 }
 

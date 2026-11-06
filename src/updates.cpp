@@ -38,7 +38,7 @@ static GLuint playerRayVBO = 0;
 
 static void DrawPlayerRay() {
 
-    if (currentViewMode != view_Mode::PLAY || playerEntityID == 0 || !FindObjectByID(playerEntityID))
+    if (currentViewMode != view_Mode::PLAY || playerEntityID == 0 || !FindObjectByID(playerEntityID) || !playerRayFired)
         return;
 
     if (!playerRayVAO) {
@@ -56,9 +56,6 @@ static void DrawPlayerRay() {
         glBindVertexArray(0);
     }
 
-    constexpr float rayLength = 100.0f;
-
-    glm::vec3 rayEnd = rayOrigin + rayDir * rayLength;
     glm::mat4 inverseView = glm::inverse(view);
 
     glm::vec3 cameraRight = glm::normalize(glm::vec3(inverseView[0]));
@@ -75,10 +72,10 @@ static void DrawPlayerRay() {
 
     glm::vec3 points[] = {
 
-        rayOrigin - startRight, rayEnd - endRight, rayEnd + endRight,
-        rayOrigin - startRight, rayEnd + endRight, rayOrigin + startRight,
-        rayOrigin - startUp, rayEnd - endUp, rayEnd + endUp,
-        rayOrigin - startUp, rayEnd + endUp, rayOrigin + startUp,
+        playerShotRayOrigin - startRight, playerShotRayEnd - endRight, playerShotRayEnd + endRight,
+        playerShotRayOrigin - startRight, playerShotRayEnd + endRight, playerShotRayOrigin + startRight,
+        playerShotRayOrigin - startUp, playerShotRayEnd - endUp, playerShotRayEnd + endUp,
+        playerShotRayOrigin - startUp, playerShotRayEnd + endUp, playerShotRayOrigin + startUp,
     };
 
     glUseProgram(program_line);
@@ -87,7 +84,8 @@ static void DrawPlayerRay() {
 
     glUniformMatrix4fv(3, 1, GL_FALSE, glm::value_ptr(mvp));
 
-    glUniform3f(shader_uniform.program_line_color, playerRayFired ? 0.0f : 1.0f, playerRayFired ? 1.0f : 0.0f, 0.0f);
+    glm::vec3 rayColor = playerRayHit ? glm::vec3(0.0f, 1.0f, 0.0f) : glm::vec3(1.0f, 0.0f, 0.0f);
+    glUniform3f(shader_uniform.program_line_color, rayColor.r, rayColor.g, rayColor.b);
 
     bool depthTestWasEnabled = glIsEnabled(GL_DEPTH_TEST);
     bool cullingWasEnabled = glIsEnabled(GL_CULL_FACE);

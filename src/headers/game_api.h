@@ -58,4 +58,4 @@ struct GameAPI {
     void (*DrawSettingsUI)() = nullptr;
 };
 
-extern "C" const GameAPI *GetGameAPI();
+extern "C" const GameAPI* GetGameAPI();

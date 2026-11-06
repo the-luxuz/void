@@ -58,6 +58,10 @@ inline size_t selectedObject = -1;
 inline glm::vec3 rayOrigin{};
 inline glm::vec3 rayDir{};
 inline bool playerRayFired = false;
+inline bool playerShotPending = false;
+inline bool playerRayHit = false;
+inline glm::vec3 playerShotRayOrigin{};
+inline glm::vec3 playerShotRayEnd{};
 
 // movement
 inline float moveSpeed = 1000.0f;
@@ -124,6 +128,8 @@ inline bool quit = false;
 
 // render modes
 inline int render_modes = 0;
+
+inline EntityID playerEntityID = 0;
 
 // tools
 enum class Tools {
@@ -237,6 +243,15 @@ void BuildRay(float mouseX, float mouseY, glm::vec3 &rayOrigin, glm::vec3 &rayDi
 // Select obj
 
 void select_object(glm::vec3 &rayOrigin, glm::vec3 &rayDir);
+
+struct RaycastHit {
+
+    EntityID objectID = 0;
+    glm::vec3 point = glm::vec3(0.0f);
+    float distance = 0.0f;
+};
+
+bool shoot_object(const glm::vec3 &rayOrigin, const glm::vec3 &rayDir, float maxDistance, RaycastHit &hit);
 
 //--------------------------------------------------------------------------
 // Controls

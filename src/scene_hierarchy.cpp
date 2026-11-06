@@ -112,16 +112,22 @@ void DetachChildren(EntityID parentID) {
 void DeleteObjectHierarchy(EntityID rootID) {
 
     std::unordered_set<EntityID> hierarchy{rootID};
+
     bool addedChild = true;
+
     while (addedChild) {
+
         addedChild = false;
+
         for (const Object &object : objects) {
+
             if (hierarchy.contains(object.parentID) && hierarchy.insert(object.id).second)
                 addedChild = true;
         }
     }
 
     for (size_t index = objects.size(); index-- > 0;) {
+
         if (!hierarchy.contains(objects[index].id))
             continue;
 
@@ -132,7 +138,7 @@ void DeleteObjectHierarchy(EntityID rootID) {
 
 void GetWorldBounds(const Object &obj, glm::vec3 &min, glm::vec3 &max) {
 
-    const glm::mat4 model = GetModelMatrix(obj);
+    glm::mat4 model = GetModelMatrix(obj);
 
     min = glm::vec3(FLT_MAX);
     max = glm::vec3(-FLT_MAX);
@@ -143,8 +149,8 @@ void GetWorldBounds(const Object &obj, glm::vec3 &min, glm::vec3 &max) {
 
             for (int z = 0; z < 2; z++) {
 
-                const glm::vec3 local(x ? obj.max.x : obj.min.x, y ? obj.max.y : obj.min.y, z ? obj.max.z : obj.min.z);
-                const glm::vec3 world = glm::vec3(model * glm::vec4(local, 1.0f));
+                glm::vec3 local(x ? obj.max.x : obj.min.x, y ? obj.max.y : obj.min.y, z ? obj.max.z : obj.min.z);
+                glm::vec3 world = glm::vec3(model * glm::vec4(local, 1.0f));
 
                 min = glm::min(min, world);
                 max = glm::max(max, world);

@@ -106,7 +106,7 @@ static void DrawSettingsUI() {
     ImGui::SliderFloat("Air gravity multiplier", &PlayerActor::jumpGravityMultiplier, 1.0f, 5.0f, "%.1f x");
 }
 
-extern "C" const GameAPI *GetGameAPI() {
+extern "C" const GameAPI* GetGameAPI() {
 
     static const GameAPI gameAPI{
 

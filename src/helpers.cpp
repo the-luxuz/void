@@ -1292,10 +1292,9 @@ void TextureManager::Clear() {
 //--------------------------------------------------------------------------
 // Ray-AABB intersection test
 
-bool RayVsAABB(const glm::vec3 &rayOrigin, const glm::vec3 &rayDir, const glm::vec3 &boxMin, const glm::vec3 &boxMax,
-               float &t) {
+bool RayVsAABB(const glm::vec3 &rayOrigin, const glm::vec3 &rayDir, const glm::vec3 &boxMin, const glm::vec3 &boxMax, float &t) {
 
-    float tmin = 0.0f;
+    float tmin = -FLT_MAX;
     float tmax = FLT_MAX;
 
     for (int i = 0; i < 3; i++) {
@@ -1322,7 +1321,10 @@ bool RayVsAABB(const glm::vec3 &rayOrigin, const glm::vec3 &rayDir, const glm::v
         }
     }
 
-    t = tmin;
+    if (tmax < 0.0f)
+        return false;
+
+    t = tmin >= 0.0f ? tmin : tmax;
 
     return true;
 }
@@ -1362,6 +1364,7 @@ void select_object(glm::vec3 &rayOrigin, glm::vec3 &rayDir) {
 
         glm::vec3 worldMin;
         glm::vec3 worldMax;
+
         GetWorldBounds(obj, worldMin, worldMax);
 
         float t;
@@ -1394,6 +1397,53 @@ void select_object(glm::vec3 &rayOrigin, glm::vec3 &rayDir) {
             }
         }
     }
+}
+
+bool shoot_object(const glm::vec3 &rayOrigin, const glm::vec3 &rayDir, float maxDistance, RaycastHit &hit) {
+
+    float directionLength = glm::length(rayDir);
+
+    if (directionLength <= 0.000001f || maxDistance <= 0.0f)
+        return false;
+
+    glm::vec3 direction = rayDir / directionLength;
+    float nearestDistance = maxDistance;
+    Object *hitObject = nullptr;
+
+    for (size_t i = 0; i < objects.size(); i++) {
+
+        Object &obj = objects[i];
+
+        if (IsEmptyObject(obj) || !obj.visible || obj.id == playerEntityID)
+            continue;
+
+        glm::vec3 worldMin;
+        glm::vec3 worldMax;
+
+        GetWorldBounds(obj, worldMin, worldMax);
+
+        float boundsDistance;
+
+        if (!RayVsAABB(rayOrigin, direction, worldMin, worldMax, boundsDistance))
+            continue;
+
+        if (boundsDistance <= nearestDistance) {
+
+            nearestDistance = boundsDistance;
+            hitObject = &obj;
+        }
+    }
+
+    if (!hitObject)
+        return false;
+
+    hit.objectID = hitObject->id;
+    hit.distance = nearestDistance;
+    hit.point = rayOrigin + direction * nearestDistance;
+
+    hitObject->position.y = 1000.0f;
+
+    return true;
 }
 
 //--------------------------------------------------------------------------
