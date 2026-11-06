@@ -10,6 +10,9 @@ namespace PlayerActor {
     static float playerViewYawAtStart = 0.0f;
     static glm::quat playerRotationAtViewStart = glm::identity<glm::quat>();
 
+    static EntityID airSteeringPlayerID = 0;
+    static float previousAirCameraYaw = 0.0f;
+
     static void AlignPlayerToView(Object &player) {
 
         glm::vec3 playerForward = player.rotation * glm::vec3(1.0f, 0.0f, 0.0f);
@@ -133,6 +136,8 @@ namespace PlayerActor {
         speedFovOffset = 0.0f;
 
         coyoteRemaining = 0.0f;
+        airSteeringPlayerID = 0;
+        previousAirCameraYaw = cameraState.alpha;
     }
 
     void QueueJumpInput() {
@@ -262,6 +267,15 @@ namespace PlayerActor {
 
         if (physics.inverseMass <= 0.0f)
             return;
+
+        if (airSteeringPlayerID != player.id) {
+
+            airSteeringPlayerID = player.id;
+            previousAirCameraYaw = cameraState.alpha;
+        }
+
+        float cameraYawDelta = std::remainder(cameraState.alpha - previousAirCameraYaw, glm::pi<float>() * 2.0f);
+        previousAirCameraYaw = cameraState.alpha;
 
         bool groundedOnSlopeAtControlStart = grounded && groundNormal.y < GroundSlopeUpDotThreshold;
 
@@ -637,21 +651,34 @@ namespace PlayerActor {
 
         } else if (slideCarryActive && (!grounded || slideCarryLandingDecayRemaining > 0.0f || groundNormal.y < GroundSlopeUpDotThreshold)) {
 
-            if (!grounded && hasMove && glm::length2(slideCarryDirection) > 0.0001f) {
+            if (!grounded && glm::length2(slideCarryDirection) > 0.0001f) {
 
-                float maxTurn = glm::radians(slideAirTurnDegreesPerSecond) * dt;
+                if (std::abs(cameraYawDelta) > 0.000001f) {
 
-                float dot = glm::clamp(glm::dot(slideCarryDirection, moveDirection), -1.0f, 1.0f);
+                    float cameraTurn = -cameraYawDelta;
+                    float cameraCos = std::cos(cameraTurn);
+                    float cameraSin = std::sin(cameraTurn);
 
-                float angle = std::atan2(slideCarryDirection.z * moveDirection.x - slideCarryDirection.x * moveDirection.z, dot);
-                angle = glm::clamp(angle, -maxTurn, maxTurn);
+                    slideCarryDirection = glm::normalize(glm::vec3(cameraCos * slideCarryDirection.x + cameraSin * slideCarryDirection.z, 0.0f, 
+                        -cameraSin * slideCarryDirection.x + cameraCos * slideCarryDirection.z));
+                }
 
-                float c = std::cos(angle);
-                float s = std::sin(angle);
+                if (hasMove) {
 
-                glm::vec3 oldDirection = slideCarryDirection;
+                    float maxTurn = glm::radians(slideAirTurnDegreesPerSecond) * airControlStrength * dt;
 
-                slideCarryDirection = glm::normalize(glm::vec3(c * oldDirection.x + s * oldDirection.z, 0.0f, -s * oldDirection.x + c * oldDirection.z));
+                    float dot = glm::clamp(glm::dot(slideCarryDirection, moveDirection), -1.0f, 1.0f);
+
+                    float angle = std::atan2(slideCarryDirection.z * moveDirection.x - slideCarryDirection.x * moveDirection.z, dot);
+                    angle = glm::clamp(angle, -maxTurn, maxTurn);
+
+                    float c = std::cos(angle);
+                    float s = std::sin(angle);
+
+                    glm::vec3 oldDirection = slideCarryDirection;
+
+                    slideCarryDirection = glm::normalize(glm::vec3(c * oldDirection.x + s * oldDirection.z, 0.0f, -s * oldDirection.x + c * oldDirection.z));
+                }
             }
 
             bool groundedOnSlope = grounded && groundNormal.y < GroundSlopeUpDotThreshold;
@@ -698,7 +725,8 @@ namespace PlayerActor {
 
                 float drag = std::max(physics.drag, 1.0f);
                 float dragFactor = std::max(1.0f - drag * dt, 0.01f);
-                float driveAcceleration = physics.maxHorizontalSpeed * drag / dragFactor;
+                float airControl = grounded ? 1.0f : airControlStrength;
+                float driveAcceleration = physics.maxHorizontalSpeed * drag / dragFactor * airControl;
 
                 glm::vec3 driveForce = moveDirection * (driveAcceleration / physics.inverseMass);
 

@@ -26,6 +26,7 @@ namespace PlayerActor {
 	inline float lookSensitivity = 0.001f;
 
 	inline float defaultMaximumSpeed = 450.0f;
+	inline float airControlStrength = 0.1f;
 
 	inline float jumpHeight = 150.0f;
 	inline float jumpGravityMultiplier = 7.f;
