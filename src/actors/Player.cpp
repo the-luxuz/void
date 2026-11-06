@@ -700,24 +700,26 @@ namespace PlayerActor {
 
         glm::vec3 playerBoundsMin;
         glm::vec3 playerBoundsMax;
+
         GetWorldBounds(player, playerBoundsMin, playerBoundsMax);
 
-        const float playerWorldHeight = playerBoundsMax.y - playerBoundsMin.y;
-        const float eyeHeightRatio = glm::clamp(cameraEyeHeight / 2.0f, 0.05f, 0.98f);
-        const float eyeY = playerWorldHeight > 0.001f
-            ? playerBoundsMin.y + playerWorldHeight * eyeHeightRatio
-            : player.position.y + cameraEyeHeight;
+        float playerWorldHeight = playerBoundsMax.y - playerBoundsMin.y;
+        float eyeHeightRatio = glm::clamp(cameraEyeHeight / 2.0f, 0.05f, 0.98f);
+        float eyeY = playerWorldHeight > 0.001f ? playerBoundsMin.y + playerWorldHeight * eyeHeightRatio : player.position.y + cameraEyeHeight;
 
         glm::vec3 desiredPosition = glm::vec3(player.position.x, eyeY, player.position.z);
 
-        // Apply runtime edits to Eye height immediately instead of waiting for camera follow smoothing.
         if (eyeHeightTrackedPlayerID != player.id) {
+
             eyeHeightTrackedPlayerID = player.id;
             previousCameraEyeHeight = cameraEyeHeight;
-        } else if (!cameraInitialized) {
+
+        } else if (!cameraInitialized)
             previousCameraEyeHeight = cameraEyeHeight;
-        } else if (cameraInitialized && cameraEyeHeight != previousCameraEyeHeight) {
+        else if (cameraInitialized && cameraEyeHeight != previousCameraEyeHeight) {
+
             float heightPerEyeUnit = playerWorldHeight * 0.5f;
+
             cameraState.cam_position.y += (cameraEyeHeight - previousCameraEyeHeight) * heightPerEyeUnit;
             previousCameraEyeHeight = cameraEyeHeight;
         }
