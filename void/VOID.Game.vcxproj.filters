@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{C69024E2-5E93-5142-B15A-4C69A7D2F339}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\actors">
+      <UniqueIdentifier>{E213371E-8B8F-5FF9-AD30-094156CED28E}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\actors\player.cpp">
+      <Filter>src\actors</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\actors\player.h">
+      <Filter>src\actors</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

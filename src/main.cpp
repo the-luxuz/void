@@ -86,7 +86,7 @@ void update(SDL_Window *window, float dt) {
             cameraPos = PlayerActor::cameraState.cam_position;
             view = glm::lookAt(cameraPos, PlayerActor::cameraState.cam_target, PlayerActor::cameraState.cam_up);
 
-            // Keep the weapon ray aligned with the center of the player's view.
+            // ray cast of player camera to shoot
             BuildRay(viewport_width * 0.5f, viewport_height * 0.5f, rayOrigin, rayDir);
             rayOrigin = PlayerActor::cameraState.cam_position;
 

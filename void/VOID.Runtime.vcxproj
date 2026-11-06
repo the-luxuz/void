@@ -22,7 +22,10 @@
     <VCProjectVersion>18.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
     <ProjectGuid>{2b956a0c-3f2a-4623-88be-bca487651ec9}</ProjectGuid>
-    <RootNamespace>void</RootNamespace>
+    <RootNamespace>VOID.Runtime</RootNamespace>
+    <TargetName>void</TargetName>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)void\x64\$(Platform)\$(Configuration)\$(MSBuildProjectName)\</IntDir>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -117,8 +120,8 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>SDL3.lib;glew32.lib;opengl32.lib;avcodec.lib;avdevice.lib;avfilter.lib;avformat.lib;avutil.lib;swresample.lib;swscale.lib;assimp-vc143-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>VOID.Engine.lib;VOID.Game.lib;VOID.Engine.lib;VOID.Game.lib;SDL3.lib;glew32.lib;opengl32.lib;avcodec.lib;avdevice.lib;avfilter.lib;avformat.lib;avutil.lib;swresample.lib;swscale.lib;assimp-vc143-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(OutDir);$(SolutionDir)lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <Manifest>
       <EnableSegmentHeap>true</EnableSegmentHeap>
@@ -138,93 +141,32 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>SDL3.lib;glew32.lib;opengl32.lib;avcodec.lib;avdevice.lib;avfilter.lib;avformat.lib;avutil.lib;swresample.lib;swscale.lib;assimp-vc143-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>VOID.Engine.lib;VOID.Game.lib;VOID.Engine.lib;VOID.Game.lib;SDL3.lib;glew32.lib;opengl32.lib;avcodec.lib;avdevice.lib;avfilter.lib;avformat.lib;avutil.lib;swresample.lib;swscale.lib;assimp-vc143-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(OutDir);$(SolutionDir)lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <Manifest>
       <EnableSegmentHeap>true</EnableSegmentHeap>
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\external\imgui\backends\imgui_impl_opengl3.cpp" />
-    <ClCompile Include="..\external\imgui\backends\imgui_impl_sdl3.cpp" />
-    <ClCompile Include="..\external\imgui\imgui.cpp" />
-    <ClCompile Include="..\external\imgui\imgui_demo.cpp" />
-    <ClCompile Include="..\external\imgui\imgui_draw.cpp" />
-    <ClCompile Include="..\external\imgui\imgui_tables.cpp" />
-    <ClCompile Include="..\external\imgui\imgui_widgets.cpp" />
-    <ClCompile Include="..\external\nativefiledialog\nfd_win.cpp" />
-    <ClCompile Include="..\external\tinyexr\deps\miniz\miniz.c" />
-    <ClCompile Include="..\external\tinyexr\deps\zstd\tinyexr_zstd.c" />
-    <ClCompile Include="..\external\tinyexr\tinyexr.cc" />
-    <ClCompile Include="..\src\actors\player.cpp" />
-    <ClCompile Include="..\src\buffers.cpp" />
-    <ClCompile Include="..\src\classes.cpp" />
-    <ClCompile Include="..\src\editor\browser.cpp" />
-    <ClCompile Include="..\src\editor\editor.cpp" />
-    <ClCompile Include="..\src\editor\guizmo_editor.cpp" />
-    <ClCompile Include="..\src\editor\hierarchy.cpp" />
-    <ClCompile Include="..\src\editor\inspector.cpp" />
-    <ClCompile Include="..\src\helpers.cpp" />
-    <ClCompile Include="..\src\ImGuizmo.cpp" />
-    <ClCompile Include="..\src\imgui_helpers.cpp" />
-    <ClCompile Include="..\src\inits.cpp" />
     <ClCompile Include="..\src\main.cpp" />
-    <ClCompile Include="..\src\parser.cpp" />
-    <ClCompile Include="..\src\programs.cpp" />
-    <ClCompile Include="..\src\scene_hierarchy.cpp" />
-    <ClCompile Include="..\src\textures.cpp" />
-    <ClCompile Include="..\src\model_importer.cpp" />
-    <ClCompile Include="..\src\updates.cpp" />
-    <ClCompile Include="..\src\video_player.cpp" />
   </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="..\external\tinyexr\deps\miniz\miniz.h" />
-    <ClInclude Include="..\external\tinyexr\deps\zstd\tinyexr_zstd.h" />
-    <ClInclude Include="..\external\tinyexr\tinyexr.h" />
-    <ClInclude Include="..\src\actors\player.h" />
-    <ClInclude Include="..\src\editor\browser.h" />
-    <ClInclude Include="..\src\editor\editor.h" />
-    <ClInclude Include="..\src\editor\editorLocal.h" />
-    <ClInclude Include="..\src\editor\guizmo_editor.h" />
-    <ClInclude Include="..\src\editor\hierarchy.h" />
-    <ClInclude Include="..\src\editor\inspector.h" />
-    <ClInclude Include="..\src\headers\buffers.h" />
-    <ClInclude Include="..\src\headers\classes.h" />
-    <ClInclude Include="..\src\headers\helpers.h" />
-    <ClInclude Include="..\src\headers\ImGuizmo.h" />
-    <ClInclude Include="..\src\headers\imgui_helpers.h" />
-    <ClInclude Include="..\src\headers\inits.h" />
-    <ClInclude Include="..\src\headers\local.h" />
-    <ClInclude Include="..\src\headers\parser.h" />
-    <ClInclude Include="..\src\headers\programs.h" />
-    <ClInclude Include="..\src\headers\scene_hierarchy.h" />
-    <ClInclude Include="..\src\headers\textures.h" />
-    <ClInclude Include="..\src\headers\updates.h" />
-    <ClInclude Include="..\src\headers\video_player.h" />
-  </ItemGroup>
+
   <ItemGroup>
     <Content Include="$(SolutionDir)void\assimp-vc143-mt.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Visible>false</Visible>
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\data\shaders\fragment.frag" />
-    <None Include="..\data\shaders\fragment_depth.frag" />
-    <None Include="..\data\shaders\fragment_grid.frag" />
-    <None Include="..\data\shaders\fragment_hdrToCubemap.frag" />
-    <None Include="..\data\shaders\fragment_line.frag" />
-    <None Include="..\data\shaders\fragment_skybox.frag" />
-    <None Include="..\data\shaders\fragment_thumbnail.frag" />
-    <None Include="..\data\shaders\fragment_videoplayer.frag" />
-    <None Include="..\data\shaders\vertex.vert" />
-    <None Include="..\data\shaders\vertex_depth.vert" />
-    <None Include="..\data\shaders\vertex_grid.vert" />
-    <None Include="..\data\shaders\vertex_hdrToCubemap.vert" />
-    <None Include="..\data\shaders\vertex_line.vert" />
-    <None Include="..\data\shaders\vertex_skybox.vert" />
-    <None Include="..\data\shaders\vertex_thumbnail.vert" />
-    <None Include="..\data\shaders\vertex_videoplayer.vert" />
+    <ProjectReference Include="VOID.Engine.vcxproj">
+      <Project>{8047E3A2-0D75-4C3D-9C1D-20F633E4C9A1}</Project>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+    <ProjectReference Include="VOID.Game.vcxproj">
+      <Project>{56DE7A47-4EB5-43BE-A1DF-38568AC4AE77}</Project>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

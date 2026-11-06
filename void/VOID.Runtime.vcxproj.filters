@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{8217AA31-BCC7-5D0F-A76C-A82D5D282FA9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="void">
+      <UniqueIdentifier>{1B5E9AAA-BDDD-5319-9667-3A9295DD350A}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\main.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="$(SolutionDir)void\assimp-vc143-mt.dll">
+      <Filter>void</Filter>
+    </Content>
+  </ItemGroup>
+</Project>

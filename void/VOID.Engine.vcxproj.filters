@@ -1,0 +1,379 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="data">
+      <UniqueIdentifier>{4DF4E652-0E13-5600-A412-4F4489083B7D}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="external">
+      <UniqueIdentifier>{A38B4FC0-8C77-5661-AC69-20EEDADBC4BF}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src">
+      <UniqueIdentifier>{FF72B88A-A0FE-5E8A-99B8-195305AA8D14}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="data\shaders">
+      <UniqueIdentifier>{60AFB781-9C43-527E-B4BB-D1FB4A303873}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="external\imgui">
+      <UniqueIdentifier>{BF6374FD-FD8A-5D63-9A5B-16DD78C045F4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="external\nativefiledialog">
+      <UniqueIdentifier>{FEA53CAD-18CF-5E59-A12E-79CC17D4D11E}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="external\tinyexr">
+      <UniqueIdentifier>{F37361CC-4899-59F9-8E16-5154864F4E18}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\editor">
+      <UniqueIdentifier>{9EA4D2DB-A179-5820-8059-C0EF0646E694}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\headers">
+      <UniqueIdentifier>{34EB8306-DDFF-5211-B9BA-110D29C5D335}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="external\imgui\backends">
+      <UniqueIdentifier>{5FC9FE97-A917-562F-8614-697750925EB8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="external\tinyexr\deps">
+      <UniqueIdentifier>{E049E47F-A2B9-565C-8B96-FF00D7CB454A}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="external\tinyexr\deps\miniz">
+      <UniqueIdentifier>{243C0ACE-2A4A-506B-BCC5-571F43600BBB}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="external\tinyexr\deps\zstd">
+      <UniqueIdentifier>{7B2E27B7-1299-5BA4-99FE-6B366FB88ED0}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\external\imgui\backends\imgui_impl_opengl3.cpp">
+      <Filter>external\imgui\backends</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\external\imgui\backends\imgui_impl_sdl3.cpp">
+      <Filter>external\imgui\backends</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\external\imgui\imgui.cpp">
+      <Filter>external\imgui</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\external\imgui\imgui_demo.cpp">
+      <Filter>external\imgui</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\external\imgui\imgui_draw.cpp">
+      <Filter>external\imgui</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\external\imgui\imgui_tables.cpp">
+      <Filter>external\imgui</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\external\imgui\imgui_widgets.cpp">
+      <Filter>external\imgui</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\external\nativefiledialog\nfd_win.cpp">
+      <Filter>external\nativefiledialog</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\external\tinyexr\deps\miniz\miniz.c">
+      <Filter>external\tinyexr\deps\miniz</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\external\tinyexr\deps\zstd\tinyexr_zstd.c">
+      <Filter>external\tinyexr\deps\zstd</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\external\tinyexr\tinyexr.cc">
+      <Filter>external\tinyexr</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\buffers.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\classes.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\editor\browser.cpp">
+      <Filter>src\editor</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\editor\editor.cpp">
+      <Filter>src\editor</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\editor\guizmo_editor.cpp">
+      <Filter>src\editor</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\editor\hierarchy.cpp">
+      <Filter>src\editor</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\editor\inspector.cpp">
+      <Filter>src\editor</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\helpers.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\ImGuizmo.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\imgui_helpers.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\inits.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\parser.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\programs.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\scene_hierarchy.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\textures.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\model_importer.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\updates.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\video_player.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\external\tinyexr\deps\miniz\miniz.h">
+      <Filter>external\tinyexr\deps\miniz</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\external\tinyexr\deps\zstd\tinyexr_zstd.h">
+      <Filter>external\tinyexr\deps\zstd</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\external\tinyexr\tinyexr.h">
+      <Filter>external\tinyexr</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\editor\browser.h">
+      <Filter>src\editor</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\editor\editor.h">
+      <Filter>src\editor</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\editor\editorLocal.h">
+      <Filter>src\editor</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\editor\guizmo_editor.h">
+      <Filter>src\editor</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\editor\hierarchy.h">
+      <Filter>src\editor</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\editor\inspector.h">
+      <Filter>src\editor</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\headers\buffers.h">
+      <Filter>src\headers</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\headers\classes.h">
+      <Filter>src\headers</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\headers\helpers.h">
+      <Filter>src\headers</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\headers\ImGuizmo.h">
+      <Filter>src\headers</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\headers\imgui_helpers.h">
+      <Filter>src\headers</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\headers\inits.h">
+      <Filter>src\headers</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\headers\local.h">
+      <Filter>src\headers</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\headers\parser.h">
+      <Filter>src\headers</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\headers\programs.h">
+      <Filter>src\headers</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\headers\scene_hierarchy.h">
+      <Filter>src\headers</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\headers\textures.h">
+      <Filter>src\headers</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\headers\updates.h">
+      <Filter>src\headers</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\headers\video_player.h">
+      <Filter>src\headers</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\data\shaders\fragment.frag">
+      <Filter>data\shaders</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\data\shaders\fragment_depth.frag">
+      <Filter>data\shaders</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\data\shaders\fragment_grid.frag">
+      <Filter>data\shaders</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\data\shaders\fragment_hdrToCubemap.frag">
+      <Filter>data\shaders</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\data\shaders\fragment_line.frag">
+      <Filter>data\shaders</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\data\shaders\fragment_skybox.frag">
+      <Filter>data\shaders</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\data\shaders\fragment_thumbnail.frag">
+      <Filter>data\shaders</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\data\shaders\fragment_videoplayer.frag">
+      <Filter>data\shaders</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\data\shaders\vertex.vert">
+      <Filter>data\shaders</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\data\shaders\vertex_depth.vert">
+      <Filter>data\shaders</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\data\shaders\vertex_grid.vert">
+      <Filter>data\shaders</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\data\shaders\vertex_hdrToCubemap.vert">
+      <Filter>data\shaders</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\data\shaders\vertex_line.vert">
+      <Filter>data\shaders</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\data\shaders\vertex_skybox.vert">
+      <Filter>data\shaders</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\data\shaders\vertex_thumbnail.vert">
+      <Filter>data\shaders</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\data\shaders\vertex_videoplayer.vert">
+      <Filter>data\shaders</Filter>
+    </None>
+  </ItemGroup>
+</Project>
