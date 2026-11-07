@@ -96,11 +96,13 @@ void UpdateLineBuffers(Object& obj) {
 
 void UpdateMeshBuffers(Object& obj) {
 
-	if (obj.vbo)
-		glDeleteBuffers(1, &obj.vbo);
+    if (!obj.vao || !obj.vbo || !obj.ebo) {
 
-	if (obj.ebo)
-		glDeleteBuffers(1, &obj.ebo);
+        buffer(obj);
+        return;
+    }
+
+    glBindVertexArray(obj.vao);
 
 	glBindBuffer(GL_ARRAY_BUFFER, obj.vbo);
 	glBufferData(
@@ -117,6 +119,10 @@ void UpdateMeshBuffers(Object& obj) {
 		obj.indices.data(),
 		GL_STATIC_DRAW
 	);
+
+    glBindVertexArray(0);
+
+    //obj.shadowGeometryRevision++;
 }
 
 void CreateVideoQuad(VideoQuad& quad) {

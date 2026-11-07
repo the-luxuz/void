@@ -4,12 +4,8 @@ void SettingsWindow() {
 
     ImGui::Begin("Graphics Settings", &showGraphicsSettings);
 
-    ImGui::Checkbox("VSync", &st.VSync);
-
-    if (!st.VSync)
-        SDL_GL_SetSwapInterval(0);
-    else
-        SDL_GL_SetSwapInterval(1);
+    if (ImGui::Checkbox("VSync", &st.VSync))
+        SDL_GL_SetSwapInterval(st.VSync ? 1 : 0);
 
     ImGui::Separator();
 

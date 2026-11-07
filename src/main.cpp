@@ -481,7 +481,7 @@ int main() {
 
                     if (event.key.scancode == SDL_SCANCODE_BACKSPACE) {
 
-                        if (selectedObject != -1) {
+                        if (selectedObject >= 0) {
 
                             if (selectedObject < (int)objects.size()) {
                                 DeleteObjectHierarchy(objects[selectedObject].id);
@@ -522,9 +522,9 @@ int main() {
 
                     if (event.key.mod & SDL_KMOD_CTRL && event.key.scancode == SDL_SCANCODE_Z) {
 
-                        if (selectedObject != -1) {
+                        if (selectedObject >= 0) {
 
-                            if (selectedObject < objects.size()) {
+                            if (static_cast<size_t>(selectedObject) < objects.size()) {
 
                                 Object &obj = objects[selectedObject];
 
@@ -565,9 +565,9 @@ int main() {
 
                     if (event.key.mod & SDL_KMOD_CTRL && event.key.scancode == SDL_SCANCODE_Y) {
 
-                        if (selectedObject != -1) {
+                        if (selectedObject >= 0) {
 
-                            if (selectedObject < objects.size()) {
+                            if (static_cast<size_t>(selectedObject) < objects.size()) {
 
                                 Object &obj = objects[selectedObject];
 
@@ -608,7 +608,7 @@ int main() {
 
                     if ((event.key.mod & SDL_KMOD_CTRL) && event.key.scancode == SDL_SCANCODE_C) {
 
-                        if (selectedObject != -1) {
+                        if (selectedObject >= 0) {
 
                             if (selectedObject < (int)objects.size()) {
 

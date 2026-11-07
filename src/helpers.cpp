@@ -296,7 +296,7 @@ void Docking() {
 
             if (ImGui::MenuItem("Copy", "Ctrl+C")) {
 
-                if (selectedObject != -1) {
+                if (selectedObject >= 0) {
 
                     if (selectedObject < (int)objects.size()) {
 
@@ -384,9 +384,9 @@ void Docking() {
 
             if (ImGui::MenuItem("Undo", "Ctrl+Z")) {
 
-                if (selectedObject != -1) {
+                if (selectedObject >= 0) {
 
-                    if (selectedObject < objects.size()) {
+                    if (static_cast<size_t>(selectedObject) < objects.size()) {
 
                         Object &obj = objects[selectedObject];
 
@@ -427,9 +427,9 @@ void Docking() {
 
             if (ImGui::MenuItem("Redo", "Ctrl+Y")) {
 
-                if (selectedObject != -1) {
+                if (selectedObject >= 0) {
 
-                    if (selectedObject < objects.size()) {
+                    if (static_cast<size_t>(selectedObject) < objects.size()) {
 
                         Object &obj = objects[selectedObject];
 
@@ -526,20 +526,6 @@ void ResizeViewport(int width, int height) {
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    for (int i = 0; i < MAX_LIGHTS; i++) {
-
-        glDeleteFramebuffers(1, &depthFBO[i]);
-    }
-
-    for (int i = 0; i < MAX_LIGHTS; i++) {
-
-        glGenFramebuffers(1, &depthFBO[i]);
-        glBindFramebuffer(GL_FRAMEBUFFER, depthFBO[i]);
-
-        Create_depth_tex(viewport_width, viewport_height, i);
-
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    }
 }
 
 void ApplyWindowMode(SDL_Window *window) {
@@ -1132,10 +1118,12 @@ Object *GetSelectedObject() {
     if (selectedObject < 0)
         return nullptr;
 
-    if (selectedObject < objects.size())
-        return &objects[selectedObject];
+    size_t selectedIndex = static_cast<size_t>(selectedObject);
 
-    size_t lightIndex = selectedObject - objects.size();
+    if (selectedIndex < objects.size())
+        return &objects[selectedIndex];
+
+    size_t lightIndex = selectedIndex - objects.size();
 
     if (lightIndex >= lightObjects.size())
         return nullptr;
@@ -1145,10 +1133,15 @@ Object *GetSelectedObject() {
 
 Light *GetSelectedLight() {
 
-    if (selectedObject < objects.size())
+    if (selectedObject < 0)
         return nullptr;
 
-    size_t lightIndex = selectedObject - objects.size();
+    size_t selectedIndex = static_cast<size_t>(selectedObject);
+
+    if (selectedIndex < objects.size())
+        return nullptr;
+
+    size_t lightIndex = selectedIndex - objects.size();
 
     if (lightIndex >= lights.size())
         return nullptr;
@@ -1440,8 +1433,6 @@ bool shoot_object(const glm::vec3 &rayOrigin, const glm::vec3 &rayDir, float max
     hit.objectID = hitObject->id;
     hit.distance = nearestDistance;
     hit.point = rayOrigin + direction * nearestDistance;
-
-    hitObject->position.y = 1000.0f;
 
     return true;
 }
@@ -1862,8 +1853,11 @@ void clean() {
     glDeleteFramebuffers(1, &captureFBO);
     glDeleteFramebuffers(1, &captureRBO);
 
-    for (int i = 0; i < MAX_LIGHTS; i++)
+    for (int i = 0; i < MAX_LIGHTS; i++) {
+
         glDeleteTextures(1, &depth_texture[i]);
+        glDeleteFramebuffers(1, &depthFBO[i]);
+    }
 
     glDeleteTextures(1, &skybox_texture);
 

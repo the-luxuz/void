@@ -53,7 +53,7 @@ inline glm::mat4 view{1.0f};
 inline glm::mat4 projection{1.0f};
 
 // selected object and ray casting
-inline size_t selectedObject = -1;
+inline int selectedObject = -1;
 
 inline glm::vec3 rayOrigin{};
 inline glm::vec3 rayDir{};

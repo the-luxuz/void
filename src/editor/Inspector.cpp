@@ -62,7 +62,7 @@ void Inspector(){
 
     ImGui::Begin("Inspector");
 
-    if (selectedObject != -1 && selectedObject < (int)objects.size()) {
+    if (selectedObject >= 0 && selectedObject < static_cast<int>(objects.size())) {
 
         Object *obj = GetSelectedObject();
         const bool isEmpty = obj && IsEmptyObject(*obj);
@@ -699,7 +699,7 @@ void Inspector(){
             ImGui::TextUnformatted("Drag scene objects onto it in Hierarchy to parent them.");
         }
 
-        if (!isEmpty && ImGui::CollapsingHeader("Mesh"), ImGuiTreeNodeFlags_DefaultOpen) {
+        if (!isEmpty && ImGui::CollapsingHeader("Mesh", ImGuiTreeNodeFlags_DefaultOpen)) {
 
             ImGui::TextWrapped("%s", obj->mesh.c_str());
 
@@ -741,7 +741,7 @@ void Inspector(){
 
         ImGui::Separator();
 
-        if (!isEmpty && ImGui::CollapsingHeader("Bounds"), ImGuiTreeNodeFlags_DefaultOpen) {
+        if (!isEmpty && ImGui::CollapsingHeader("Bounds", ImGuiTreeNodeFlags_DefaultOpen)) {
 
             ImGui::DragFloat3("Min", &obj->min.x, 0.1f);
 
