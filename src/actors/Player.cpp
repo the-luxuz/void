@@ -821,8 +821,5 @@ namespace PlayerActor {
 
         UpdateCameraObject(*playerObject, dt);
     }
-
-    
-
 }
 
