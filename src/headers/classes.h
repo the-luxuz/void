@@ -414,6 +414,18 @@ struct Object {
     bool renderBothSides = false;
 };
 
+struct ProxyObject {
+
+    EntityID id = 0;
+
+    glm::vec3 position = glm::vec3(0.0f);
+    glm::quat rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+    glm::vec3 scale = glm::vec3(1.0f);
+
+    Collider collider;
+    ColliderTransform colliderTransform;
+};
+
 inline bool IsEmptyObject(const Object &object) {
     return object.mesh.empty() && object.vertices.empty();
 }
@@ -728,11 +740,9 @@ const AnimationKey *GetPrevKey(const AnimationTrack &track, float time);
 
 const AnimationKey *GetNextKey(const AnimationTrack &track, float time);
 
-AnimationTrack *FindTrack(AnimationClip &clip, AnimationTargetType targetType, EntityID targetID,
-    AnimationProperty property);
+AnimationTrack *FindTrack(AnimationClip &clip, AnimationTargetType targetType, EntityID targetID, AnimationProperty property);
 
-AnimationTrack &GetOrCreateTrack(AnimationClip &clip, AnimationTargetType targetType, EntityID targetID,
-     AnimationProperty property);
+AnimationTrack &GetOrCreateTrack(AnimationClip &clip, AnimationTargetType targetType, EntityID targetID, AnimationProperty property);
 
 void RecalculateAnimationDuration(AnimationClip &clip);
 
@@ -740,18 +750,22 @@ template <typename T> void AddKey(AnimationTrack &track, float time, const T &va
 
     for (AnimationKey &key : track.keys) {
 
-  if (std::abs(key.time - time) < 0.0001f) {
+          if (std::abs(key.time - time) < 0.0001f) {
 
-  key.value = AnimationValue(value);
+              key.value = AnimationValue(value);
 
-  return;
-  }
+              return;
+          }
     }
 
     track.keys.push_back({time, AnimationValue(value)});
 
-    std::sort(track.keys.begin(), track.keys.end(),
-  [](const AnimationKey &a, const AnimationKey &b) { return a.time < b.time; });
+    std::sort(track.keys.begin(), track.keys.end(), [](const AnimationKey &a, const AnimationKey &b) { 
+
+        return a.time < b.time;
+
+        }
+    );
 }
 
 AnimationValue EvaluateTrack(const AnimationTrack &track, float time);

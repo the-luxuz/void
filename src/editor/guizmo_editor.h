@@ -2,6 +2,6 @@
 
 #include "editorLocal.h"
 
-Object GetColliderProxy(const Object &object);
+ProxyObject GetColliderProxy(const Object &object);
 
 void Guizmo();

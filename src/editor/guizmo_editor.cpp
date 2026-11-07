@@ -126,7 +126,7 @@ static void DrawLightGuides(const Light &light, const Object &lightObject) {
 //--------------------------------------------------------------------------
 // Update Collisions
 
-Object GetColliderProxy(const Object &object) {
+ProxyObject GetColliderProxy(const Object &object) {
 
     glm::mat4 transform = GetModelMatrix(object);
 
@@ -140,12 +140,15 @@ Object GetColliderProxy(const Object &object) {
 
     ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(transform), glm::value_ptr(position), glm::value_ptr(rotation), glm::value_ptr(scale));
 
-    Object proxy;
+    ProxyObject proxy;
+
+    proxy.id = object.id;
 
     proxy.position = position;
     proxy.rotation = glm::quat(glm::radians(rotation));
     proxy.scale = scale;
     proxy.collider = object.collider;
+    proxy.colliderTransform = object.colliderTransform;
 
     return proxy;
 }
@@ -155,7 +158,7 @@ static void DrawColliderWireframe(Object &object) {
     if (!object.hasCollider || object.collider.type == ColliderType::None)
         return;
 
-    Object proxy = GetColliderProxy(object);
+    ProxyObject proxy = GetColliderProxy(object);
 
     glm::mat4 transform = glm::translate(glm::mat4(1.0f), proxy.position) * glm::toMat4(proxy.rotation);
 

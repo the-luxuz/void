@@ -2100,7 +2100,7 @@ bool CanCollide(const Object &a, const Object &b) {
     return (a.collider.mask & b.collider.layer) && (b.collider.mask & a.collider.layer);
 }
 
-Contact Sphere_vs_Sphere(const Object &a, const Object &b) {
+Contact Sphere_vs_Sphere(const ProxyObject &a, const ProxyObject &b) {
 
     Contact contact{};
 
@@ -2136,7 +2136,7 @@ Contact Sphere_vs_Sphere(const Object &a, const Object &b) {
     return contact;
 }
 
-Contact Sphere_vs_Plane(const Object &sphere, const Object &plane) {
+Contact Sphere_vs_Plane(const ProxyObject &sphere, const ProxyObject &plane) {
 
     Contact contact{};
 
@@ -2195,7 +2195,7 @@ Contact Sphere_vs_Plane(const Object &sphere, const Object &plane) {
     return contact;
 }
 
-Contact Sphere_vs_AABB(const Object &sphere, const Object &box) {
+Contact Sphere_vs_AABB(const ProxyObject &sphere, const ProxyObject &box) {
 
     Contact contact{};
 
@@ -2233,39 +2233,46 @@ Contact Sphere_vs_AABB(const Object &sphere, const Object &box) {
     return contact;
 }
 
-Contact AABB_vs_AABB(const Object &a, const Object &b) {
+Contact AABB_vs_AABB(const ProxyObject &a, const ProxyObject &b) {
 
     Contact contact{};
 
     glm::vec3 halfA = glm::abs(a.scale);
     glm::vec3 halfB = glm::abs(b.scale);
-    const glm::vec3 axesA[3] = {a.rotation * glm::vec3(1, 0, 0), a.rotation * glm::vec3(0, 1, 0),
-                                a.rotation * glm::vec3(0, 0, 1)};
-    const glm::vec3 axesB[3] = {b.rotation * glm::vec3(1, 0, 0), b.rotation * glm::vec3(0, 1, 0),
-                                b.rotation * glm::vec3(0, 0, 1)};
+    const glm::vec3 axesA[3] = {a.rotation * glm::vec3(1, 0, 0), a.rotation * glm::vec3(0, 1, 0), a.rotation * glm::vec3(0, 0, 1)};
+
+    const glm::vec3 axesB[3] = {b.rotation * glm::vec3(1, 0, 0), b.rotation * glm::vec3(0, 1, 0), b.rotation * glm::vec3(0, 0, 1)};
+
     const glm::vec3 delta = b.position - a.position;
     float minOverlap = FLT_MAX;
     glm::vec3 minAxis(1.0f, 0.0f, 0.0f);
 
     auto testAxis = [&](const glm::vec3 &axis) {
-        const float axisLength2 = glm::length2(axis);
+
+        float axisLength2 = glm::length2(axis);
+
         if (axisLength2 < 1e-8f)
             return true;
 
-        const glm::vec3 normalizedAxis = axis / std::sqrt(axisLength2);
+        glm::vec3 normalizedAxis = axis / std::sqrt(axisLength2);
+
         float radiusA = 0.0f;
         float radiusB = 0.0f;
-        for (int i = 0; i < 3; ++i) {
+
+        for (int i = 0; i < 3; i++) {
+
             radiusA += halfA[i] * std::abs(glm::dot(normalizedAxis, axesA[i]));
             radiusB += halfB[i] * std::abs(glm::dot(normalizedAxis, axesB[i]));
         }
 
-        const float distance = glm::dot(delta, normalizedAxis);
-        const float overlap = radiusA + radiusB - std::abs(distance);
+        float distance = glm::dot(delta, normalizedAxis);
+        float overlap = radiusA + radiusB - std::abs(distance);
+
         if (overlap <= 0.0f)
             return false;
 
         if (overlap < minOverlap) {
+
             minOverlap = overlap;
             minAxis = distance >= 0.0f ? normalizedAxis : -normalizedAxis;
         }
@@ -2293,17 +2300,17 @@ Contact AABB_vs_AABB(const Object &a, const Object &b) {
     return contact;
 }
 
-Contact AABB_vs_Plane(const Object &box, const Object &plane) {
+Contact AABB_vs_Plane(const ProxyObject &box, const ProxyObject &plane) {
 
     Contact contact{};
 
-    const glm::quat invRotation = glm::inverse(plane.rotation);
-    const glm::vec3 localCenter = invRotation * (box.position - plane.position);
-    const glm::vec3 half = glm::abs(box.scale);
-    const glm::vec3 boxAxes[3] = {box.rotation * glm::vec3(1, 0, 0), box.rotation * glm::vec3(0, 1, 0),
-                                  box.rotation * glm::vec3(0, 0, 1)};
-    const glm::vec3 planeAxes[3] = {plane.rotation * glm::vec3(1, 0, 0), plane.rotation * glm::vec3(0, 1, 0),
-                                    plane.rotation * glm::vec3(0, 0, 1)};
+    glm::quat invRotation = glm::inverse(plane.rotation);
+    glm::vec3 localCenter = invRotation * (box.position - plane.position);
+    glm::vec3 half = glm::abs(box.scale);
+
+    glm::vec3 boxAxes[3] = {box.rotation * glm::vec3(1, 0, 0), box.rotation * glm::vec3(0, 1, 0), box.rotation * glm::vec3(0, 0, 1)};
+
+    glm::vec3 planeAxes[3] = {plane.rotation * glm::vec3(1, 0, 0), plane.rotation * glm::vec3(0, 1, 0), plane.rotation * glm::vec3(0, 0, 1)};
 
     float halfWidth = std::abs(plane.scale.x);
     float halfDepth = std::abs(plane.scale.z);
@@ -2314,13 +2321,15 @@ Contact AABB_vs_Plane(const Object &box, const Object &plane) {
     closestPointLocal.y = 0.0f;
     closestPointLocal.z = glm::clamp(localCenter.z, -halfDepth, halfDepth);
 
-    const float projectedHalfX = half.x * std::abs(glm::dot(boxAxes[0], planeAxes[0])) +
+    float projectedHalfX = half.x * std::abs(glm::dot(boxAxes[0], planeAxes[0])) +
                                  half.y * std::abs(glm::dot(boxAxes[1], planeAxes[0])) +
                                  half.z * std::abs(glm::dot(boxAxes[2], planeAxes[0]));
-    const float projectedHalfY = half.x * std::abs(glm::dot(boxAxes[0], planeAxes[1])) +
+
+    float projectedHalfY = half.x * std::abs(glm::dot(boxAxes[0], planeAxes[1])) +
                                  half.y * std::abs(glm::dot(boxAxes[1], planeAxes[1])) +
                                  half.z * std::abs(glm::dot(boxAxes[2], planeAxes[1]));
-    const float projectedHalfZ = half.x * std::abs(glm::dot(boxAxes[0], planeAxes[2])) +
+
+    float projectedHalfZ = half.x * std::abs(glm::dot(boxAxes[0], planeAxes[2])) +
                                  half.y * std::abs(glm::dot(boxAxes[1], planeAxes[2])) +
                                  half.z * std::abs(glm::dot(boxAxes[2], planeAxes[2]));
 
@@ -2379,14 +2388,20 @@ void PositionalCorrection(Object &a, Object &b, Contact &c) {
     glm::vec3 correction = c.normal * percent * std::max(c.penetration - slop, 0.0f) / totalInvMass;
 
     if (!pa.isStatic) {
+
         glm::mat4 worldMatrix = GetModelMatrix(a);
+
         worldMatrix[3] -= glm::vec4(correction * invMassA, 0.0f);
+
         SetObjectWorldMatrix(a, worldMatrix);
     }
 
     if (!pb.isStatic) {
+
         glm::mat4 worldMatrix = GetModelMatrix(b);
+
         worldMatrix[3] += glm::vec4(correction * invMassB, 0.0f);
+
         SetObjectWorldMatrix(b, worldMatrix);
     }
 }
@@ -2428,7 +2443,7 @@ void ResolveVelocity(Object &a, Object &b, Contact &c) {
         pb.velocity += impulse * invMassB;
 }
 
-float GetWorldRadius(const Object &obj) {
+float GetWorldRadius(const ProxyObject &obj) {
 
     float s = glm::compMax(glm::abs(obj.scale));
     return obj.collider.radius * s;

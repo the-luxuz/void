@@ -282,14 +282,14 @@ void update_depthmap() {
 
             glBindVertexArray(obj.vao);
 
-            const bool disableBackfaceCulling = obj.renderBothSides && cullingEnabledAtStart;
+            bool disableBackfaceCulling = obj.renderBothSides && cullingEnabledAtStart;
+
             if (disableBackfaceCulling)
                 glDisable(GL_CULL_FACE);
 
-            if (obj.submeshes.empty()) {
-
+            if (obj.submeshes.empty())
                 glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(obj.indices.size()), GL_UNSIGNED_INT, nullptr);
-            } else {
+            else {
 
                 for (const Submesh &submesh : obj.submeshes) {
 
@@ -714,28 +714,25 @@ void UpdateAnimation(float dt) {
     UpdateAnimationPreview(dt);
 }
 
-static void StabilizePlayerRampContact(const Object &a, const Object &b, const Object &colliderA, const Object &colliderB,
-                                      Contact &contact) {
+static void StabilizePlayerRampContact(const Object &a, const Object &b, const ProxyObject &colliderA, const ProxyObject &colliderB, Contact &contact) {
 
     bool playerIsA = a.id == playerEntityID;
 
     if (!playerIsA && b.id != playerEntityID)
         return;
 
-    const Object &playerCollider = playerIsA ? colliderA : colliderB;
+    const ProxyObject &playerCollider = playerIsA ? colliderA : colliderB;
     const Object &rampObject = playerIsA ? b : a;
-    const Object &rampCollider = playerIsA ? colliderB : colliderA;
+    const ProxyObject &rampCollider = playerIsA ? colliderB : colliderA;
 
     if (rampObject.collider.type != ColliderType::AABB)
         return;
 
-    const glm::vec3 up(0.0f, 1.0f, 0.0f);
-    const glm::vec3 playerAxes[3] = {playerCollider.rotation * glm::vec3(1.0f, 0.0f, 0.0f),
-                                     playerCollider.rotation * glm::vec3(0.0f, 1.0f, 0.0f),
-                                     playerCollider.rotation * glm::vec3(0.0f, 0.0f, 1.0f)};
-    const glm::vec3 rampAxes[3] = {rampCollider.rotation * glm::vec3(1.0f, 0.0f, 0.0f),
-                                   rampCollider.rotation * glm::vec3(0.0f, 1.0f, 0.0f),
-                                   rampCollider.rotation * glm::vec3(0.0f, 0.0f, 1.0f)};
+    glm::vec3 up(0.0f, 1.0f, 0.0f);
+
+    glm::vec3 playerAxes[3] = {playerCollider.rotation * glm::vec3(1.0f, 0.0f, 0.0f), playerCollider.rotation * glm::vec3(0.0f, 1.0f, 0.0f), playerCollider.rotation * glm::vec3(0.0f, 0.0f, 1.0f)};
+
+    glm::vec3 rampAxes[3] = {rampCollider.rotation * glm::vec3(1.0f, 0.0f, 0.0f), rampCollider.rotation * glm::vec3(0.0f, 1.0f, 0.0f), rampCollider.rotation * glm::vec3(0.0f, 0.0f, 1.0f)};
 
     glm::vec3 rampUp = glm::normalize(rampAxes[1]);
 
@@ -758,8 +755,7 @@ static void StabilizePlayerRampContact(const Object &a, const Object &b, const O
         playerRadiusZ += playerHalf[axis] * std::abs(glm::dot(playerAxes[axis], rampAxes[2]));
     }
 
-    if (std::abs(localPlayerPosition.x) > rampHalf.x + playerRadiusX ||
-        std::abs(localPlayerPosition.z) > rampHalf.z + playerRadiusZ)
+    if (std::abs(localPlayerPosition.x) > rampHalf.x + playerRadiusX || std::abs(localPlayerPosition.z) > rampHalf.z + playerRadiusZ)
         return;
 
     float distanceFromRampTop = glm::dot(playerFromRamp, rampUp);
@@ -783,39 +779,61 @@ static void StabilizePlayerRampContact(const Object &a, const Object &b, const O
 
 void CollisionUpdate() {
 
+    for (size_t i = 0; i < objects.size(); i++) {
+        
+        Object &a = objects[i];
+
+        proxyObjects.push_back(GetColliderProxy(a));
+    }
+
     GetGameAPI()->BeginSimulationStep();
 
     for (size_t i = 0; i < objects.size(); i++) {
+
+        Object &a = objects[i];
+
+        if (!a.hasCollider || (a.hasPhysics && a.physics.isStatic) || a.collider.type == ColliderType::None)
+            continue;
 
         for (size_t j = i + 1; j < objects.size(); j++) {
 
             Contact contact{};
 
-            Object &a = objects[i];
             Object &b = objects[j];
+
+            if (!b.hasCollider || (b.hasPhysics && b.physics.isStatic) || b.collider.type == ColliderType::None)
+                continue;
 
             if (&a == &b)
                 continue;
 
             if (!CanCollide(a, b))
                 continue;
-
-            if (a.collider.type == ColliderType::None || b.collider.type == ColliderType::None)
-                continue;
-
-            if (!a.hasCollider)
-                continue;
-
-            if (!b.hasCollider)
-                continue;
-
-            if (a.hasPhysics && b.hasPhysics && a.physics.isStatic && b.physics.isStatic)
-                continue;
-
-            Object colliderA = GetColliderProxy(a);
-            Object colliderB = GetColliderProxy(b);
+            
+            ProxyObject colliderA = proxyObjects[i];
+            ProxyObject colliderB = proxyObjects[j];
 
             switch (a.collider.type) {
+
+                case ColliderType::AABB:
+
+                switch (b.collider.type) {
+
+                    case ColliderType::AABB:
+                    contact = AABB_vs_AABB(colliderA, colliderB);
+                    break;
+
+                case ColliderType::Plane:
+                    contact = AABB_vs_Plane(colliderA, colliderB);
+                    break;
+
+                case ColliderType::Sphere:
+                    contact = Sphere_vs_AABB(colliderB, colliderA);
+                    contact.normal *= -1.0f;
+                    break;
+                }
+
+                break;
 
             case ColliderType::Plane:
 
@@ -853,26 +871,6 @@ void CollisionUpdate() {
 
                 break;
 
-            case ColliderType::AABB:
-
-                switch (b.collider.type) {
-
-                case ColliderType::Plane:
-                    contact = AABB_vs_Plane(colliderA, colliderB);
-                    break;
-
-                case ColliderType::Sphere:
-                    contact = Sphere_vs_AABB(colliderB, colliderA);
-                    contact.normal *= -1.0f;
-                    break;
-
-                case ColliderType::AABB:
-                    contact = AABB_vs_AABB(colliderA, colliderB);
-                    break;
-                }
-
-                break;
-
             default:
                 break;
             }
@@ -885,11 +883,15 @@ void CollisionUpdate() {
                 ResolveVelocity(a, b, contact);
 
                 GameContact gameContact{};
+
                 gameContact.hit = contact.hit;
+
                 gameContact.normal[0] = contact.normal.x;
                 gameContact.normal[1] = contact.normal.y;
                 gameContact.normal[2] = contact.normal.z;
+
                 gameContact.penetration = contact.penetration;
+
                 gameContact.point[0] = contact.point.x;
                 gameContact.point[1] = contact.point.y;
                 gameContact.point[2] = contact.point.z;

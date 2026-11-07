@@ -39,6 +39,7 @@ inline ImVec2 viewportSize{};
 
 // vectors
 inline std::vector<Object> objects;
+inline std::vector<ProxyObject> proxyObjects;
 inline std::vector<Light> lights;
 inline std::vector<Object> lightObjects;
 
@@ -324,17 +325,17 @@ void AddForce(Object &obj, const glm::vec3 &force);
 
 bool CanCollide(const Object &a, const Object &b);
 
-Contact Sphere_vs_Sphere(const Object &a, const Object &b);
-Contact Sphere_vs_Plane(const Object &a, const Object &b);
-Contact Sphere_vs_AABB(const Object &a, const Object &b);
-Contact AABB_vs_AABB(const Object &a, const Object &b);
-Contact AABB_vs_Plane(const Object &a, const Object &b);
+Contact Sphere_vs_Sphere(const ProxyObject &a, const ProxyObject &b);
+Contact Sphere_vs_Plane(const ProxyObject &a, const ProxyObject &b);
+Contact Sphere_vs_AABB(const ProxyObject &a, const ProxyObject &b);
+Contact AABB_vs_AABB(const ProxyObject &a, const ProxyObject &b);
+Contact AABB_vs_Plane(const ProxyObject &a, const ProxyObject &b);
 
 void PositionalCorrection(Object &a, Object &b, Contact &c);
 
 void ResolveVelocity(Object &a, Object &b, Contact &contact);
 
-float GetWorldRadius(const Object &obj);
+float GetWorldRadius(const ProxyObject &obj);
 
 //--------------------------------------------------------------------------
 
