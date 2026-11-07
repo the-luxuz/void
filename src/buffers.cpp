@@ -122,7 +122,7 @@ void UpdateMeshBuffers(Object& obj) {
 
     glBindVertexArray(0);
 
-    //obj.shadowGeometryRevision++;
+    obj.shadowGeometryRevision++;
 }
 
 void CreateVideoQuad(VideoQuad& quad) {

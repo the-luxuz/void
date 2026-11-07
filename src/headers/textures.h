@@ -21,6 +21,7 @@ inline int viewport_width = 512;
 inline int viewport_height = 512;
 
 // depth map
+inline constexpr int ShadowMapResolution = 1024;
 inline GLuint depth_texture[MAX_LIGHTS]{};
 
 // skybox

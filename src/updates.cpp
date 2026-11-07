@@ -260,7 +260,7 @@ void update_depthmap() {
 
         glBindFramebuffer(GL_FRAMEBUFFER, depthFBO[i]);
 
-        glViewport(0, 0, viewport_width, viewport_height);
+        glViewport(0, 0, ShadowMapResolution, ShadowMapResolution);
 
         glClear(GL_DEPTH_BUFFER_BIT);
 

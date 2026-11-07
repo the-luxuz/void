@@ -104,7 +104,7 @@ void init_viewport() {
         glGenFramebuffers(1, &depthFBO[i]);
         glBindFramebuffer(GL_FRAMEBUFFER, depthFBO[i]);
 
-        Create_depth_tex(viewport_width, viewport_height, i);
+        Create_depth_tex(ShadowMapResolution, ShadowMapResolution, i);
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
