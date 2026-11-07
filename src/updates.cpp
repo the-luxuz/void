@@ -779,12 +779,11 @@ static void StabilizePlayerRampContact(const Object &a, const Object &b, const P
 
 void CollisionUpdate() {
 
-    for (size_t i = 0; i < objects.size(); i++) {
-        
-        Object &a = objects[i];
+    proxyObjects.clear();
+    proxyObjects.reserve(objects.size());
 
-        proxyObjects.push_back(GetColliderProxy(a));
-    }
+    for (Object& obj : objects)
+        proxyObjects.push_back(GetColliderProxy(obj));
 
     GetGameAPI()->BeginSimulationStep();
 
@@ -792,7 +791,7 @@ void CollisionUpdate() {
 
         Object &a = objects[i];
 
-        if (!a.hasCollider || (a.hasPhysics && a.physics.isStatic) || a.collider.type == ColliderType::None)
+        if (!a.hasCollider || a.collider.type == ColliderType::None)
             continue;
 
         for (size_t j = i + 1; j < objects.size(); j++) {
@@ -801,7 +800,10 @@ void CollisionUpdate() {
 
             Object &b = objects[j];
 
-            if (!b.hasCollider || (b.hasPhysics && b.physics.isStatic) || b.collider.type == ColliderType::None)
+            if (!b.hasCollider || b.collider.type == ColliderType::None)
+                continue;
+
+            if (a.physics.isStatic && b.physics.isStatic)
                 continue;
 
             if (&a == &b)
@@ -810,8 +812,8 @@ void CollisionUpdate() {
             if (!CanCollide(a, b))
                 continue;
             
-            ProxyObject colliderA = proxyObjects[i];
-            ProxyObject colliderB = proxyObjects[j];
+            ProxyObject& colliderA = proxyObjects[i];
+            ProxyObject& colliderB = proxyObjects[j];
 
             switch (a.collider.type) {
 
@@ -881,6 +883,9 @@ void CollisionUpdate() {
 
                 PositionalCorrection(a, b, contact);
                 ResolveVelocity(a, b, contact);
+
+                proxyObjects[i] = GetColliderProxy(a);
+                proxyObjects[j] = GetColliderProxy(b);
 
                 GameContact gameContact{};
 
