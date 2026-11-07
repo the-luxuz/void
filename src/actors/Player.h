@@ -25,8 +25,10 @@ namespace PlayerActor {
 
 	inline float lookSensitivity = 0.001f;
 
-	inline float defaultMaximumSpeed = 450.0f;
+	inline float defaultMaximumSpeed = 600.0f;
 	inline float airControlStrength = 0.4f;
+	inline float slideImpactForcePerSpeed = 100.0f;
+	inline float slideSpeedLossDuration = 1.5f;
 
 	inline float jumpHeight = 150.0f;
 	inline float jumpGravityMultiplier = 7.f;
@@ -39,6 +41,7 @@ namespace PlayerActor {
 	inline float normalMaximumSpeed = 0.0f;
     inline float slideCurrentSpeed = 0.0f;
     inline float slideSpeedCeiling = 0.0f;
+    inline float slideInitialSpeed = 0.0f;
     inline glm::vec3 slideDirection(0.0f);
 
 	inline glm::vec3 slideVelocityDirection(0.0f);

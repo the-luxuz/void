@@ -423,7 +423,7 @@ void Parser::load_settings(std::ifstream &in, Settings &st, camera &cam) {
 
 void Parser::save_scene(std::ofstream &out, const std::vector<Object> &scene, const std::vector<Object> &scene_lgh_obj, const std::vector<::Light> &scene_lgh, const Settings &sceneSettings, const camera &sceneCamera) {
 
-    size_t count = scene.size();
+    const uint32_t count = static_cast<uint32_t>(scene.size());
 
     const uint32_t lightCount = static_cast<uint32_t>(std::min(scene_lgh_obj.size(), scene_lgh.size()));
     const uint32_t lightObjCount = lightCount;

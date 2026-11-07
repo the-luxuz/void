@@ -94,6 +94,8 @@ static void DrawSettingsUI() {
     ImGui::Separator();
     ImGui::TextUnformatted("Player Movement");
     ImGui::SliderFloat("Default max speed", &PlayerActor::defaultMaximumSpeed, 100.0f, 10000.0f, "%.0f");
+    ImGui::SliderFloat("Slide impact force", &PlayerActor::slideImpactForcePerSpeed, 0.0f, 1000.0f, "%.0f");
+    ImGui::SliderFloat("Slide speed loss duration", &PlayerActor::slideSpeedLossDuration, 0.1f, 5.0f, "%.2f s");
     ImGui::SliderFloat("Air input control", &PlayerActor::airControlStrength, 0.0f, 1.0f, "%.2f");
     ImGui::SliderFloat("Slide crouch scale", &PlayerActor::slideCrouchScale, 0.4f, 1.0f, "%.2f");
     ImGui::SliderFloat("Crouch transition", &PlayerActor::crouchTransitionDuration, 0.05f, 0.5f, "%.2f s");
