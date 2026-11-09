@@ -80,7 +80,41 @@ out vec4 outputColor;
 
 // light
 in vec4 fragPosLight[MAX_LIGHTS];
-float shadow = 0.0;
+
+// Shadow factor of a spot light: 0.0 = lit, 1.0 = fully in shadow.
+// Only called once the pixel is known to be inside the cone and facing the light.
+float CalcShadow(int i, Light light) {
+
+    vec3 proj = fragPosLight[i].xyz / fragPosLight[i].w;
+
+    vec3 norm_proj = proj * 0.5 + 0.5;
+
+    if (norm_proj.x < 0.0 || norm_proj.x > 1.0 || norm_proj.y < 0.0 || norm_proj.y > 1.0 || norm_proj.z > 1.0)
+        return 0.0;
+
+    float currentDepth = norm_proj.z;
+
+    vec2 texelSize = 1.0 / vec2(textureSize(depthData[i], 0));
+
+    int radius = int(light.pcf);
+
+    float shadow = 0.0;
+
+    for (int x = -radius; x <= radius; x++) {
+
+        for (int y = -radius; y <= radius; y++) {
+
+            float depth = texture(depthData[i], norm_proj.xy + vec2(x, y) * texelSize).r;
+
+            if (currentDepth - light.bias > depth)
+                shadow += 1.0;
+        }
+    }
+
+    int samples = (2 * radius + 1) * (2 * radius + 1);
+
+    return shadow / float(samples);
+}
 
 vec3 ShadePointLight(Light light, vec3 N, vec3 V, vec3 baseColor, float specPower, float metallic) {
 
@@ -102,7 +136,7 @@ vec3 ShadePointLight(Light light, vec3 N, vec3 V, vec3 baseColor, float specPowe
     vec3 diffuse = diff * light.color * min(att, 1.0);
     vec3 specular = spec * mix(vec3(0.04), baseColor, metallic) * light.color * min(att, 1.0);
 
-    return (light.ambient * light.color * baseColor) + (1.0 - shadow) * ((diffuse * baseColor)  + specular);
+    return (light.ambient * light.color * baseColor) + ((diffuse * baseColor) + specular);
 }
 
 vec3 ShadeDirLight(Light light, vec3 N, vec3 V, vec3 baseColor, float specPower, float metallic) {
@@ -119,10 +153,10 @@ vec3 ShadeDirLight(Light light, vec3 N, vec3 V, vec3 baseColor, float specPower,
     vec3 diffuse = diff * light.color;
     vec3 specular = spec * mix(vec3(0.04), baseColor, metallic) * light.color;
 
-    return (light.ambient * light.color * baseColor) + (1.0 - shadow) * ((diffuse * baseColor) + specular);
+    return (light.ambient * light.color * baseColor) + ((diffuse * baseColor) + specular);
 }
 
-vec3 ShadeSpotLight(Light light, vec3 N, vec3 V, vec3 baseColor, float specPower, float metallic) {
+vec3 ShadeSpotLight(int i, Light light, vec3 N, vec3 V, vec3 baseColor, float specPower, float metallic) {
 
     vec3 lightPosView = vec3(aView * vec4(light.position, 1.0));
 
@@ -151,6 +185,12 @@ vec3 ShadeSpotLight(Light light, vec3 N, vec3 V, vec3 baseColor, float specPower
         spotEff = clamp(pow((alpha - phi) / (theta - phi), light.falloff), 0.0, 1.0);
 
     float diff = max(dot(N, L), 0.0);
+
+    // facing away from the light: only ambient, no shadow lookup needed
+    if(diff <= 0.0)
+        return light.ambient * light.color * baseColor;
+
+    float shadow = shadow_active ? CalcShadow(i, light) : 0.0;
 
     float denom = light.attenuation.x + light.attenuation.y * dist + light.attenuation.z * dist * dist;
 
@@ -320,40 +360,6 @@ void main() {
 
     for (int i = 0; i < numLights; i++) {
 
-        if (shadow_active) {
-
-            shadow = 0.0;
-
-            vec3 proj = fragPosLight[i].xyz / fragPosLight[i].w;
-
-            vec3 norm_proj = proj * 0.5 + 0.5;
-
-            if (norm_proj.x >= 0.0 && norm_proj.x <= 1.0 && norm_proj.y >= 0.0 && norm_proj.y <= 1.0 && norm_proj.z <= 1.0) {
-
-                float currentDepth = norm_proj.z;
-
-                vec2 texelSize = 1.0 / textureSize(depthData[i], 0);
-
-                int radius = int(lights[i].pcf);
-
-                for ( int x = -radius; x <= radius; x++) {
-
-                    for (int y = -radius; y <= radius; y++) {
-
-                        float depth = texture(depthData[i], norm_proj.xy + vec2(x, y) * texelSize).r;
-
-                        if (currentDepth - lights[i].bias > depth )
-                            shadow += 1.0;
-                    }
-                }
-
-                float samples = float(pow(2 * radius + 1, 2));
-
-                shadow /= samples;
-            }
-        }
-
-
         if (lights[i].type == 0)
             result += ShadePointLight(lights[i], finalNormal, V, baseColor, specPower, metallic);
         else if (lights[i].type == 1)
@@ -361,7 +367,7 @@ void main() {
             result += ShadeDirLight(lights[i], finalNormal, V, baseColor, specPower, metallic);
         else if (lights[i].type == 2)
 
-            result += ShadeSpotLight(lights[i], finalNormal, V, baseColor, specPower, metallic);
+            result += ShadeSpotLight(i, lights[i], finalNormal, V, baseColor, specPower, metallic);
     }
 
 
