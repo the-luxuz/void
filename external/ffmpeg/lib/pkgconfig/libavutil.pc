@@ -1,0 +1,14 @@
+prefix=${pcfiledir}/../..
+exec_prefix=${prefix}
+libdir=${pcfiledir}/../../lib
+includedir=${pcfiledir}/../../include
+
+Name: libavutil
+Description: FFmpeg utility library
+Version: 60.26.103
+Requires: 
+Requires.private: 
+Conflicts:
+Libs: -L${libdir}  -lavutil 
+Libs.private: -lm -lz -LD:/a/ffmpeg-lgpl/ffmpeg-lgpl/out/windows-x86_64/lib/pkgconfig/../ -lvpl -lole32 -lgdi32 -luuid -luser32 -lbcrypt -latomic
+Cflags: -I${includedir}

@@ -1,13 +1,14 @@
 prefix=${pcfiledir}/../..
 exec_prefix=${prefix}
-libdir=${prefix}/lib
-includedir=${prefix}/include
+libdir=${pcfiledir}/../../lib
+includedir=${pcfiledir}/../../include
 
 Name: libswresample
 Description: FFmpeg audio resampling library
-Version: 7.2.100
+Version: 6.3.103
 Requires: 
-Requires.private: libavutil >= 61.5.100
+Requires.private: libavutil >= 60.26.103
 Conflicts:
 Libs: -L${libdir}  -lswresample 
+Libs.private: -lm -latomic
 Cflags: -I${includedir}
